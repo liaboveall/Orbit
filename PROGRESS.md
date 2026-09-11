@@ -1,3 +1,14 @@
+# 2026-09-11 — M6 本地实现与验收，生产待配置
+
+M6 的共享准入、维护、容器、CI 工作流、恢复演练、质量测量、只读 demo 与英文 README 已实现。当前 M6 保持 review：远端 CI 和真实 HTTPS 部署尚待验收；M7 未启动。详情见 [M6 验收报告](docs/reviews/M6-ACCEPTANCE-2026-09-11.md)。
+
+- 本地 check、scripts typecheck、308 integration、70 E2E、13 UI 通过；浏览器零重试、开发/测试库指纹一致。新增一个故障映射单测单独通过。
+- 千任务、千子任务、千评论，10 并发 HTTP 读取 p95 62.13ms、写入 p95 127.91ms，错误率 0；看板 87111 bytes；5 次 CPU 4x 工作台实验室导航就绪中位 560ms。不是生产真实用户指标。
+- Node 24 非 root 容器构建与实际启动通过；第 14 个迁移已部署开发/独立测试库；隔离临时库与 MinIO 恢复演练验证版本/成员/评论/活动/文件摘要。
+- 下一步：远端 CI；配置容器平台、域名、托管 PostgreSQL、私有存储、生产邮件，执行 HTTPS 双账户冒烟与每日维护/备份配置。不得把本地验收写成生产发布。
+
+---
+
 # GitHub 发布交接 · 2026-09-11
 
 已创建私有仓库 [liaboveall/Orbit](https://github.com/liaboveall/Orbit)。本次将当前 M0–M5 已验收状态建立为 `main` 基线，并发布 15 个 `archive/snapshot-*` 恢复标签。原本没有正式提交；全部历史 tree 原样保留，原始作者/时间/父子关系不可恢复，没有伪造开发顺序。详见 [历史说明](docs/DEVELOPMENT-HISTORY.md) 与 [归档清单](docs/history/recovered-snapshots.json)。

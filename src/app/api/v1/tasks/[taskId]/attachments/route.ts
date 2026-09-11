@@ -21,12 +21,12 @@ export async function POST(request:Request,context:Context) {
     const denied=verifyRequestOrigin(request,requestId);if(denied)return denied;
     const user=await requireSessionUser(request);
     const limited=await enforceWriteLimit(user.id,requestId);if(limited)return limited;
-    const slot = acquireUploadSlot(user.id, requestId);
+    const slot = await acquireUploadSlot(user.id, requestId);
     if (!slot.allowed) return slot.response;
     try {
       const result=await uploadMultipart(request,(await context.params).taskId,user.id);
       return jsonSuccess(result.attachment,requestId,result.replayed?200:201);
-    } finally { slot.release(); }
+    } finally { await slot.release(); }
   }catch(error){return toErrorResponse(error,requestId);}
 }
 

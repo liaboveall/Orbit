@@ -11,7 +11,11 @@
 | `check-db.ts` | 只读探测 `DATABASE_URL` 是否可连接（M0 验收：空库可连接） | `pnpm exec tsx scripts/check-db.ts` |
 | `cleanup-idempotency.ts` | 分批删除过期幂等记录（走 `expiresAt` 索引，短事务限批量，离线运行） | `pnpm exec tsx scripts/cleanup-idempotency.ts` |
 
-> 业务 seed 在 `prisma/seed.ts`（由 `pnpm db:seed` 调用）。`maintenance:cleanup`、`worker:ai` 属后续里程碑。
+> 业务 seed 在 `prisma/seed.ts`（由 `pnpm db:seed` 调用）。`worker:ai` 属 M7。
+
+M6：`pnpm maintenance:cleanup` 限批清理过期运行记录和附件；
+`node --conditions=react-server --import tsx scripts/recovery-drill.ts` 在随机命名的本地临时库执行真实恢复演练；
+`node scripts/container-smoke.mjs` 验证已构建的 `orbit:m6` 镜像。完整发布步骤见 [运行手册](../docs/M6-OPERATIONS.md)。
 
 
 邀请令牌维护：`pnpm exec tsx scripts/cleanup-invitation-tokens.ts` 默认只读统计。

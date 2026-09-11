@@ -8,5 +8,6 @@ test("首页返回 200 并渲染 Orbit 基线", async ({ page }) => {
   const response = await page.goto("/");
   expect(response?.ok()).toBe(true);
   await expect(page).toHaveTitle(/Orbit/);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Orbit");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("有序向前");
+  await expect(page.getByRole("link", { name: "体验只读演示" })).toHaveAttribute("href", "/demo");
 });

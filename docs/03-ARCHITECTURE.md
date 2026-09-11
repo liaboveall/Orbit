@@ -111,7 +111,7 @@ V1 不引入数据库 RLS；所有查询必须经过项目授权服务，并用�
 
 结构化日志目标字段：requestId、route、method、status、durationMs、userId（内部ID）、projectId（授权后）、errorCode。敏感字段统一 redact；不记录密码、cookie、token、请求正文或 signed URL。**当前实现差距**：仅 requestId 已落地；route/method/status/durationMs/projectId 等为目标、尚未实现。`LOG_LEVEL` 环境变量已在 `src/server/env.ts` 中校验（枚举 debug/info/warn/error，默认 info），但当前从不被消费。上述未实现字段与日志级别消费属待补工作。
 
-**当前限流实现为单节点进程内存令牌桶**（`src/server/modules/rate-limit/memory.ts` 的 `MemoryRateLimiter`，基于内存 Map），没有 PostgreSQL 共享计数，也未启用分布式存储；多副本部署下会失效。已落地的业务参数：常规业务写 60 次/用户/分钟（所有业务写端点共享同一用户写桶）、邀请预览/接受合计 20 次/IP/分钟（匿名端点独立桶）；认证敏感端点按 Better Auth 库内置限流（test 环境关闭、其余环境启用）。M5 上传另有独立滑动窗口：10 次/用户/分钟、跨任务最多 2 个在途请求，在接收 multipart 前准入；成功、失败、取消、超时均在 finally 释放。已准入的重放及失败请求计频率，门禁拒绝不消耗上传频率。读取 300 次/用户/分钟待 M6 实现。只信任已配置代理提供的客户端 IP（`TRUSTED_PROXY_COUNT`，默认 0 不信任转发头）。阈值为产品默认，可由配置下调，不由客户端设置。**多副本共享限流遵循既定 PostgreSQL 架构方向（非 Redis，见 docs/11 ADR-014），属 M6 部署范围，当前未实现**；多副本部署前需迁移到 PostgreSQL 共享计数。
+staging/production 使用 PostgreSQL 共享原子固定窗口限流：业务写 60 次/用户/分钟、GET 读取 300 次/用户/分钟、邀请预览/接受合计 20 次/IP/分钟；认证使用 Better Auth 1.7.3 customStorage.consume，并保持敏感端点原阈值。上传采用数据库滑动分钟 10 次和最多 2 个跨副本活跃租约（180 秒，覆盖 120 秒请求截止）；development/test 保留内存实现，真实双池并发测试直接验证共享实现。只信任 TRUSTED_PROXY_COUNT 指定代理链，默认 0 退化共享来源桶。细节与维护见 [M6 运行手册](M6-OPERATIONS.md)。
 
 计划提供 /health/live（进程可服务）和 /health/ready（数据库连接与迁移兼容）；不暴露版本、凭证、连接字符串。**当前两个端点尚未实现，属 M6 部署范围**。邮件/存储暂时不可用只影响对应操作，有独立可观测错误，不让整个看板持续 500。
 

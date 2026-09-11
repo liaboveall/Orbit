@@ -3,7 +3,7 @@
   "project": "Orbit",
   "planVersion": "1.0.0",
   "updatedAt": "2026-09-11",
-  "applicationStatus": "M0_M5_DONE",
+  "applicationStatus": "M6_REVIEW_PRODUCTION_PENDING",
   "stateRules": {
     "allowed": [
       "todo",
@@ -127,7 +127,13 @@
         "min": 16,
         "max": 24
       },
-      "status": "todo"
+      "status": "review",
+      "latestReview": "docs/reviews/M6-ACCEPTANCE-2026-09-11.md",
+      "evidence": [
+        "docs/reviews/M6-ACCEPTANCE-2026-09-11.md",
+        "docs/M6-OPERATIONS.md"
+      ],
+      "notes": "本地实现与验收完成，远端 CI 和生产 HTTPS 部署待验收；没有上线声明。"
     },
     {
       "id": "M7",
@@ -758,7 +764,7 @@
       "id": "ORB-020",
       "milestone": "M6",
       "title": "综合质量验收",
-      "status": "todo",
+      "status": "review",
       "dependsOn": [
         "ORB-019"
       ],
@@ -774,14 +780,18 @@
         "AC-01 through AC-11",
         "实际性能和可访问性报告"
       ],
-      "evidence": [],
-      "notes": ""
+      "evidence": [
+        "docs/reviews/M6-ACCEPTANCE-2026-09-11.md",
+        "docs/M6-OPERATIONS.md"
+      ],
+      "notes": "本地代码、容器、测试、恢复演练、demo 和材料已交付；外部部署配置与远端 CI 结果待验收。",
+      "latestReview": "docs/reviews/M6-ACCEPTANCE-2026-09-11.md"
     },
     {
       "id": "ORB-021",
       "milestone": "M6",
       "title": "CI 与生产部署",
-      "status": "todo",
+      "status": "review",
       "dependsOn": [
         "ORB-020"
       ],
@@ -799,14 +809,18 @@
         "迁移和备份恢复",
         "私有存储与邮件"
       ],
-      "evidence": [],
-      "notes": "M6 进行部署、备份恢复和质量验收；本地 M0–M4 验证不替代生产验收。"
+      "evidence": [
+        "docs/reviews/M6-ACCEPTANCE-2026-09-11.md",
+        "docs/M6-OPERATIONS.md"
+      ],
+      "notes": "本地代码、容器、测试、恢复演练、demo 和材料已交付；外部部署配置与远端 CI 结果待验收。",
+      "latestReview": "docs/reviews/M6-ACCEPTANCE-2026-09-11.md"
     },
     {
       "id": "ORB-022",
       "milestone": "M6",
       "title": "演示与求职材料",
-      "status": "todo",
+      "status": "review",
       "dependsOn": [
         "ORB-021"
       ],
@@ -824,8 +838,12 @@
         "真实截图/报告",
         "3 分钟演示"
       ],
-      "evidence": [],
-      "notes": ""
+      "evidence": [
+        "docs/reviews/M6-ACCEPTANCE-2026-09-11.md",
+        "docs/M6-OPERATIONS.md"
+      ],
+      "notes": "本地代码、容器、测试、恢复演练、demo 和材料已交付；外部部署配置与远端 CI 结果待验收。",
+      "latestReview": "docs/reviews/M6-ACCEPTANCE-2026-09-11.md"
     },
     {
       "id": "ORB-023",
@@ -899,11 +917,11 @@
   ],
   "latestReview": {
     "date": "2026-09-11",
-    "period": "Full project review after M5 remediation",
+    "period": "M6 local implementation and acceptance",
     "reviewer": "Codex",
-    "report": "docs/reviews/PROJECT-DEEP-REVIEW-2026-09-11.md",
-    "status": "completed_with_findings",
-    "summary": "9 类问题（2 P1、7 P2）；4 个数据库/认证及 7 个浏览器/HTTP 探针复现边界。check、scripts typecheck、297 integration、生产构建、51 E2E、13 UI 通过，零重试且两库指纹一致；详细验证与限制见报告。M1/M2/M3/M5 review，M0/M4 保留 done，M6/M7 todo。"
+    "report": "docs/reviews/M6-ACCEPTANCE-2026-09-11.md",
+    "status": "production_pending",
+    "summary": "本地门禁通过；M6 保持 review，等待远端 CI 与真实 HTTPS 部署条件。"
   },
   "documentationMaintenance": {
     "date": "2026-09-11",

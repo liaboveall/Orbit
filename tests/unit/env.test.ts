@@ -70,7 +70,7 @@ describe("parseEnv · 合法输入", () => {
   });
 
   it("production 下提供足够长度的 BETTER_AUTH_SECRET 时通过", () => {
-    const raw = { ...validEnv(), APP_ENV: "production", BETTER_AUTH_SECRET: "x".repeat(48) };
+    const raw = { ...validEnv(), APP_ENV: "production", APP_URL: "https://orbit.example", BETTER_AUTH_URL: "https://orbit.example", STORAGE_ENDPOINT: "https://storage.example", BETTER_AUTH_SECRET: "x".repeat(48) };
     expect(() => parseEnv(raw)).not.toThrow();
   });
 });

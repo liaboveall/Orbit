@@ -134,6 +134,11 @@ export const envSchema = z
     if (value.APP_ENV !== "development" && value.BETTER_AUTH_SECRET.trim().length < 32) {
       ctx.addIssue({ code: "custom", path: ["BETTER_AUTH_SECRET"] });
     }
+    if (value.BETTER_AUTH_URL !== value.APP_URL) ctx.addIssue({ code: "custom", path: ["BETTER_AUTH_URL"] });
+    if (["production", "staging"].includes(value.APP_ENV)) {
+      if (!value.APP_URL.startsWith("https://")) ctx.addIssue({ code: "custom", path: ["APP_URL"] });
+      if (!value.STORAGE_ENDPOINT.startsWith("https://")) ctx.addIssue({ code: "custom", path: ["STORAGE_ENDPOINT"] });
+    }
 
     // AUTH_TRUSTED_ORIGINS：精确来源列表，拒绝通配符与非法项。
     const origins = value.AUTH_TRUSTED_ORIGINS.split(",").map((s) => s.trim());

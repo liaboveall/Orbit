@@ -34,7 +34,7 @@ pnpm dev
 | pnpm db:migrate:deploy | 按环境应用已审阅迁移 |
 | pnpm db:seed | 幂等写入开发fixture |
 | pnpm cleanup:attachments | M5 已实现：限批处理失效上传与待删除附件，失败可重试 |
-| pnpm maintenance:cleanup | M6 待实现：统一清理过期幂等记录/限流桶等 |
+| pnpm maintenance:cleanup | M6 已实现：统一限批清理过期幂等记录/限流桶/上传租约与附件 |
 | pnpm worker:ai | M7才提供的持久AI任务worker |
 
 开发Agent负责让名称和实际行为一致。如果使用不同命令，同步README/AGENTS/CI，不能只改package.json。
@@ -162,4 +162,4 @@ pnpm dev
 
 认证与业务端点统一按 `TRUSTED_PROXY_COUNT` 选择转发链中的来源；默认 0 忽略客户端提供的转发头并使用共享桶。大于 0 仅适用于受控代理正确追加/清洗头且源站禁止直接访问的部署。
 
-附件集合端点不经过 Next Proxy，避免 Proxy 在路由准入之前缓冲请求体；会话、Origin、资源授权、通用写桶与上传专用门禁仍在路由/服务端执行。上传 10 次/用户/分钟、最多 2 条在途请求为单进程限制，多副本共享准入仍须在 M6 按 PostgreSQL 方案完成。
+附件集合端点不经过 Next Proxy，避免 Proxy 在路由准入之前缓冲请求体；会话、Origin、资源授权、通用写桶与上传专用门禁仍在路由/服务端执行。上传 10 次/用户/分钟、最多 2 条在途请求在 staging/production 使用 M6 PostgreSQL 共享租约；development/test 保留内存路径。部署、健康检查、维护与恢复演练见 [M6 运行手册](M6-OPERATIONS.md)。

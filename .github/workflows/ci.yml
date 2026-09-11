@@ -1,0 +1,57 @@
+name: Orbit quality
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      CI: "true"
+      E2E_PORT: "3100"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Configure isolated synthetic services
+        run: |
+          cp .env.example .env.local
+          echo 'BETTER_AUTH_SECRET=orbit-ci-synthetic-secret-not-for-production-2026' >> .env.local
+          docker compose -f infra/compose.dev.yml up -d --wait
+      - run: pnpm db:migrate:deploy
+      - name: Migrate test database
+        run: pnpm db:migrate:deploy
+        env:
+          DATABASE_URL: postgresql://orbit:orbit_dev_only@localhost:5432/orbit_test
+      - run: pnpm check
+      - run: pnpm typecheck:scripts
+      - run: pnpm test:integration
+      - run: node --conditions=react-server --import tsx scripts/recovery-drill.ts
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e --retries=0
+      - run: pnpm test:ui --retries=0
+      - run: pnpm audit --prod --audit-level=high
+      - run: docker build --target runner -t orbit:${{ github.sha }} .
+      - run: docker build --target operations -t orbit-operations:${{ github.sha }} .
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quality-evidence
+          path: |
+            playwright-report
+            test-results
+            artifacts/release
+          retention-days: 7

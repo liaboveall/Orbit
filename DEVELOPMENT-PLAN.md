@@ -480,7 +480,7 @@ V1 不引入数据库 RLS；所有查询必须经过项目授权服务，并用�
 
 结构化日志目标字段：requestId、route、method、status、durationMs、userId（内部ID）、projectId（授权后）、errorCode。敏感字段统一 redact；不记录密码、cookie、token、请求正文或 signed URL。**当前实现差距**：仅 requestId 已落地；route/method/status/durationMs/projectId 等为目标、尚未实现。`LOG_LEVEL` 环境变量已在 `src/server/env.ts` 中校验（枚举 debug/info/warn/error，默认 info），但当前从不被消费。上述未实现字段与日志级别消费属待补工作。
 
-**当前限流实现为单节点进程内存令牌桶**（`src/server/modules/rate-limit/memory.ts` 的 `MemoryRateLimiter`，基于内存 Map），没有 PostgreSQL 共享计数，也未启用分布式存储；多副本部署下会失效。已落地的业务参数：常规业务写 60 次/用户/分钟（所有业务写端点共享同一用户写桶）、邀请预览/接受合计 20 次/IP/分钟（匿名端点独立桶）；认证敏感端点按 Better Auth 库内置限流（test 环境关闭、其余环境启用）。M5 上传另有独立滑动窗口：10 次/用户/分钟、跨任务最多 2 个在途请求，在接收 multipart 前准入；成功、失败、取消、超时均在 finally 释放。已准入的重放及失败请求计频率，门禁拒绝不消耗上传频率。读取 300 次/用户/分钟待 M6 实现。只信任已配置代理提供的客户端 IP（`TRUSTED_PROXY_COUNT`，默认 0 不信任转发头）。阈值为产品默认，可由配置下调，不由客户端设置。**多副本共享限流遵循既定 PostgreSQL 架构方向（非 Redis，见 docs/11 ADR-014），属 M6 部署范围，当前未实现**；多副本部署前需迁移到 PostgreSQL 共享计数。
+staging/production 使用 PostgreSQL 共享原子固定窗口限流：业务写 60 次/用户/分钟、GET 读取 300 次/用户/分钟、邀请预览/接受合计 20 次/IP/分钟；认证使用 Better Auth 1.7.3 customStorage.consume，并保持敏感端点原阈值。上传采用数据库滑动分钟 10 次和最多 2 个跨副本活跃租约（180 秒，覆盖 120 秒请求截止）；development/test 保留内存实现，真实双池并发测试直接验证共享实现。只信任 TRUSTED_PROXY_COUNT 指定代理链，默认 0 退化共享来源桶。细节与维护见 [M6 运行手册](docs/M6-OPERATIONS.md)。
 
 计划提供 /health/live（进程可服务）和 /health/ready（数据库连接与迁移兼容）；不暴露版本、凭证、连接字符串。**当前两个端点尚未实现，属 M6 部署范围**。邮件/存储暂时不可用只影响对应操作，有独立可观测错误，不让整个看板持续 500。
 
@@ -579,6 +579,10 @@ id UUID PK；userId；method；routeKey（含真实资源ID的规范化路径）
 ### RateLimitBucket
 
 keyHash PK（不存原始邮箱/IP）；windowStart；count；expiresAt。实际表与 Better Auth 数据库存储方式可分开，不能破坏库 schema。计数原子递增，维护命令清理过期桶。不以 count 的 read-then-write 实现共享限流。
+
+### UploadLease（M6）
+
+id UUID PK；keyHash char(64)；startedAt timestamptz；expiresAt timestamptz；active boolean。索引 (keyHash,startedAt) 和 expiresAt。同用户准入通过事务级 advisory lock 串行化，频率统计 startedAt 的滑动一分钟、并发统计未过期 active。释放只改 active，不删除频率证据；超过 180 秒允许崩溃恢复，维护限批删除过期行。
 
 ## 4. 写入事务与锁
 
@@ -1031,7 +1035,7 @@ pnpm dev
 | pnpm db:migrate:deploy | 按环境应用已审阅迁移 |
 | pnpm db:seed | 幂等写入开发fixture |
 | pnpm cleanup:attachments | M5 已实现：限批处理失效上传与待删除附件，失败可重试 |
-| pnpm maintenance:cleanup | M6 待实现：统一清理过期幂等记录/限流桶等 |
+| pnpm maintenance:cleanup | M6 已实现：统一限批清理过期幂等记录/限流桶/上传租约与附件 |
 | pnpm worker:ai | M7才提供的持久AI任务worker |
 
 开发Agent负责让名称和实际行为一致。如果使用不同命令，同步README/AGENTS/CI，不能只改package.json。
@@ -1159,7 +1163,7 @@ pnpm dev
 
 认证与业务端点统一按 `TRUSTED_PROXY_COUNT` 选择转发链中的来源；默认 0 忽略客户端提供的转发头并使用共享桶。大于 0 仅适用于受控代理正确追加/清洗头且源站禁止直接访问的部署。
 
-附件集合端点不经过 Next Proxy，避免 Proxy 在路由准入之前缓冲请求体；会话、Origin、资源授权、通用写桶与上传专用门禁仍在路由/服务端执行。上传 10 次/用户/分钟、最多 2 条在途请求为单进程限制，多副本共享准入仍须在 M6 按 PostgreSQL 方案完成。
+附件集合端点不经过 Next Proxy，避免 Proxy 在路由准入之前缓冲请求体；会话、Origin、资源授权、通用写桶与上传专用门禁仍在路由/服务端执行。上传 10 次/用户/分钟、最多 2 条在途请求在 staging/production 使用 M6 PostgreSQL 共享租约；development/test 保留内存路径。部署、健康检查、维护与恢复演练见 [M6 运行手册](docs/M6-OPERATIONS.md)。
 
 
 ---

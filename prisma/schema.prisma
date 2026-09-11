@@ -15,6 +15,24 @@ datasource db {
   provider = "postgresql"
 }
 
+model RateLimitBucket {
+  keyHash String @id @db.Char(64)
+  windowStart DateTime @db.Timestamptz(3)
+  count Int
+  expiresAt DateTime @db.Timestamptz(3)
+  @@index([expiresAt])
+}
+
+model UploadLease {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  keyHash String @db.Char(64)
+  startedAt DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt DateTime @db.Timestamptz(3)
+  active Boolean @default(true)
+  @@index([keyHash, startedAt])
+  @@index([expiresAt])
+}
+
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"

@@ -11,6 +11,7 @@ import type { NextConfig } from "next";
  *   加载失败、React 无法 hydrate（仅影响开发服务器，不影响生产构建）。
  */
 const nextConfig: NextConfig = {
+  output: process.env.ORBIT_STANDALONE === "1" ? "standalone" : undefined,
   reactStrictMode: true,
   poweredByHeader: false,
   serverExternalPackages: ["pg"],

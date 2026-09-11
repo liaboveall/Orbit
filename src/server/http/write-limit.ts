@@ -2,12 +2,15 @@ import "server-only";
 import { buildErrorResponse } from "@/contracts";
 import { getRateLimiter } from "@/server/modules/rate-limit";
 import { MemoryRateLimiter } from "@/server/modules/rate-limit/memory";
+import { consumeBucket, sharedLimitsEnabled } from "@/server/modules/rate-limit/postgres";
 
 export async function enforceWriteLimit(
   userId: string,
   requestId: string,
 ): Promise<Response | null> {
-  const result = await (await getRateLimiter()).checkLimit(userId, "write");
+  const result = sharedLimitsEnabled()
+    ? await consumeBucket((await import("@/server/db/prisma")).prisma, "write", userId, 60)
+    : await (await getRateLimiter()).checkLimit(userId, "write");
   if (result.allowed) return null;
   return Response.json(
     buildErrorResponse("RATE_LIMITED", "操作过于频繁，请稍后重试。", {
@@ -66,7 +69,9 @@ export async function enforceAnonymousInviteLimit(
   clientIpBucketKey: string,
   requestId: string,
 ): Promise<Response | null> {
-  const result = await getAnonymousInviteRateLimiter().checkLimit(
+  const result = sharedLimitsEnabled()
+    ? await consumeBucket((await import("@/server/db/prisma")).prisma, "anonymous-invite", clientIpBucketKey, 20)
+    : await getAnonymousInviteRateLimiter().checkLimit(
     clientIpBucketKey,
     "anonymous-invite",
   );

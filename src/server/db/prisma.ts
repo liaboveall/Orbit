@@ -25,7 +25,7 @@ function createPrismaClient(): PrismaClient {
   //     lock_timeout=5000: 等锁最长 5s，超时即失败（配合 tx.ts 的死锁/序列化重试）。
   const adapter = new PrismaPg({
     connectionString: DATABASE_URL,
-    max: 15,
+    max: 5,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
     options: "-c statement_timeout=10000 -c lock_timeout=5000 -c timezone=UTC",

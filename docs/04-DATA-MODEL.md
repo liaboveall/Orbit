@@ -86,6 +86,10 @@ id UUID PK；userId；method；routeKey（含真实资源ID的规范化路径）
 
 keyHash PK（不存原始邮箱/IP）；windowStart；count；expiresAt。实际表与 Better Auth 数据库存储方式可分开，不能破坏库 schema。计数原子递增，维护命令清理过期桶。不以 count 的 read-then-write 实现共享限流。
 
+### UploadLease（M6）
+
+id UUID PK；keyHash char(64)；startedAt timestamptz；expiresAt timestamptz；active boolean。索引 (keyHash,startedAt) 和 expiresAt。同用户准入通过事务级 advisory lock 串行化，频率统计 startedAt 的滑动一分钟、并发统计未过期 active。释放只改 active，不删除频率证据；超过 180 秒允许崩溃恢复，维护限批删除过期行。
+
 ## 4. 写入事务与锁
 
 所有同项目写入先锁 Project（SELECT FOR UPDATE 或语义等价实现），再检查权限和归档状态，之后按 Task → 子资源顺序锁定。涉及owner活动项目数量的创建/归档/恢复，须先取得User锁再取得Project锁；恢复时检查10项目配额。统一顺序 User（需要时）→ Project → Task → 子资源。必须使用参数化 SQL。网络 I/O 不能位于事务内。

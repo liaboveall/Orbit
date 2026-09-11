@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+const twMerge = extendTailwindMerge({ extend: { theme: { text: ["caption", "label", "body", "section", "page", "hero"] } } });
 
 /**
  * 合并 className 的跨功能纯工具（docs/03 §3：lib/ 放确实跨功能的纯工具）。

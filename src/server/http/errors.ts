@@ -103,7 +103,9 @@ export function errorResponse(
 /** 由 DomainError 构造错误 Response（透传 fieldErrors 与冲突明细 details）。 */
 export function domainErrorResponse(error: DomainError, requestId: string): Response {
   const body = buildBody(error.code, error.message, requestId, error.fieldErrors, error.details);
-  return toResponse(body, error.status, requestId);
+  const response = toResponse(body, error.status, requestId);
+  if (error.code === "RATE_LIMITED") response.headers.set("Retry-After", "60");
+  return response;
 }
 
 /**
@@ -124,6 +126,11 @@ export function internalErrorResponse(requestId: string): Response {
 export function toErrorResponse(error: unknown, requestId: string): Response {
   if (error instanceof DomainError) {
     return domainErrorResponse(error, requestId);
+  }
+  const code = typeof error === "object" && error !== null && "code" in error ? error.code : undefined;
+  if (typeof code === "string" && ["P1001", "P1002", "P1008", "P1017", "P2024", "ECONNREFUSED", "ECONNRESET", "57P01", "53300"].includes(code)) {
+    console.error(JSON.stringify({ requestId, errorCode: "SERVICE_UNAVAILABLE" }));
+    return errorResponse("SERVICE_UNAVAILABLE", "服务暂时不可用，请稍后重试。", requestId);
   }
   // 脱敏日志：只记录安全的结构化字段（requestId、errorCode、errorClass），
   // 完全移除可能含敏感信息的 message/name/stack 等字段
