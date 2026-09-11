@@ -1,0 +1,231 @@
+"use client";
+
+import { ListChecks, Plus } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { z } from "zod";
+import {
+  Button,
+  IconButton,
+  InlineError,
+  Skeleton,
+  SkeletonBlock,
+  Textarea,
+  useToast,
+} from "@/components/ui";
+import {
+  CreateSubtaskSchema,
+  SubtaskSchema,
+  createApiClient,
+  type SubtaskDTO,
+} from "@/contracts";
+import { SampleError } from "@/features/shell/state-views";
+import {
+  messageForError,
+  redirectToLoginIfUnauthenticated,
+} from "../api-helpers";
+import { SubtaskItem } from "./subtask-item";
+
+const api = createApiClient();
+const SubtaskListSchema = z.array(SubtaskSchema);
+const TITLE_MAX = 200;
+
+/**
+ * 子任务模块容器（ORB-016）。自取数据（GET /tasks/{id}/subtasks，非分页 → api.get + 数组 schema），
+ * 负责添加（POST 幂等）与刷新，勾选/编辑/删除由 SubtaskItem 直接对接端点。
+ *
+ * 六态：loading（骨架）/ empty（空提示）/ error（局部错误+重试，不清草稿）/ permission（403）
+ * / 正常 / long-content（列表天然可滚动）。移动端布局在 task-editor 容器内自适应。
+ */
+export function SubtaskList({ taskId, canEdit }: { taskId: string; canEdit: boolean }) {
+  const { toast } = useToast();
+  const [subtasks, setSubtasks] = useState<SubtaskDTO[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
+  const [rowBusy, setRowBusy] = useState(false);
+
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [addError, setAddError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const addLock = useRef(false);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await api.get(`/tasks/${taskId}/subtasks`, SubtaskListSchema);
+      if (!res.ok) {
+        if (redirectToLoginIfUnauthenticated(res.status)) return;
+        if (res.status === 403) {
+          setForbidden(true);
+          return;
+        }
+        setLoadError(messageForError(res.error.code, res.status, "加载子任务失败，请重试。"));
+        return;
+      }
+      setSubtasks(res.data);
+      setLoadError(null);
+      setForbidden(false);
+    } catch {
+      setLoadError("无法连接服务器，请检查网络后重试。");
+    }
+  }, [taskId]);
+
+  useEffect(() => {
+    setSubtasks(null);
+    setLoadError(null);
+    setForbidden(false);
+    void load();
+  }, [load]);
+
+  async function handleAdd() {
+    if (addLock.current || !canEdit) return;
+    const parsed = CreateSubtaskSchema.safeParse({ title: draft.trim() });
+    if (!parsed.success) {
+      // Zod 4：读取 .issues（非 Zod 3 的 .errors）。
+      setAddError(parsed.error.issues[0]?.message ?? "标题不合法。");
+      return;
+    }
+    addLock.current = true;
+    setSubmitting(true);
+    setAddError(null);
+    try {
+      const res = await api.post(`/tasks/${taskId}/subtasks`, SubtaskSchema, parsed.data, {
+        idempotencyKey: crypto.randomUUID(),
+      });
+      if (!res.ok) {
+        if (redirectToLoginIfUnauthenticated(res.status)) return;
+        setAddError(messageForError(res.error.code, res.status, res.error.message));
+        return;
+      }
+      setDraft("");
+      setAdding(false);
+      toast({ title: "子任务已添加", variant: "success" });
+      await load();
+    } catch {
+      setAddError("无法连接服务器，你的输入已保留，请重试。");
+    } finally {
+      addLock.current = false;
+      setSubmitting(false);
+    }
+  }
+
+  const doneCount = subtasks?.filter((s) => s.isCompleted).length ?? 0;
+  const total = subtasks?.length ?? 0;
+
+  return (
+    <section className="space-y-3" aria-label="子任务">
+      <h2 className="flex items-center gap-2 text-label font-semibold text-foreground">
+        <ListChecks className="h-4 w-4 text-foreground-muted" aria-hidden="true" />
+        子任务{total > 0 ? ` (${doneCount}/${total})` : ""}
+      </h2>
+
+      {subtasks === null && !loadError ? (
+        <SkeletonBlock label="子任务加载中" className="space-y-2">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-8" />
+          ))}
+        </SkeletonBlock>
+      ) : forbidden ? (
+        <p className="text-caption text-foreground-muted">你没有查看该任务子任务的权限。</p>
+      ) : loadError ? (
+        <div>
+          <SampleError message={loadError} draftNote={null} />
+          <div className="mt-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setLoadError(null);
+                setSubtasks(null);
+                void load();
+              }}
+            >
+              重新加载
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {total === 0 && !adding ? (
+            <p className="text-caption text-foreground-muted">暂无子任务。</p>
+          ) : (
+            <ul className="space-y-1" role="list">
+              {subtasks!.map((subtask) => (
+                <SubtaskItem
+                  key={subtask.id}
+                  subtask={subtask}
+                  canEdit={canEdit}
+                  disabled={rowBusy}
+                  onBusyChange={setRowBusy}
+                  onReload={load}
+                />
+              ))}
+            </ul>
+          )}
+
+          {canEdit && (
+            <div className="rounded-control border border-line p-2">
+              {adding ? (
+                <div className="space-y-2">
+                  <Textarea
+                    value={draft}
+                    onChange={(e) => {
+                      setDraft(e.target.value);
+                      setAddError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        e.stopPropagation();
+                        setAdding(false);
+                        setDraft("");
+                        setAddError(null);
+                      } else if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        void handleAdd();
+                      }
+                    }}
+                    placeholder="输入子任务标题（最多 200 字符）…"
+                    aria-label="新子任务标题"
+                    className="text-label"
+                    rows={2}
+                    maxLength={TITLE_MAX}
+                    autoFocus
+                  />
+                  {addError && <InlineError>{addError}</InlineError>}
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" onClick={handleAdd} disabled={submitting || !draft.trim()}>
+                      {submitting ? "添加中…" : "添加"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={submitting}
+                      onClick={() => {
+                        setAdding(false);
+                        setDraft("");
+                        setAddError(null);
+                      }}
+                    >
+                      取消
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setAdding(true);
+                    setAddError(null);
+                  }}
+                >
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  添加子任务
+                </Button>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
