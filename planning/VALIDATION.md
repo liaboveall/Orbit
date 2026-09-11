@@ -1,7 +1,7 @@
 # 规划静态校验结果
 
 - Result: PASS
-- Run at: 2026-09-11T11:20:36.594698+00:00
+- Run at: 2026-09-11T11:21:54.964846+00:00
 - Scope: planning files only. Application code, business behavior, deployment and runtime tests are NOT verified.
 
 ## Checks

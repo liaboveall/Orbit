@@ -917,6 +917,13 @@
     "baselineDate": "2026-09-11",
     "recoveredSnapshotCount": 15,
     "historyDocument": "docs/DEVELOPMENT-HISTORY.md",
-    "originalCommitHistoryAvailable": false
+    "originalCommitHistoryAvailable": false,
+    "published": true,
+    "verification": {
+      "freshRemoteClone": "passed",
+      "archiveTreesMatched": 15,
+      "gitFsck": "passed",
+      "baselineCommit": "6efa2c5e438fc8853674f304091011df6509c2b7"
+    }
   }
 }

@@ -2,6 +2,8 @@
 
 已创建私有仓库 [liaboveall/Orbit](https://github.com/liaboveall/Orbit)。本次将当前 M0–M5 已验收状态建立为 `main` 基线，并发布 15 个 `archive/snapshot-*` 恢复标签。原本没有正式提交；全部历史 tree 原样保留，原始作者/时间/父子关系不可恢复，没有伪造开发顺序。详见 [历史说明](docs/DEVELOPMENT-HISTORY.md) 与 [归档清单](docs/history/recovered-snapshots.json)。
 
+发布验收：主分支和 15 个标签已推送；从远端全新 bare clone 核对全部历史 tree/commit 一致，Git fsck 通过，规划检查 PASS。基线提交 `6efa2c5`。
+
 本次仅涉及 Git 发布与文档，业务验收仍为下述 R01–R09 修复报告的 787 项测试。未部署生产环境，M6/M7 状态不变。下一步按 M6 / ORB-020 推进；此后开发应持续提交到 Git，避免只依赖临时快照。
 
 ---
