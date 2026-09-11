@@ -1,0 +1,71 @@
+# Orbit 本地开发依赖（M0）。命令：docker compose -f infra/compose.dev.yml up -d
+#
+# 约束（docs/08 §1）：所有端口只绑定 127.0.0.1；测试使用独立数据库 orbit_test，
+# 不复用 orbit_dev 数据。生产 Dockerfile / 部署编排属 M6（ORB-021），此处不含。
+#
+# 端口：PostgreSQL 5432 · MinIO API 9000 / 控制台 9001 · Mailpit SMTP 宿主 25025→容器 1025 / Web 8025
+
+name: orbit-dev
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: orbit-postgres
+    restart: unless-stopped
+    ports:
+      # 默认 5432（docs/08 推荐）。本机 5432 已被其它 PostgreSQL 占用时，
+      # 可用 POSTGRES_HOST_PORT 覆盖宿主端口（容器内仍为 5432），
+      # 并同步修改 .env.local 的 DATABASE_URL/TEST_DATABASE_URL 端口。
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: orbit
+      POSTGRES_PASSWORD: orbit_dev_only
+      POSTGRES_DB: orbit_dev
+    volumes:
+      - orbit_pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orbit -d orbit_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  minio:
+    # 私有 S3 兼容存储（附件属 M5）。开发用浮动标签，生产在 M6 锁定 digest。
+    image: minio/minio:latest
+    container_name: orbit-minio
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    environment:
+      # 与 .env.example 的 STORAGE_ACCESS_KEY_ID / STORAGE_SECRET_ACCESS_KEY 对应（仅本地）
+      MINIO_ROOT_USER: orbit_dev_access
+      MINIO_ROOT_PASSWORD: orbit_dev_secret_change
+    volumes:
+      - orbit_minio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  mailpit:
+    # 本地 SMTP / 邮件查看器（邮件流程属 M1）。开发用浮动标签，生产在 M6 锁定。
+    image: axllent/mailpit:latest
+    container_name: orbit-mailpit
+    restart: unless-stopped
+    ports:
+      # SMTP 宿主端口默认 25025 → 容器 1025（与 .env.local / .env.example 的 SMTP_PORT=25025 一致）。
+      # 不用宿主 1025 的原因：Windows 的动态/临时端口范围常为 1024–15000，宿主 1025 会被
+      # 出站连接随机占用导致 bind 失败；25025 在临时区间之外，稳定可用。容器内 Mailpit 始终监听 1025。
+      # 如需改宿主端口，用 MAILPIT_SMTP_HOST_PORT 覆盖并同步 .env.local 的 SMTP_PORT。
+      - "127.0.0.1:${MAILPIT_SMTP_HOST_PORT:-25025}:1025"
+      - "127.0.0.1:${MAILPIT_WEB_HOST_PORT:-8025}:8025"
+    environment:
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+
+volumes:
+  orbit_pgdata:
+  orbit_minio:

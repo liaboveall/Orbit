@@ -1,0 +1,75 @@
+# --- Dependencies ---
+node_modules/
+.pnpm-store/
+
+# --- Next.js build output ---
+.next/
+out/
+build/
+next-env.d.ts.bak
+
+# --- Prisma generated client (regenerated via `pnpm db:generate`) ---
+src/generated/
+
+# --- Environment files & secrets (NEVER commit real values) ---
+.env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+# Any local secret material
+*.pem
+*.key
+*.p12
+secrets/
+credentials.json
+
+# --- Auth / session / invite artifacts (must never be committed) ---
+sessions/
+*.session
+invite-tokens/
+invite_tokens.*
+
+# --- Real user uploads / attachments (local dev only) ---
+/uploads/
+/attachments/
+/storage-local/
+
+# --- Test / coverage / e2e output ---
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+playwright/.cache/
+blob-report/
+
+# --- Database dumps / local data ---
+*.sql.gz
+*.dump
+pgdata/
+
+# --- Logs ---
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Artifacts: keep the folder + README, ignore large generated reports ---
+artifacts/*
+!artifacts/README.md
+!artifacts/**/.gitkeep
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# --- Misc ---
+*.tsbuildinfo

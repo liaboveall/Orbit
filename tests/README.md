@@ -1,0 +1,22 @@
+# tests · 测试与验收
+
+| 目录 | 命令 | 覆盖范围 |
+|---|---|---|
+| unit | `pnpm test:unit` | 输入校验、游标、草稿、IP、排序等纯逻辑 |
+| contract | `pnpm test:contract` | OpenAPI / Zod、响应形状与 M0–M4 HTTP 路由导出 |
+| integration | `pnpm test:integration` | 独立 PostgreSQL 上的 API、权限、事务、并发与维护脚本 |
+| e2e | `pnpm test:e2e --retries=0` | 真实认证、项目、任务、邀请、成员与失败恢复 |
+| ui | `pnpm test:ui --retries=0` | 响应式导航、弹层、键盘焦点、草稿保护 |
+
+`pnpm check` 包含 lint、typecheck、unit、contract；集成测试、浏览器测试和
+`pnpm typecheck:scripts` 单独运行。最新实际结果见
+[最新审查与验证报告](../docs/reviews/REVIEW-FIXES-2026-09-11.md)。
+
+E2E/UI 默认先生产构建，再由 runner 启动 3100 端口的独立测试服务，连接 orbit_test。
+`E2E_BASE_URL` 外部服务复用已禁用，不能指向日常开发服务。UI 继承相同隔离配置。
+两套浏览器测试均精确清理夹具，并在结束时核对开发库、测试库内容指纹。
+数据库集成与浏览器套件顺序执行，避免同时修改测试库造成隔离校验冲突。
+
+浏览器安装：`pnpm exec playwright install --with-deps chromium`。
+截图、trace 等运行产物在 `test-results/`；正式验收日志在 `artifacts/`。
+连接、环境变量和清理规则见 [环境文档](../docs/08-ENVIRONMENT-AND-DEPLOYMENT.md)。
