@@ -1,0 +1,316 @@
+// Orbit · Prisma 7 schema（M0 基线）
+//
+// Prisma 7 约定（区别于 6/8）：
+//   - datasource 只声明 provider；连接串 url 在根目录 prisma.config.ts 配置。
+//   - generator 使用新的 "prisma-client"（Rust-free），且 output 为必填，
+//     客户端不再默认生成到 node_modules。
+//
+// M0 范围：仅支撑「空数据库可连接 + 迁移工具链可用」。
+// M1（ORB-004）：引入 Better Auth 1.7.3 认证模型（User/Session/Account/Verification）。
+// 认证表字段严格对齐 @better-auth/core@1.7.3 dist/db/schema/*（官方生成结果，不擅自删改）；
+// User.timezone 是 Orbit 业务扩展字段（docs/04 §3），由本项目添加。
+// 其余业务表（Project/Task 等）随 M2 起按 docs/04 引入。
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// ── Better Auth 认证模型（1.7.3 官方 schema）───────────────────────────────
+// id 使用认证库默认 cuid()（字符串，非 UUID）；业务 userId 与之同类型（docs/04 §1）。
+// email/token 唯一约束、userId 外键 Cascade、@updatedAt、userId/identifier 索引均为库要求，不删改。
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  // Orbit 业务扩展字段：IANA 时区（docs/04 §3）。默认 Asia/Shanghai。
+  timezone      String    @default("Asia/Shanghai")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  // M2 项目域反向关系（docs/04）：owner 的项目、成员关系、活动、幂等记录。
+  ownedProjects   Project[]           @relation("ProjectOwner")
+  memberships     ProjectMember[]     @relation("ProjectMembership")
+  activities      ActivityLog[]       @relation("ActivityActor")
+  idempotencyKeys IdempotencyRecord[] @relation("IdempotencyUser")
+  // M4 邀请关系
+  invitationsCreated  Invitation[]    @relation("InvitationCreator")
+  invitedToProjects   Invitation[]    @relation("InvitationAcceptedBy")
+  // M2 任务域反向关系（docs/04 §3）：创建的任务、被分配的任务。
+  createdTasks    Task[]              @relation("TaskCreator")
+  assignedTasks   Task[]              @relation("TaskAssignee")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  // 邮箱密码认证的密码哈希仅由认证库存于此列（credential provider），业务 API 永不返回。
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+// ── M2 项目域枚举 ──────────────────────────────────────────────
+// 取值严格对齐 src/contracts/enums.ts（PROJECT_COLOR / ACTIVITY_ENTITY_TYPE / ACTIVITY_ACTION）。
+// PROJECT_ROLE 不入数据库（计算得出，docs/05 §4）。
+
+enum ProjectColor {
+  BLUE
+  PURPLE
+  TEAL
+  GREEN
+  ORANGE
+  GRAY
+}
+
+enum ActivityEntityType {
+  PROJECT
+  MEMBER
+  TASK
+  SUBTASK
+  COMMENT
+  ATTACHMENT
+}
+
+enum ActivityAction {
+  PROJECT_CREATED
+  PROJECT_UPDATED
+  PROJECT_ARCHIVED
+  PROJECT_RESTORED
+  MEMBER_JOINED
+  MEMBER_LEFT
+  MEMBER_REMOVED
+  TASK_CREATED
+  TASK_UPDATED
+  TASK_MOVED
+  TASK_DELETED
+  TASK_RESTORED
+  SUBTASK_CREATED
+  SUBTASK_UPDATED
+  SUBTASK_DELETED
+  COMMENT_CREATED
+  COMMENT_UPDATED
+  COMMENT_DELETED
+  FILE_UPLOADED
+  FILE_DELETED
+}
+
+// ── M2 项目域模型（docs/04 §3）────────────────────────────────────────
+// 业务实体 id 用 @db.Uuid + gen_random_uuid()；FK 到 User.id 的字段用 String（TEXT/cuid）。
+// 所有 onDelete: Restrict：用户/项目存在引用时不允许级联删除（保护业务数据）。
+// CHECK 约束（key 格式、计数器正值、bytes 非负）无法由 Prisma schema 表达，在迁移 SQL 中手写。
+
+model Project {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerId        String
+  name           String        @db.VarChar(80)
+  key            String        @unique @db.VarChar(8)
+  description    String        @default("")
+  color          ProjectColor
+  archivedAt     DateTime?
+  version        Int           @default(1)
+  boardVersion   Int           @default(1)
+  nextTaskNumber Int           @default(1)
+  reservedBytes  BigInt        @default(0)
+  usedBytes      BigInt        @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  owner          User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  members        ProjectMember[]
+  invitations    Invitation[]
+  activities     ActivityLog[]
+  tasks          Task[]
+
+  @@index([ownerId, archivedAt, updatedAt, id])
+}
+
+model ProjectMember {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId String   @db.Uuid
+  userId    String
+  joinedAt  DateTime @default(now())
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  user      User     @relation("ProjectMembership", fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([projectId, userId])
+  @@index([userId, projectId])
+}
+
+// ── M4 邀请模型（docs/04 §5）────────────────────────────────────────
+// token 为 32 随机字节的 URL 安全编码；数据库仅存 SHA-256 摘要 (char(64))。
+// INVITE_TOKEN 明文仅在创建响应返回一次，不进入日志或持久层。
+// acceptedAt 与 acceptedById 同时为空或同时非空（原子性）。
+
+model Invitation {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId    String       @db.Uuid
+  createdById  String
+  tokenHash    String       @db.Char(64) @unique
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  acceptedAt   DateTime?    // Must be NULL if acceptedById is NULL, and vice versa (docs/04 §5)
+  acceptedById String?      // Both must be NULL or both non-NULL - enforced by DB trigger
+  createdAt    DateTime     @default(now())
+
+  project      Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  creator      User               @relation("InvitationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  acceptedBy   User?              @relation("InvitationAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
+
+  @@index([projectId, createdAt, id])
+  @@index([expiresAt])
+  
+  // Business rule for database integrity - enforced via trigger in migration
+  // acceptedAt and acceptedById must be both NULL or both non-NULL
+}
+
+model ActivityLog {
+  id         String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId  String             @db.Uuid
+  actorId    String
+  entityType ActivityEntityType
+  entityId   String
+  action     ActivityAction
+  metadata   Json               @default("{}")
+  createdAt  DateTime           @default(now())
+
+  project    Project            @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  actor      User               @relation("ActivityActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([projectId, createdAt(sort: Desc), id(sort: Desc)])
+}
+
+model IdempotencyRecord {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String
+  method         String    @db.VarChar(10)
+  routeKey       String
+  key            String    @db.VarChar(128)
+  requestHash    String    @db.Char(64)
+  responseStatus Int
+  responseBody   Json
+  resourceId     String?
+  createdAt      DateTime  @default(now())
+  expiresAt      DateTime
+
+  user           User      @relation("IdempotencyUser", fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, method, routeKey, key])
+  @@index([expiresAt])
+}
+
+// ── M2 任务域枚举（docs/04 §3）────────────────────────────────
+// 取值严格对齐 src/contracts/enums.ts（TASK_STATUS / TASK_PRIORITY）。
+// TaskPriority 声明顺序 NONE→LOW→MEDIUM→HIGH：PostgreSQL 枚举按声明序排序，
+// 故 `ORDER BY priority DESC` 恰好得到 HIGH→MEDIUM→LOW→NONE（docs/05 §6）。
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum TaskPriority {
+  NONE
+  LOW
+  MEDIUM
+  HIGH
+}
+
+// ── M2 任务域模型（docs/04 §3）────────────────────────────────
+// id 用 @db.Uuid + gen_random_uuid()；FK 到 User.id 的字段用 String（TEXT/cuid）。
+// creatorId onDelete Restrict（保护历史）；assigneeId onDelete SetNull（成员退出/删除时置空）。
+// position 为 bigint，仅服务端处理，永不入 DTO（docs/04 §5）。
+// CHECK 约束（number>0、version>0、title trim 非空、DONE⇔completedAt）无法由 Prisma 表达，在迁移 SQL 手写。
+
+model Task {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId   String        @db.Uuid
+  number      Int
+  creatorId   String
+  assigneeId  String?
+  title       String        @db.VarChar(120)
+  description String        @default("")
+  status      TaskStatus    @default(TODO)
+  priority    TaskPriority  @default(NONE)
+  dueDate     DateTime?     @db.Date
+  position    BigInt
+  completedAt DateTime?
+  version     Int           @default(1)
+  deletedAt   DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  creator     User          @relation("TaskCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  assignee    User?         @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  moveRecords MoveRecord[]
+
+  @@unique([projectId, number])
+  @@unique([id, projectId])
+  @@index([projectId, deletedAt, status, position, id])
+  @@index([projectId, deletedAt, updatedAt, id])
+  @@index([assigneeId, deletedAt, status, dueDate, id])
+}
+
+model MoveRecord {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taskId        String     @db.Uuid
+  fromStatus    String
+  toStatus      String
+  fromPosition  BigInt
+  toPosition    BigInt
+  boardVersion  Int
+  createdAt     DateTime   @default(now())
+
+  task          Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([createdAt(sort: Desc)])
+}

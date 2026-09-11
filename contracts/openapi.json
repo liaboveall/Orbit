@@ -1,0 +1,5442 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Orbit V1 Business API",
+    "version": "1.0.0",
+    "description": "开发前契约。认证由 /api/auth/* Better Auth 管理。业务规则见docs/01、04、05。当前尚未实现。"
+  },
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Account"
+    },
+    {
+      "name": "Projects"
+    },
+    {
+      "name": "Members"
+    },
+    {
+      "name": "Invitations"
+    },
+    {
+      "name": "Tasks"
+    },
+    {
+      "name": "Board"
+    },
+    {
+      "name": "Subtasks"
+    },
+    {
+      "name": "Comments"
+    },
+    {
+      "name": "Files"
+    },
+    {
+      "name": "Activity"
+    },
+    {
+      "name": "Dashboard"
+    }
+  ],
+  "paths": {
+    "/me": {
+      "get": {
+        "operationId": "getMe",
+        "tags": [
+          "Account"
+        ],
+        "summary": "读取当前账户",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateMe",
+        "tags": [
+          "Account"
+        ],
+        "summary": "修改姓名或时区",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMe"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects": {
+      "get": {
+        "operationId": "listProjects",
+        "tags": [
+          "Projects"
+        ],
+        "summary": "列出我拥有和参与的项目",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Project"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "description": "不透明游标，需与过滤/排序一致"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30
+            },
+            "description": ""
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "owned",
+                "joined"
+              ]
+            },
+            "description": ""
+          },
+          {
+            "name": "archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "exclude",
+                "only"
+              ]
+            },
+            "description": ""
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createProject",
+        "tags": [
+          "Projects"
+        ],
+        "summary": "创建项目",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "幂等重放（邀请明文 token 返回 null）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Project"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Project"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "同一逻辑请求的重试复用；邀请token重放例外见05。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProject"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{projectId}": {
+      "get": {
+        "operationId": "getProject",
+        "tags": [
+          "Projects"
+        ],
+        "summary": "读取项目",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Project"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "updateProject",
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Owner 修改或归档/恢复项目",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Project"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProject"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{projectId}/members": {
+      "get": {
+        "operationId": "listMembers",
+        "tags": [
+          "Members"
+        ],
+        "summary": "列出项目成员，含 Owner",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Member"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/projects/{projectId}/members/{userId}": {
+      "delete": {
+        "operationId": "removeMember",
+        "tags": [
+          "Members"
+        ],
+        "summary": "Owner 移除成员，或 Member 退出",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "成功，无响应体"
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ]
+      }
+    },
+    "/projects/{projectId}/invitations": {
+      "get": {
+        "operationId": "listInvitations",
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "Owner 查看邀请元数据",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Invitation"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "description": "不透明游标，需与过滤/排序一致"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30
+            },
+            "description": ""
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createInvitation",
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "Owner 创建7天有效的一次性邀请",
+        "description": "无请求体；首次201返回token，幂等重放200仅元数据、token和invitePath为null。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "幂等重放（邀请明文 token 返回 null）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CreatedInvitation"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CreatedInvitation"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "同一逻辑请求的重试复用；邀请token重放例外见05。"
+          }
+        ]
+      }
+    },
+    "/projects/{projectId}/invitations/{invitationId}": {
+      "delete": {
+        "operationId": "revokeInvitation",
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "Owner 撤销邀请",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "成功，无响应体"
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/invitations/preview": {
+      "post": {
+        "operationId": "previewInvitation",
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "持token匿名预览最小邀请信息",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/InvitePreview"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteToken"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/invitations/accept": {
+      "post": {
+        "operationId": "acceptInvitation",
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "已验证账户接受邀请",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AcceptedInvitation"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteToken"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{projectId}/tasks": {
+      "get": {
+        "operationId": "listProjectTasks",
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "项目任务列表/回收站",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TaskSummary"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "description": "不透明游标，需与过滤/排序一致"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30
+            },
+            "description": ""
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 100
+            },
+            "description": ""
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "TODO",
+                "IN_PROGRESS",
+                "DONE"
+              ]
+            },
+            "description": ""
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NONE",
+                "LOW",
+                "MEDIUM",
+                "HIGH"
+              ]
+            },
+            "description": ""
+          },
+          {
+            "name": "assigneeId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": ""
+          },
+          {
+            "name": "unassigned",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": ""
+          },
+          {
+            "name": "overdue",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": ""
+          },
+          {
+            "name": "deleted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "exclude",
+                "only"
+              ]
+            },
+            "description": ""
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "updated_desc",
+                "due_asc",
+                "priority_desc"
+              ]
+            },
+            "description": ""
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createTask",
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "创建任务",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "幂等重放（邀请明文 token 返回 null）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Task"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Task"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "同一逻辑请求的重试复用；邀请token重放例外见05。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTask"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{projectId}/board": {
+      "get": {
+        "operationId": "getBoard",
+        "tags": [
+          "Board"
+        ],
+        "summary": "同快照看板及分列分页",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Board"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "description": ""
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "description": "只用于单列分页，包含最初boardVersion"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "TODO",
+                "IN_PROGRESS",
+                "DONE"
+              ]
+            },
+            "description": "有cursor时必填；无status时返回三列"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 100
+            },
+            "description": ""
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NONE",
+                "LOW",
+                "MEDIUM",
+                "HIGH"
+              ]
+            },
+            "description": ""
+          },
+          {
+            "name": "assigneeId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": ""
+          },
+          {
+            "name": "unassigned",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": ""
+          },
+          {
+            "name": "overdue",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": ""
+          }
+        ]
+      }
+    },
+    "/tasks/{taskId}": {
+      "get": {
+        "operationId": "getTask",
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "读取未删除任务详情",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Task"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "updateTask",
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "带版本更新任务；改状态追加目标列末尾",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Task"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTask"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteTask",
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Owner/创建者软删除任务",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DeletedTask"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "expectedVersion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "当前任务版本"
+          }
+        ]
+      }
+    },
+    "/tasks/{taskId}/restore": {
+      "post": {
+        "operationId": "restoreTask",
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Owner/创建者恢复任务",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Task"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "同一逻辑请求的重试复用；邀请token重放例外见05。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/{taskId}/move": {
+      "post": {
+        "operationId": "moveTask",
+        "tags": [
+          "Board"
+        ],
+        "summary": "版本检查后移动或排序任务",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MoveResult"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveTask"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/{taskId}/subtasks": {
+      "get": {
+        "operationId": "listSubtasks",
+        "tags": [
+          "Subtasks"
+        ],
+        "summary": "读取子任务清单",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Subtask"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createSubtask",
+        "tags": [
+          "Subtasks"
+        ],
+        "summary": "创建子任务",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "幂等重放（邀请明文 token 返回 null）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Subtask"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Subtask"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "同一逻辑请求的重试复用；邀请token重放例外见05。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSubtask"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/subtasks/{subtaskId}": {
+      "patch": {
+        "operationId": "updateSubtask",
+        "tags": [
+          "Subtasks"
+        ],
+        "summary": "编辑/勾选子任务",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Subtask"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "subtaskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSubtask"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteSubtask",
+        "tags": [
+          "Subtasks"
+        ],
+        "summary": "软删除子任务",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "成功，无响应体"
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "subtaskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "expectedVersion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "当前子任务版本"
+          }
+        ]
+      }
+    },
+    "/tasks/{taskId}/comments": {
+      "get": {
+        "operationId": "listComments",
+        "tags": [
+          "Comments"
+        ],
+        "summary": "分页读取评论（含删除占位）",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Comment"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "description": "不透明游标，需与过滤/排序一致"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30
+            },
+            "description": ""
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createComment",
+        "tags": [
+          "Comments"
+        ],
+        "summary": "发布纯文本评论",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "幂等重放（邀请明文 token 返回 null）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Comment"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Comment"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "同一逻辑请求的重试复用；邀请token重放例外见05。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateComment"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/comments/{commentId}": {
+      "patch": {
+        "operationId": "updateComment",
+        "tags": [
+          "Comments"
+        ],
+        "summary": "作者编辑评论",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Comment"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "commentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateComment"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteComment",
+        "tags": [
+          "Comments"
+        ],
+        "summary": "Owner/作者删除评论并返回占位",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Comment"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "commentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "expectedVersion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "当前评论版本"
+          }
+        ]
+      }
+    },
+    "/tasks/{taskId}/attachments": {
+      "get": {
+        "operationId": "listAttachments",
+        "tags": [
+          "Files"
+        ],
+        "summary": "列出上传中/已就绪/失败的附件",
+        "description": "Return all UPLOADING/READY plus the latest 5 FAILED records, at most 10 records. DELETED records are excluded.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Attachment"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "uploadAttachment",
+        "tags": [
+          "Files"
+        ],
+        "summary": "受控流式上传私有附件",
+        "description": "Multipart order: uploadId, declaredSizeBytes, sha256, then file. Metadata <=64KiB, file 1 byte..10MiB, timeout 120s. See docs/05 for authorization, validation, quotas and compensation.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "相同 uploadId 的已完成附件",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Attachment"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Attachment"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadAttachment"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/attachments/{attachmentId}/download": {
+      "get": {
+        "operationId": "getAttachmentDownload",
+        "tags": [
+          "Files"
+        ],
+        "summary": "授权后签发60秒下载链接",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Download"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "attachmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/attachments/{attachmentId}": {
+      "delete": {
+        "operationId": "deleteAttachment",
+        "tags": [
+          "Files"
+        ],
+        "summary": "Owner/上传者删除附件",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "成功，无响应体"
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "attachmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/projects/{projectId}/activity": {
+      "get": {
+        "operationId": "listActivity",
+        "tags": [
+          "Activity"
+        ],
+        "summary": "分页读取项目活动",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Activity"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "description": "不透明游标，需与过滤/排序一致"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30
+            },
+            "description": ""
+          }
+        ]
+      }
+    },
+    "/my/overview": {
+      "get": {
+        "operationId": "getMyOverview",
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "按用户时区统计当前分配",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Overview"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        }
+      }
+    },
+    "/my/tasks": {
+      "get": {
+        "operationId": "listMyTasks",
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "跨我参与的活动项目列出分配给我的任务",
+        "description": "详细权限、事务与边界规则见 docs/01、04、05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TaskSummary"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        },
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "description": "不透明游标，需与过滤/排序一致"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30
+            },
+            "description": ""
+          },
+          {
+            "name": "bucket",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all_open",
+                "overdue",
+                "today",
+                "upcoming",
+                "in_progress",
+                "done"
+              ]
+            },
+            "description": ""
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": ""
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 100
+            },
+            "description": ""
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NONE",
+                "LOW",
+                "MEDIUM",
+                "HIGH"
+              ]
+            },
+            "description": ""
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "updated_desc",
+                "due_asc",
+                "priority_desc"
+              ]
+            },
+            "description": ""
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "better-auth.session_token",
+        "description": "数据库会话，实际cookie名称/生产安全前缀由M1按锁定Better Auth配置同步；禁止客户端自行构造。"
+      }
+    },
+    "schemas": {
+      "Meta": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "requestId"
+        ]
+      },
+      "PageMeta": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "requestId",
+          "nextCursor",
+          "hasMore"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "fieldErrors": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                }
+              },
+              "currentVersion": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "currentBoardVersion": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "error",
+          "meta"
+        ]
+      },
+      "UserSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "User": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "emailVerified": {
+            "type": "boolean"
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "emailVerified",
+          "timezone"
+        ]
+      },
+      "UpdateMe": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [],
+        "minProperties": 1
+      },
+      "Project": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "key": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9]{1,7}$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 2000
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "BLUE",
+              "PURPLE",
+              "TEAL",
+              "GREEN",
+              "ORANGE",
+              "GRAY"
+            ]
+          },
+          "ownerId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "OWNER",
+              "MEMBER"
+            ]
+          },
+          "archivedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "boardVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "memberCount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "openTaskCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "key",
+          "description",
+          "color",
+          "ownerId",
+          "role",
+          "archivedAt",
+          "version",
+          "boardVersion",
+          "memberCount",
+          "openTaskCount",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateProject": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "key": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9]{1,7}$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 2000
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "BLUE",
+              "PURPLE",
+              "TEAL",
+              "GREEN",
+              "ORANGE",
+              "GRAY"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "key"
+        ]
+      },
+      "UpdateProject": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 2000
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "BLUE",
+              "PURPLE",
+              "TEAL",
+              "GREEN",
+              "ORANGE",
+              "GRAY"
+            ]
+          },
+          "archived": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "minProperties": 2
+      },
+      "Member": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "OWNER",
+              "MEMBER"
+            ]
+          },
+          "joinedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "userId",
+          "name",
+          "role",
+          "joinedAt"
+        ]
+      },
+      "Invitation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdById": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "acceptedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "EXPIRED",
+              "REVOKED",
+              "USED"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "createdById",
+          "createdAt",
+          "expiresAt",
+          "revokedAt",
+          "acceptedAt",
+          "state"
+        ]
+      },
+      "CreatedInvitation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "invitation": {
+            "$ref": "#/components/schemas/Invitation"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 40,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "invitePath": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "invitation",
+          "token",
+          "invitePath"
+        ]
+      },
+      "InviteToken": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 40,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "InvitePreview": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "projectName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "ownerName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "MEMBER"
+            ]
+          },
+          "isArchived": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "projectName",
+          "ownerName",
+          "expiresAt",
+          "role",
+          "isArchived"
+        ]
+      },
+      "AcceptedInvitation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "alreadyMember": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "projectId",
+          "alreadyMember"
+        ]
+      },
+      "TaskSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "identifier": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 40
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE"
+            ]
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "NONE",
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          },
+          "assignee": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "creator": {
+            "$ref": "#/components/schemas/UserSummary"
+          },
+          "dueDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "completedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "subtaskTotal": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "subtaskCompleted": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "commentCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "attachmentCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "deletedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "number",
+          "identifier",
+          "title",
+          "status",
+          "priority",
+          "assignee",
+          "creator",
+          "dueDate",
+          "completedAt",
+          "version",
+          "subtaskTotal",
+          "subtaskCompleted",
+          "commentCount",
+          "attachmentCount",
+          "deletedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "Task": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "identifier": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 40
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE"
+            ]
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "NONE",
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          },
+          "assignee": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "creator": {
+            "$ref": "#/components/schemas/UserSummary"
+          },
+          "dueDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "completedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "subtaskTotal": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "subtaskCompleted": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "commentCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "attachmentCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "deletedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 10000
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "number",
+          "identifier",
+          "title",
+          "status",
+          "priority",
+          "assignee",
+          "creator",
+          "dueDate",
+          "completedAt",
+          "version",
+          "subtaskTotal",
+          "subtaskCompleted",
+          "commentCount",
+          "attachmentCount",
+          "deletedAt",
+          "createdAt",
+          "updatedAt",
+          "description"
+        ]
+      },
+      "CreateTask": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 10000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE"
+            ]
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "NONE",
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          },
+          "assigneeId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dueDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "UpdateTask": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 10000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE"
+            ]
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "NONE",
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          },
+          "assigneeId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dueDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "minProperties": 2
+      },
+      "VersionInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ]
+      },
+      "DeletedTask": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "deletedAt"
+        ]
+      },
+      "MoveTask": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expectedBoardVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "toStatus": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE"
+            ]
+          },
+          "beforeTaskId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "expectedBoardVersion",
+          "toStatus",
+          "beforeTaskId"
+        ]
+      },
+      "MoveResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/Task"
+          },
+          "boardVersion": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "task",
+          "boardVersion"
+        ]
+      },
+      "BoardColumn": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE"
+            ]
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskSummary"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "total",
+          "items",
+          "nextCursor"
+        ]
+      },
+      "Board": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "boardVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardColumn"
+            }
+          }
+        },
+        "required": [
+          "boardVersion",
+          "columns"
+        ]
+      },
+      "Subtask": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "isCompleted": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "taskId",
+          "title",
+          "isCompleted",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateSubtask": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "UpdateSubtask": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "isCompleted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "minProperties": 2
+      },
+      "Comment": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "author": {
+            "$ref": "#/components/schemas/UserSummary"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "isDeleted": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "editedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "taskId",
+          "author",
+          "body",
+          "isDeleted",
+          "version",
+          "editedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateComment": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "body"
+        ]
+      },
+      "UpdateComment": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "body"
+        ]
+      },
+      "Attachment": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uploader": {
+            "$ref": "#/components/schemas/UserSummary"
+          },
+          "uploadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "mimeType": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "sizeBytes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10485760
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "declaredSizeBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10485760
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "UPLOADING",
+              "READY",
+              "FAILED"
+            ]
+          },
+          "errorCode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "taskId",
+          "uploader",
+          "uploadId",
+          "fileName",
+          "mimeType",
+          "sizeBytes",
+          "declaredSizeBytes",
+          "state",
+          "errorCode",
+          "createdAt"
+        ]
+      },
+      "UploadAttachment": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary"
+          },
+          "uploadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "declaredSizeBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10485760
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "file",
+          "uploadId",
+          "declaredSizeBytes",
+          "sha256"
+        ]
+      },
+      "Download": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fileName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "url",
+          "expiresAt",
+          "fileName"
+        ]
+      },
+      "Activity": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actor": {
+            "$ref": "#/components/schemas/UserSummary"
+          },
+          "entityType": {
+            "type": "string",
+            "enum": [
+              "PROJECT",
+              "MEMBER",
+              "TASK",
+              "SUBTASK",
+              "COMMENT",
+              "ATTACHMENT"
+            ]
+          },
+          "entityId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "PROJECT_CREATED",
+              "PROJECT_UPDATED",
+              "PROJECT_ARCHIVED",
+              "PROJECT_RESTORED",
+              "MEMBER_JOINED",
+              "MEMBER_LEFT",
+              "MEMBER_REMOVED",
+              "TASK_CREATED",
+              "TASK_UPDATED",
+              "TASK_MOVED",
+              "TASK_DELETED",
+              "TASK_RESTORED",
+              "SUBTASK_CREATED",
+              "SUBTASK_UPDATED",
+              "SUBTASK_DELETED",
+              "COMMENT_CREATED",
+              "COMMENT_UPDATED",
+              "COMMENT_DELETED",
+              "FILE_UPLOADED",
+              "FILE_DELETED"
+            ]
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ActivityMetadata"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "actor",
+          "entityType",
+          "entityId",
+          "action",
+          "metadata",
+          "createdAt"
+        ]
+      },
+      "Overview": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "today": {
+            "type": "string",
+            "format": "date"
+          },
+          "overdue": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dueToday": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "upcoming": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "inProgress": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalOpen": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "timezone",
+          "today",
+          "overdue",
+          "dueToday",
+          "upcoming",
+          "inProgress",
+          "totalOpen"
+        ]
+      },
+      "ActivityMetadata": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "taskIdentifier": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "name",
+                "description",
+                "color",
+                "title",
+                "status",
+                "priority",
+                "assigneeId",
+                "dueDate",
+                "isCompleted",
+                "body"
+              ]
+            }
+          },
+          "fromStatus": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE"
+            ]
+          },
+          "toStatus": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE"
+            ]
+          },
+          "targetUserId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "responses": {
+      "BusinessError": {
+        "description": "业务错误，具体HTTP码语义见05；429含Retry-After。",
+        "headers": {
+          "Retry-After": {
+            "description": "仅429返回等待秒数",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  }
+}
