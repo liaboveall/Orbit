@@ -1,0 +1,803 @@
+{
+  "schemaVersion": 1,
+  "project": "Orbit",
+  "planVersion": "1.0.0",
+  "updatedAt": "2026-09-11",
+  "applicationStatus": "M0_M4_VERIFIED_M5_READY",
+  "stateRules": {
+    "allowed": [
+      "todo",
+      "in_progress",
+      "review",
+      "done",
+      "blocked"
+    ],
+    "doneRequiresEvidence": true,
+    "defaultExecution": "one milestone at a time",
+    "M7RequiresExplicitRequest": true
+  },
+  "milestones": [
+    {
+      "id": "M0",
+      "title": "项目基线与规格实现",
+      "release": "V1",
+      "estimatedHours": {
+        "min": 10,
+        "max": 14
+      },
+      "status": "done",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md",
+      "notes": "2026-09-11：本轮审查收尾已验证。实际门禁、修复范围和限制见最新关闭报告。",
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ]
+    },
+    {
+      "id": "M1",
+      "title": "认证和个人设置",
+      "release": "V1",
+      "estimatedHours": {
+        "min": 14,
+        "max": 20
+      },
+      "status": "done",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md",
+      "notes": "2026-09-11：本轮审查收尾已验证。实际门禁、修复范围和限制见最新关闭报告。",
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ]
+    },
+    {
+      "id": "M2",
+      "title": "项目与任务纵向闭环",
+      "release": "V1",
+      "estimatedHours": {
+        "min": 18,
+        "max": 24
+      },
+      "status": "done",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md",
+      "notes": "2026-09-11：本轮审查收尾已验证。实际门禁、修复范围和限制见最新关闭报告。",
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ]
+    },
+    {
+      "id": "M3",
+      "title": "列表、看板与编辑体验",
+      "release": "V1",
+      "estimatedHours": {
+        "min": 14,
+        "max": 20
+      },
+      "status": "done",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md",
+      "notes": "2026-09-11：本轮审查收尾已验证。实际门禁、修复范围和限制见最新关闭报告。",
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ]
+    },
+    {
+      "id": "M4",
+      "title": "团队成员与活动",
+      "release": "V1",
+      "estimatedHours": {
+        "min": 14,
+        "max": 20
+      },
+      "status": "done",
+      "completionDate": "2026-09-11",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md",
+      "notes": "2026-09-11：本轮审查收尾已验证。实际门禁、修复范围和限制见最新关闭报告。",
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ]
+    },
+    {
+      "id": "M5",
+      "title": "协作、附件和工作台",
+      "release": "V1",
+      "estimatedHours": {
+        "min": 14,
+        "max": 22
+      },
+      "status": "todo",
+      "notes": "M0–M4 准入门禁通过。下一步 ORB-016 子任务清单，随后 ORB-017 评论、ORB-018 私有附件、ORB-019 工作台；本轮未实施 M5。",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+    },
+    {
+      "id": "M6",
+      "title": "发布与求职材料",
+      "release": "V1",
+      "estimatedHours": {
+        "min": 16,
+        "max": 24
+      },
+      "status": "todo"
+    },
+    {
+      "id": "M7",
+      "title": "AI 拆解助手 V1.1",
+      "release": "V1.1",
+      "estimatedHours": {
+        "min": 16,
+        "max": 24
+      },
+      "status": "todo"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "ORB-001",
+      "milestone": "M0",
+      "title": "工程与开发环境基线",
+      "status": "done",
+      "dependsOn": [],
+      "owner": null,
+      "specFiles": [
+        "docs/00-EXECUTION-OVERVIEW.md",
+        "docs/02-UX-AND-DESIGN.md",
+        "docs/03-ARCHITECTURE.md",
+        "contracts/openapi.json",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "依赖兼容并锁定",
+        "lint/typecheck/build 实际通过",
+        "本地依赖可启动且不包含生产凭证"
+      ],
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ],
+      "notes": "已实现并通过 M0–M4 最新验收；规格与验收要求见 specFiles / acceptanceChecks，实际命令见最新报告。",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+    },
+    {
+      "id": "ORB-002",
+      "milestone": "M0",
+      "title": "视觉变量、组件和三页布局",
+      "status": "done",
+      "dependsOn": [
+        "ORB-001"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/00-EXECUTION-OVERVIEW.md",
+        "docs/02-UX-AND-DESIGN.md",
+        "docs/03-ARCHITECTURE.md",
+        "contracts/openapi.json",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "390/768/1440 视口检查",
+        "基础键盘操作",
+        "fixture 明确标注"
+      ],
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ],
+      "notes": "已实现并通过 M0–M4 最新验收；规格与验收要求见 specFiles / acceptanceChecks，实际命令见最新报告。",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+    },
+    {
+      "id": "ORB-003",
+      "milestone": "M0",
+      "title": "DTO、错误与契约基础",
+      "status": "done",
+      "dependsOn": [
+        "ORB-001"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/00-EXECUTION-OVERVIEW.md",
+        "docs/02-UX-AND-DESIGN.md",
+        "docs/03-ARCHITECTURE.md",
+        "contracts/openapi.json",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "请求响应 schema 正反例",
+        "OpenAPI 对应结构",
+        "服务端客户端边界"
+      ],
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ],
+      "notes": "已实现并通过 M0–M4 最新验收；规格与验收要求见 specFiles / acceptanceChecks，实际命令见最新报告。",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+    },
+    {
+      "id": "ORB-004",
+      "milestone": "M1",
+      "title": "认证与数据库基础",
+      "status": "done",
+      "dependsOn": [
+        "ORB-002",
+        "ORB-003"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/01-PRODUCT-SPEC.md",
+        "docs/04-DATA-MODEL.md",
+        "docs/08-ENVIRONMENT-AND-DEPLOYMENT.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "认证迁移",
+        "会话隔离",
+        "Origin 及请求 ID"
+      ],
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ],
+      "notes": "已实现并通过 M0–M4 最新验收；规格与验收要求见 specFiles / acceptanceChecks，实际命令见最新报告。",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+    },
+    {
+      "id": "ORB-005",
+      "milestone": "M1",
+      "title": "认证全流程与邮件",
+      "status": "done",
+      "dependsOn": [
+        "ORB-004"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/01-PRODUCT-SPEC.md",
+        "docs/04-DATA-MODEL.md",
+        "docs/08-ENVIRONMENT-AND-DEPLOYMENT.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "AC-01",
+        "验证/重置实际 Mailpit 联调",
+        "旧会话失效"
+      ],
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ],
+      "notes": "已实现并通过 M0–M4 最新验收；规格与验收要求见 specFiles / acceptanceChecks，实际命令见最新报告。",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+    },
+    {
+      "id": "ORB-006",
+      "milestone": "M1",
+      "title": "个人设置与缓存清理",
+      "status": "done",
+      "dependsOn": [
+        "ORB-005"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/01-PRODUCT-SPEC.md",
+        "docs/04-DATA-MODEL.md",
+        "docs/08-ENVIRONMENT-AND-DEPLOYMENT.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "姓名时区持久化",
+        "非法时区拒绝",
+        "退出换账号缓存隔离"
+      ],
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ],
+      "notes": "已实现并通过 M0–M4 最新验收；规格与验收要求见 specFiles / acceptanceChecks，实际命令见最新报告。",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+    },
+    {
+      "id": "ORB-007",
+      "milestone": "M2",
+      "title": "项目、授权与活动事务",
+      "status": "done",
+      "dependsOn": [
+        "ORB-006"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/01-PRODUCT-SPEC.md",
+        "docs/04-DATA-MODEL.md",
+        "docs/05-API-CONTRACT.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "AC-02",
+        "AC-04",
+        "AC-10",
+        "项目数量及 key 并发"
+      ],
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ],
+      "notes": "已实现并通过 M0–M4 最新验收；规格与验收要求见 specFiles / acceptanceChecks，实际命令见最新报告。",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+    },
+    {
+      "id": "ORB-008",
+      "milestone": "M2",
+      "title": "任务生命周期",
+      "status": "done",
+      "dependsOn": [
+        "ORB-007"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/01-PRODUCT-SPEC.md",
+        "docs/04-DATA-MODEL.md",
+        "docs/05-API-CONTRACT.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "AC-02",
+        "AC-05",
+        "AC-10",
+        "编号/幂等/软删除"
+      ],
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ],
+      "notes": "已实现并通过 M0–M4 最新验收；规格与验收要求见 specFiles / acceptanceChecks，实际命令见最新报告。",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+    },
+    {
+      "id": "ORB-009",
+      "milestone": "M2",
+      "title": "纵向闭环集成验证",
+      "status": "done",
+      "dependsOn": [
+        "ORB-008"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/01-PRODUCT-SPEC.md",
+        "docs/04-DATA-MODEL.md",
+        "docs/05-API-CONTRACT.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "真实数据库回滚",
+        "契约测试",
+        "非成员越权拒绝"
+      ],
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ],
+      "notes": "已实现并通过 M0–M4 最新验收；规格与验收要求见 specFiles / acceptanceChecks，实际命令见最新报告。",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+    },
+    {
+      "id": "ORB-010",
+      "milestone": "M3",
+      "title": "任务列表与详情导航",
+      "status": "done",
+      "dependsOn": [
+        "ORB-009"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/02-UX-AND-DESIGN.md",
+        "docs/03-ARCHITECTURE.md",
+        "docs/04-DATA-MODEL.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "筛选 URL 与分页",
+        "侧面板及独立链接",
+        "私有任务不可见"
+      ],
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ],
+      "notes": "已实现并通过 M0–M4 最新验收；规格与验收要求见 specFiles / acceptanceChecks，实际命令见最新报告。",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+    },
+    {
+      "id": "ORB-011",
+      "milestone": "M3",
+      "title": "看板排序与移动",
+      "status": "done",
+      "dependsOn": [
+        "ORB-010"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/02-UX-AND-DESIGN.md",
+        "docs/03-ARCHITECTURE.md",
+        "docs/04-DATA-MODEL.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "AC-06",
+        "并发 move",
+        "分页快照冲突",
+        "重编号"
+      ],
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ],
+      "notes": "已实现并通过 M0–M4 最新验收；规格与验收要求见 specFiles / acceptanceChecks，实际命令见最新报告。",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+    },
+    {
+      "id": "ORB-012",
+      "milestone": "M3",
+      "title": "编辑冲突与响应式",
+      "status": "done",
+      "dependsOn": [
+        "ORB-011"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/02-UX-AND-DESIGN.md",
+        "docs/03-ARCHITECTURE.md",
+        "docs/04-DATA-MODEL.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "AC-05",
+        "AC-11",
+        "草稿保留",
+        "轮询不覆盖"
+      ],
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ],
+      "notes": "已实现并通过 M0–M4 最新验收；规格与验收要求见 specFiles / acceptanceChecks，实际命令见最新报告。",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+    },
+    {
+      "id": "ORB-013",
+      "milestone": "M4",
+      "title": "一次性项目邀请",
+      "status": "done",
+      "dependsOn": [
+        "ORB-012"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/01-PRODUCT-SPEC.md",
+        "docs/04-DATA-MODEL.md",
+        "docs/05-API-CONTRACT.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "AC-03",
+        "token 只首次显示",
+        "并发接受恰好一人成功",
+        "幂等重放无 token"
+      ],
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ],
+      "notes": "已实现并通过 M0–M4 最新验收；规格与验收要求见 specFiles / acceptanceChecks，实际命令见最新报告。",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+    },
+    {
+      "id": "ORB-014",
+      "milestone": "M4",
+      "title": "成员加入退出与分配清理",
+      "status": "done",
+      "dependsOn": [
+        "ORB-013"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/01-PRODUCT-SPEC.md",
+        "docs/04-DATA-MODEL.md",
+        "docs/05-API-CONTRACT.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "AC-09",
+        "移除与分配竞争处理",
+        "owner 不可退出"
+      ],
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ],
+      "notes": "已实现并通过 M0–M4 最新验收；规格与验收要求见 specFiles / acceptanceChecks，实际命令见最新报告。",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+    },
+    {
+      "id": "ORB-015",
+      "milestone": "M4",
+      "title": "活动与设置完整 UI",
+      "status": "done",
+      "dependsOn": [
+        "ORB-014"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/01-PRODUCT-SPEC.md",
+        "docs/04-DATA-MODEL.md",
+        "docs/05-API-CONTRACT.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "活动事务一致",
+        "归档例外处理",
+        "不记录正文/token"
+      ],
+      "evidence": [
+        "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+      ],
+      "notes": "已实现并通过 M0–M4 最新验收；规格与验收要求见 specFiles / acceptanceChecks，实际命令见最新报告。",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+    },
+    {
+      "id": "ORB-016",
+      "milestone": "M5",
+      "title": "子任务清单",
+      "status": "todo",
+      "dependsOn": [
+        "ORB-015"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/01-PRODUCT-SPEC.md",
+        "docs/02-UX-AND-DESIGN.md",
+        "docs/04-DATA-MODEL.md",
+        "docs/05-API-CONTRACT.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "AC-08",
+        "50 个上限",
+        "version",
+        "父状态独立"
+      ],
+      "evidence": [],
+      "notes": "依赖已满足，可开始子任务清单的规格、验收与垂直实现。本轮仅收尾 M0–M4。",
+      "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+    },
+    {
+      "id": "ORB-017",
+      "milestone": "M5",
+      "title": "评论讨论",
+      "status": "todo",
+      "dependsOn": [
+        "ORB-016"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/01-PRODUCT-SPEC.md",
+        "docs/02-UX-AND-DESIGN.md",
+        "docs/04-DATA-MODEL.md",
+        "docs/05-API-CONTRACT.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "AC-08",
+        "幂等评论",
+        "作者编辑/owner 删除",
+        "纯文本安全"
+      ],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "ORB-018",
+      "milestone": "M5",
+      "title": "私有附件与补偿",
+      "status": "todo",
+      "dependsOn": [
+        "ORB-017"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/01-PRODUCT-SPEC.md",
+        "docs/02-UX-AND-DESIGN.md",
+        "docs/04-DATA-MODEL.md",
+        "docs/05-API-CONTRACT.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "AC-08",
+        "类型/配额/摘要",
+        "重复 uploadId",
+        "真实 MinIO",
+        "清理幂等"
+      ],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "ORB-019",
+      "milestone": "M5",
+      "title": "我的工作台与时区",
+      "status": "todo",
+      "dependsOn": [
+        "ORB-018"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/01-PRODUCT-SPEC.md",
+        "docs/02-UX-AND-DESIGN.md",
+        "docs/04-DATA-MODEL.md",
+        "docs/05-API-CONTRACT.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "AC-07",
+        "固定时钟",
+        "活动项目/负责人筛选"
+      ],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "ORB-020",
+      "milestone": "M6",
+      "title": "综合质量验收",
+      "status": "todo",
+      "dependsOn": [
+        "ORB-019"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/07-QUALITY-AND-TESTING.md",
+        "docs/08-ENVIRONMENT-AND-DEPLOYMENT.md",
+        "docs/13-DEMO-AND-PORTFOLIO.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "AC-01 through AC-11",
+        "实际性能和可访问性报告"
+      ],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "ORB-021",
+      "milestone": "M6",
+      "title": "CI 与生产部署",
+      "status": "todo",
+      "dependsOn": [
+        "ORB-020"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/07-QUALITY-AND-TESTING.md",
+        "docs/08-ENVIRONMENT-AND-DEPLOYMENT.md",
+        "docs/13-DEMO-AND-PORTFOLIO.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "AC-12",
+        "HTTPS 双账户冒烟",
+        "迁移和备份恢复",
+        "私有存储与邮件"
+      ],
+      "evidence": [],
+      "notes": "M6 进行部署、备份恢复和质量验收；本地 M0–M4 验证不替代生产验收。"
+    },
+    {
+      "id": "ORB-022",
+      "milestone": "M6",
+      "title": "演示与求职材料",
+      "status": "todo",
+      "dependsOn": [
+        "ORB-021"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/07-QUALITY-AND-TESTING.md",
+        "docs/08-ENVIRONMENT-AND-DEPLOYMENT.md",
+        "docs/13-DEMO-AND-PORTFOLIO.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "只读 demo 隔离",
+        "英文 README",
+        "真实截图/报告",
+        "3 分钟演示"
+      ],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "ORB-023",
+      "milestone": "M7",
+      "title": "AI 契约与 provider 适配",
+      "status": "todo",
+      "dependsOn": [
+        "ORB-022"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/09-AI-ASSISTANT-V1.1.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "V1 仍无 key 可用",
+        "结构校验",
+        "受限输入",
+        "20 个 fixture"
+      ],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "ORB-024",
+      "milestone": "M7",
+      "title": "AI 持久作业与 worker",
+      "status": "todo",
+      "dependsOn": [
+        "ORB-023"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/09-AI-ASSISTANT-V1.1.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "租约恢复",
+        "取消超时",
+        "不重复提交结果",
+        "限次"
+      ],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "ORB-025",
+      "milestone": "M7",
+      "title": "AI 预览导入与评测",
+      "status": "todo",
+      "dependsOn": [
+        "ORB-024"
+      ],
+      "owner": null,
+      "specFiles": [
+        "docs/09-AI-ASSISTANT-V1.1.md",
+        "docs/06-IMPLEMENTATION-PLAN.md",
+        "docs/07-QUALITY-AND-TESTING.md"
+      ],
+      "acceptanceChecks": [
+        "用户编辑确认",
+        "导入幂等",
+        "真实 provider 验证",
+        "评测报告"
+      ],
+      "evidence": [],
+      "notes": ""
+    }
+  ],
+  "latestReview": {
+    "date": "2026-09-11",
+    "period": "M0-M4 remediation verification",
+    "reviewer": "Codex",
+    "report": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md",
+    "status": "completed",
+    "summary": "A01–A07 关闭；259 unit、137 contract、258 integration、45 E2E、13 UI 通过，依赖扫描零告警；M5 可从 ORB-016 开始。"
+  },
+  "documentationMaintenance": {
+    "date": "2026-09-11",
+    "summary": "清理过时报告、旧交接与历史嵌套状态，保留最新验收报告、规范、ADR 和原始测试证据。",
+    "validation": "planning/VALIDATION.md"
+  }
+}
