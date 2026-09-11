@@ -1,0 +1,12 @@
+{
+  "//": "scripts/ 的独立类型检查（ISS-08）。根 tsconfig 把 scripts 放在 exclude 里，因此 pnpm typecheck 不覆盖这些文件，Prisma 7 缺 adapter 之类的错误长期无人发现。运行：pnpm typecheck:scripts。",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["scripts/**/*.ts"],
+  "exclude": [
+    "scripts/m2-auth-network-errors-verify.ts"
+  ],
+  "//exclude-reason": "m2-auth-network-errors-verify.ts 是 M2 时期的一次性浏览器验收脚本（Q05），既不属于产品代码也不在任何门禁中。它原先 import 自未安装的 'playwright' 包，类型全部退化为 any，从而掩盖了约 50 处 strict-null 违规；改为 @playwright/test 后这些违规暴露出来。逐条加断言需改动该脚本的控制流，与本轮审查范围不符，故整文件排除并记录。若要纳入：把 `let page: Page | null` 改为在 Flow 内局部非空持有，或为每个 Flow 抽出接收 Page 参数的函数。"
+}

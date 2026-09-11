@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 1,
+  "project": "Orbit",
+  "workspace": "D:\\FullStack\\Orbit",
+  "reviewDate": "2026-09-09",
+  "reviewPeriod": "23时工作区",
+  "report": "docs/reviews/RE-REVIEW-2026-09-09.md",
+  "sourceManifest": "artifacts/re-review-2026-09-09/source-manifest.json",
+  "scope": "修复已有M0—M3，不推进M4",
+  "oldFindingsClosed": [
+    "R1",
+    "R2",
+    "R3",
+    "R4",
+    "R9"
+  ],
+  "oldFindingsPartiallyFixed": [
+    "R10"
+  ],
+  "checks": {
+    "check": "exit 0; unit 122; contract 136",
+    "build": "exit 0",
+    "integration": "exit 1; 163 passed; 1 suite failed collection; 0 skipped",
+    "e2e": "8 passed",
+    "ui": "13 passed",
+    "migrations": "development/test both 5 applied, checksums match"
+  },
+  "findings": [
+    {
+      "id": "Q01",
+      "priority": "P1",
+      "title": "真实看板、详情编辑和列表上下文未完成",
+      "status": "open",
+      "ownerRole": "B",
+      "oldFindingReferences": [
+        "R5"
+      ],
+      "acceptanceIds": [
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "A05",
+        "A06",
+        "A07"
+      ],
+      "files": [
+        "src/app/app/projects/[id]/board/page.tsx",
+        "src/features/tasks/real/task-detail-client.tsx",
+        "src/features/board/board-view-client.tsx"
+      ],
+      "evidence": "artifacts/re-review-2026-09-09/observations.json"
+    },
+    {
+      "id": "Q02",
+      "priority": "P2",
+      "title": "无语义变化移动仍写版本和活动",
+      "status": "open",
+      "ownerRole": "A",
+      "oldFindingReferences": [],
+      "acceptanceIds": [
+        "A08"
+      ],
+      "files": [
+        "src/server/modules/task/move.ts"
+      ],
+      "evidence": "artifacts/re-review-2026-09-09/move-boundaries/observations.json"
+    },
+    {
+      "id": "Q03",
+      "priority": "P3",
+      "title": "排序bigint溢出未重编号",
+      "status": "open",
+      "ownerRole": "A",
+      "oldFindingReferences": [],
+      "acceptanceIds": [
+        "A09"
+      ],
+      "files": [
+        "src/server/modules/task/position.ts",
+        "src/server/modules/task/move.ts"
+      ],
+      "evidence": "artifacts/re-review-2026-09-09/move-boundaries/observations.json"
+    },
+    {
+      "id": "Q04",
+      "priority": "P2",
+      "title": "分页旧响应污染刷新数据",
+      "status": "open",
+      "ownerRole": "B",
+      "oldFindingReferences": [
+        "R6"
+      ],
+      "acceptanceIds": [
+        "A10"
+      ],
+      "files": [
+        "src/features/tasks/real/task-list-client.tsx"
+      ],
+      "evidence": "artifacts/re-review-2026-09-09/observations.json"
+    },
+    {
+      "id": "Q05",
+      "priority": "P2",
+      "title": "认证网络失败与退出失败不可恢复",
+      "status": "open",
+      "ownerRole": "C",
+      "oldFindingReferences": [
+        "R7"
+      ],
+      "acceptanceIds": [
+        "A11",
+        "A12",
+        "A13"
+      ],
+      "files": [
+        "src/features/auth/use-auth.ts",
+        "src/features/shell/user-menu.tsx"
+      ],
+      "evidence": "artifacts/re-review-2026-09-09/observations.json"
+    },
+    {
+      "id": "Q06",
+      "priority": "P2",
+      "title": "真实锁超时仍返回500",
+      "status": "open",
+      "ownerRole": "A",
+      "oldFindingReferences": [
+        "R8"
+      ],
+      "acceptanceIds": [
+        "A14"
+      ],
+      "files": [
+        "src/server/db/tx.ts"
+      ],
+      "evidence": "artifacts/re-review-2026-09-09/observations.json"
+    },
+    {
+      "id": "Q07",
+      "priority": "P2",
+      "title": "限流恢复速度和写入口覆盖不足",
+      "status": "open",
+      "ownerRole": "A",
+      "oldFindingReferences": [
+        "R10"
+      ],
+      "acceptanceIds": [
+        "A15",
+        "A16"
+      ],
+      "files": [
+        "src/server/modules/rate-limit/memory.ts",
+        "src/server/modules/rate-limit/redis.ts"
+      ],
+      "evidence": "artifacts/re-review-2026-09-09/infrastructure.json"
+    },
+    {
+      "id": "Q08",
+      "priority": "P2",
+      "title": "限流集成suite失败且测试库未正确隔离",
+      "status": "open",
+      "ownerRole": "D",
+      "oldFindingReferences": [],
+      "acceptanceIds": [
+        "A17"
+      ],
+      "files": [
+        "tests/integration/rate-limit.test.ts",
+        "vitest.config.ts"
+      ],
+      "evidence": "artifacts/re-review-2026-09-09/integration.log"
+    },
+    {
+      "id": "Q09",
+      "priority": "P2",
+      "title": "详情URL项目与任务归属不一致",
+      "status": "open",
+      "ownerRole": "B",
+      "oldFindingReferences": [],
+      "acceptanceIds": [
+        "A18"
+      ],
+      "files": [
+        "src/app/app/projects/[id]/tasks/[taskId]/page.tsx"
+      ],
+      "evidence": "artifacts/re-review-2026-09-09/move-boundaries/observations.json"
+    },
+    {
+      "id": "Q10",
+      "priority": "P3",
+      "title": "大写UUID幂等重放返回404",
+      "status": "open",
+      "ownerRole": "A",
+      "oldFindingReferences": [
+        "R11"
+      ],
+      "acceptanceIds": [
+        "A19"
+      ],
+      "files": [
+        "src/server/modules/task/replay.ts"
+      ],
+      "evidence": "artifacts/re-review-2026-09-09/observations.json"
+    }
+  ]
+}
