@@ -4,7 +4,7 @@ Orbit is a Chinese-first project collaboration app for individuals and small stu
 
 ![Actual read-only demo screenshot with synthetic data](public/screenshots/demo.png)
 
-The implementation is available locally. Production deployment and remote CI acceptance are pending; there is no claimed public deployment URL. See [current progress](PROGRESS.md) and the [M6 operations guide](docs/M6-OPERATIONS.md).
+The implementation is available locally. Remote CI has passed; production deployment acceptance is pending; there is no claimed public deployment URL. See [current progress](PROGRESS.md) and the [M6 operations guide](docs/M6-OPERATIONS.md).
 
 ## Try it locally
 

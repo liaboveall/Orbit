@@ -4,7 +4,7 @@
 
 GitHub：[liaboveall/Orbit](https://github.com/liaboveall/Orbit)（私有） · [开发历史与 15 份恢复快照](docs/DEVELOPMENT-HISTORY.md)。
 
-版本：1.0 · 最新验收：2026-09-11 · 状态：**M0–M5 本地验收完成，本次审查 R01–R09 全部修复**。M6 本地实现与验收完成，远端 CI 和生产部署待验收；M7 待实施。修复内容、数据库迁移与最终证据见 [本轮修复验收报告](docs/reviews/REVIEW-FIXES-2026-09-11.md) 和 [PROGRESS](PROGRESS.md)。
+版本：1.0 · 最新验收：2026-09-11 · 状态：**M0–M5 本地验收完成，本次审查 R01–R09 全部修复**。M6 本地实现与验收完成，远端 CI 通过，生产部署待验收；M7 待实施。修复内容、数据库迁移与最终证据见 [本轮修复验收报告](docs/reviews/REVIEW-FIXES-2026-09-11.md) 和 [PROGRESS](PROGRESS.md)。
 
 Orbit 是面向个人与学生小团队的项目协作 Web App。产品围绕创建项目、邀请成员、拆分任务、看板推进、讨论与成果附件展开。通过完整业务、清晰设计和可靠交付展示全栈能力。
 

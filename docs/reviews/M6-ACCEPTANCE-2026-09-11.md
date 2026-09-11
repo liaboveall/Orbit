@@ -1,6 +1,6 @@
 # M6 本地实现与验收 · 2026-09-11
 
-M6 当前为 **review**。本地实现与验收已完成；生产域名、托管服务、真实 HTTPS 双账户冒烟、备份/维护平台调度和远端 CI 尚待验收。没有发布生产站点，不将 M7 纳入本次范围。
+M6 当前为 **review**。本地实现与验收已完成；生产域名、托管服务、真实 HTTPS 双账户冒烟、备份/维护平台调度尚待验收；远端 CI 已通过。没有发布生产站点，不将 M7 纳入本次范围。
 
 ## 交付内容
 
@@ -14,7 +14,7 @@ M6 当前为 **review**。本地实现与验收已完成；生产域名、托管
 
 | 命令/验证 | 结果 |
 |---|---|
-| pnpm check | lint/typecheck、265 unit、137 contract 通过 |
+| pnpm check | lint/typecheck、266 unit、137 contract 通过 |
 | 新增 m6-production + design-classes 定向单测 | 2 通过（含新增 1 项故障映射测试） |
 | pnpm typecheck:scripts | 通过 |
 | pnpm test:integration | 308 通过，含双独立数据库池的原子限流和上传租约竞争 |
@@ -47,3 +47,11 @@ M6 当前为 **review**。本地实现与验收已完成；生产域名、托管
 ## 外部待验收与下一步
 
 提交并运行远端 CI；提供服务器/容器平台、域名、PostgreSQL、私有 S3、生产 SMTP 配置位置，然后按 [运行手册](../M6-OPERATIONS.md) 完成 staging、备份点、一次性迁移、生产部署、HTTPS 双账户冒烟、每日维护与备份调度及告警。待这些证据齐备后再将 M6/ORB-021 置为 done。
+
+## 远端 CI 关闭证据
+
+[GitHub Actions run 34604440601](https://github.com/liaboveall/Orbit/actions/runs/34604440601) conclusion=success，代码提交 618b171 / PR merge 739334d，完整执行所有工作流步骤，无跳过关键测试。包括 266 unit、137 contract、308 integration、70 E2E、13 UI、真实恢复、audit、两类 Docker 构建。草稿 [PR #1](https://github.com/liaboveall/Orbit/pull/1) 未合并。
+
+GitHub ubuntu-24.04 / AMD EPYC 7763 / 7.75 GiB / Node 24.20.0：读取 p95 191.99ms，写入 p95 164.43ms，错误率 0，工作台 5 次实验室导航就绪中位 845ms（788–974ms）；axe serious/critical 0。原始远端产物已下载到 artifacts/m6-ci/。
+
+继续工作时本机 Docker 停止引起一次 contract suite setup 失败；启动服务后 137 contract 全部通过，最终首页/demo/健康 3 E2E 通过且两库指纹一致。此失败记录不替代已通过的完整远端验证。

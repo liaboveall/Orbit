@@ -133,7 +133,8 @@
         "docs/reviews/M6-ACCEPTANCE-2026-09-11.md",
         "docs/M6-OPERATIONS.md"
       ],
-      "notes": "本地实现与验收完成，远端 CI 和生产 HTTPS 部署待验收；没有上线声明。"
+      "notes": "本地及远端 CI 全部通过；真实 HTTPS 生产部署、每日维护/备份与生产恢复点待外部配置验收。",
+      "ciUrl": "https://github.com/liaboveall/Orbit/actions/runs/34604440601"
     },
     {
       "id": "M7",
@@ -784,8 +785,9 @@
         "docs/reviews/M6-ACCEPTANCE-2026-09-11.md",
         "docs/M6-OPERATIONS.md"
       ],
-      "notes": "本地代码、容器、测试、恢复演练、demo 和材料已交付；外部部署配置与远端 CI 结果待验收。",
-      "latestReview": "docs/reviews/M6-ACCEPTANCE-2026-09-11.md"
+      "notes": "本地及远端 CI 全部通过；真实 HTTPS 生产部署、每日维护/备份与生产恢复点待外部配置验收。",
+      "latestReview": "docs/reviews/M6-ACCEPTANCE-2026-09-11.md",
+      "ciUrl": "https://github.com/liaboveall/Orbit/actions/runs/34604440601"
     },
     {
       "id": "ORB-021",
@@ -813,8 +815,9 @@
         "docs/reviews/M6-ACCEPTANCE-2026-09-11.md",
         "docs/M6-OPERATIONS.md"
       ],
-      "notes": "本地代码、容器、测试、恢复演练、demo 和材料已交付；外部部署配置与远端 CI 结果待验收。",
-      "latestReview": "docs/reviews/M6-ACCEPTANCE-2026-09-11.md"
+      "notes": "本地及远端 CI 全部通过；真实 HTTPS 生产部署、每日维护/备份与生产恢复点待外部配置验收。",
+      "latestReview": "docs/reviews/M6-ACCEPTANCE-2026-09-11.md",
+      "ciUrl": "https://github.com/liaboveall/Orbit/actions/runs/34604440601"
     },
     {
       "id": "ORB-022",
@@ -842,8 +845,9 @@
         "docs/reviews/M6-ACCEPTANCE-2026-09-11.md",
         "docs/M6-OPERATIONS.md"
       ],
-      "notes": "本地代码、容器、测试、恢复演练、demo 和材料已交付；外部部署配置与远端 CI 结果待验收。",
-      "latestReview": "docs/reviews/M6-ACCEPTANCE-2026-09-11.md"
+      "notes": "本地及远端 CI 全部通过；真实 HTTPS 生产部署、每日维护/备份与生产恢复点待外部配置验收。",
+      "latestReview": "docs/reviews/M6-ACCEPTANCE-2026-09-11.md",
+      "ciUrl": "https://github.com/liaboveall/Orbit/actions/runs/34604440601"
     },
     {
       "id": "ORB-023",
@@ -921,7 +925,8 @@
     "reviewer": "Codex",
     "report": "docs/reviews/M6-ACCEPTANCE-2026-09-11.md",
     "status": "production_pending",
-    "summary": "本地门禁通过；M6 保持 review，等待远端 CI 与真实 HTTPS 部署条件。"
+    "summary": "本地及完整远端 CI 通过，M6 保持 review 等待生产部署条件。",
+    "ciUrl": "https://github.com/liaboveall/Orbit/actions/runs/34604440601"
   },
   "documentationMaintenance": {
     "date": "2026-09-11",

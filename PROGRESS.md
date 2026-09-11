@@ -1,3 +1,13 @@
+# 2026-09-11 — M6 远端 CI 验收通过
+
+代码提交 `618b171`（PR 合并测试提交 `739334d`）的 [GitHub Actions](https://github.com/liaboveall/Orbit/actions/runs/34604440601) 全部通过：266 unit、137 contract、308 integration、70 E2E、13 UI、恢复演练、依赖扫描及 runner/operations 镜像构建。草稿 [PR #1](https://github.com/liaboveall/Orbit/pull/1)，分支 `codex/m6-release`；未合并 main。后续文档提交不改变该已验收代码。
+
+GitHub Linux/Node 24.20.0 千任务 10 并发：读取 p95 191.99ms、写入 p95 164.43ms，错误率 0。M6 仍 review：实际平台、域名和生产服务配置缺失，HTTPS 双账户冒烟、每日备份/维护调度与生产恢复点尚未验收。
+
+继续时本机 Docker 曾停止，导致一次契约补跑失败；恢复服务后 137 contract 与 3 项最终首页/demo/健康检查补跑通过，两库指纹一致。
+
+---
+
 # 2026-09-11 — M6 本地实现与验收，生产待配置
 
 M6 的共享准入、维护、容器、CI 工作流、恢复演练、质量测量、只读 demo 与英文 README 已实现。当前 M6 保持 review：远端 CI 和真实 HTTPS 部署尚待验收；M7 未启动。详情见 [M6 验收报告](docs/reviews/M6-ACCEPTANCE-2026-09-11.md)。
