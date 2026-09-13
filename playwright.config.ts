@@ -44,6 +44,9 @@ export default defineConfig({
         command: "pnpm run build && node scripts/e2e-server.mjs",
         url: baseURL,
         reuseExistingServer: false,
+        // POSIX: allow the launcher to kill its detached application group before exiting.
+        // SIGKILL bypasses its handlers and leaves inherited log pipes open indefinitely.
+        gracefulShutdown: { signal: "SIGTERM", timeout: 5_000 },
         timeout: 240_000,
       },
 });

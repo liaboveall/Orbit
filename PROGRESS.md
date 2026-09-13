@@ -1,3 +1,12 @@
+# 2026-09-13 — CI 测试结束后挂起修复
+
+- CI 34731593916 已通过 MinIO 初始化并完成81项 E2E及数据库指纹检查，但卡在 Playwright webServer teardown，已取消该运行。
+- 根因：POSIX 应用进程 detached，Playwright 默认 SIGKILL 启动器，绕过清理处理器；独立进程持有日志管道，close 无法完成。Windows taskkill /T 不复现。
+- playwright.config.ts 配置 SIGTERM + 5秒超时，UI继承；新增 scripts/verify-web-server-lifecycle.mjs 并纳入Linux CI，使用真实Playwright验证成功/失败测试后的退出、端口释放与无关监听保护。
+- Linux无网络容器实测：旧默认关闭路径在用例通过后超过15秒，被回归测试拒绝；修复后成功和失败两条路径均及时退出，端口释放。下一步：推送并复验完整远程门禁。
+
+---
+
 # 2026-09-13 — CI 镜像拉取修复
 
 - 提交 7dff454 的 CI 34731446195 在服务初始化失败：Docker Hub 拒绝拉取 minio/minio:latest，尚未进入测试。

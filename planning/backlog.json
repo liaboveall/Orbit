@@ -1100,7 +1100,13 @@
     "container --version",
     "compose config --quiet"
    ],
-   "status": "awaiting_remote_ci"
+   "status": "awaiting_remote_ci",
+   "teardownFix": {
+    "run": "https://github.com/liaboveall/Orbit/actions/runs/34731593916",
+    "cause": "Playwright SIGKILL bypassed detached application cleanup; inherited pipes remained open",
+    "fix": "SIGTERM with 5s budget; real POSIX Playwright lifecycle regression in CI",
+    "verification": "Old behavior failed bounded 15s reproduction; corrected success/failure teardown both passed in Linux container"
+   }
   }
  },
  "documentationMaintenance": {

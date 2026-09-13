@@ -26,6 +26,9 @@ jobs:
           node-version: "24"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Verify POSIX Playwright server teardown
+        timeout-minutes: 2
+        run: node scripts/verify-web-server-lifecycle.mjs
       - name: Configure isolated synthetic services
         run: |
           cp .env.example .env.local
