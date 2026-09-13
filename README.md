@@ -2,18 +2,22 @@
 
 # 有序 Orbit · 项目仓库
 
+**最新验收（2026-09-13）：本地返工已验证，871项正式测试通过。** 已修复认证超限、SMTP取消、草稿关闭、错误恢复和评论分页竞态；历史误删恢复及M6外部证据仍待补齐。以 [返工交付报告](docs/reviews/REMEDIATION-REWORK-CLOSURE-2026-09-13.md)、[事件追溯](docs/reviews/TEST-DATA-INCIDENT-2026-09-13.md) 和 [PROGRESS](PROGRESS.md) 为准。
+
+个人展示部署：[AWS t3.micro 逐步部署指南（不足再升级 small）](docs/AWS-MICRO-DEPLOYMENT.md)。
+
 GitHub：[liaboveall/Orbit](https://github.com/liaboveall/Orbit)（私有） · [开发历史与 15 份恢复快照](docs/DEVELOPMENT-HISTORY.md)。
 
-版本：1.0 · 最新验收：2026-09-11 · 状态：**M0–M5 本地验收完成，本次审查 R01–R09 全部修复**。M6 本地实现与验收完成，远端 CI 通过，生产部署待验收；M7 待实施。修复内容、数据库迁移与最终证据见 [本轮修复验收报告](docs/reviews/REVIEW-FIXES-2026-09-11.md) 和 [PROGRESS](PROGRESS.md)。
+版本：1.0 · 最新复验：2026-09-13 · 状态：**M0–M5本地功能完成，M6生产部署/当前交付CI待验收，历史测试数据证据待补齐，M7未启动**。审计台账保留70组及58个独立子项；本地测试通过不代表历史数据已恢复。
 
 Orbit 是面向个人与学生小团队的项目协作 Web App。产品围绕创建项目、邀请成员、拆分任务、看板推进、讨论与成果附件展开。通过完整业务、清晰设计和可靠交付展示全栈能力。
 
-本目录是应用仓库根目录。M0 工程与组件、M1 真实认证与设置、M2 项目与任务生命周期、M3 列表/看板/详情、M4 成员协作及 M5 子任务、评论、私有附件与真实工作台均已有实现和历史本地验收。本轮已修复限流、草稿保护、分页刷新等审查问题，具体实现与证据见最新报告；仅 /app/samples 保留明确标记的样例。M6 实现、质量测量和运行手册见 [M6 验收报告](docs/reviews/M6-ACCEPTANCE-2026-09-11.md)，生产部署仍待外部配置。实际锁定版本见 [版本记录](docs/versions.md)，当前验收以 [PROGRESS.md](PROGRESS.md) 为准。
+本目录是应用仓库根目录。M0 工程与组件、M1 真实认证与设置、M2 项目与任务生命周期、M3 列表/看板/详情、M4 成员协作及 M5 子任务、评论、私有附件与真实工作台均已有实现和历史本地验收。此前已修复限流、草稿保护、分页刷新等问题，2026-09-12 审查的 7 项问题已完成仓库修复和本地验收；2026-09-13 最终复核与返工中的本地契约、交互和故障边界修复已复验；外部条件和历史事件仍按台账跟踪。M6 实现、质量测量和运行手册见 [M6 验收报告](docs/reviews/M6-ACCEPTANCE-2026-09-11.md)，生产部署仍待外部配置。实际锁定版本见 [版本记录](docs/versions.md)，当前验收以 [PROGRESS.md](PROGRESS.md) 为准。
 
 ## 交给 AI IDE 的最快方式
 
 1. 将整个 Orbit 目录作为项目根目录打开。
-2. 先读 [开发状态](PROGRESS.md) 和 [最新审查报告](docs/reviews/REVIEW-FIXES-2026-09-11.md)，R01–R09 已关闭，下一步进入 M6 / ORB-020。E2E/UI 使用独立测试服务，结束时校验开发库和测试库内容指纹。集成测试使用独立 orbit_test。
+2. 先读 [开发状态](PROGRESS.md) 和 [返工交付报告](docs/reviews/REMEDIATION-REWORK-CLOSURE-2026-09-13.md)，下一步补齐报告列出的历史事件证据和 M6 外部验收；已有修复不重复实施。E2E/UI 使用独立测试服务，结束时校验开发库和测试库内容指纹。集成测试使用独立 orbit_test。
 3. 使用 [继续开发指令](prompts/CONTINUE.md)，每次推进一个里程碑。
 4. 交接时让 Agent 更新 [开发状态](PROGRESS.md) 和 [任务清单](planning/backlog.json)。
 
@@ -42,14 +46,15 @@ Orbit 是面向个人与学生小团队的项目协作 Web App。产品围绕创
    ```powershell
    docker compose -f infra/compose.dev.yml up -d
    ```
-   拉起 PostgreSQL 17（5432）、MinIO（9000/9001）、Mailpit（1025/8025）。init 脚本会自动创建 `orbit_dev` 与 `orbit_test`。
+   拉起 PostgreSQL 17（5432）、MinIO（9000/9001）、Mailpit（25025/8025）。init 脚本会自动创建 `orbit_dev` 与 `orbit_test`。
    > 若本机 5432 已被其它 PostgreSQL 占用，用宿主端口覆盖（不改动仓库默认值）：`$env:POSTGRES_HOST_PORT=5433; docker compose -f infra/compose.dev.yml up -d`，并把 `.env.local` 里连接串端口同步改为 5433。
+   > 若 Mailpit 的 8025 被 Windows 保留，设置 `$env:MAILPIT_WEB_HOST_PORT=28025` 后仅重建 Mailpit 服务，并设置 `$env:MAILPIT_API="http://localhost:28025/api/v1"`。SMTP 宿主端口用 MAILPIT_SMTP_HOST_PORT 覆盖，同时同步 SMTP_PORT；不要修改或清空数据库卷。
 5. **应用数据库迁移**（Prisma 7 使用 driver adapter；env 由 `prisma.config.ts` 显式加载 `.env.local`）：
    ```powershell
    pnpm db:migrate:dev
    pnpm db:seed
    ```
-   当前包含 11 个迁移。开发库和独立测试库都需要应用迁移；运行测试前确认 TEST_DATABASE_URL 指向 orbit_test。
+   当前包含 14 个迁移。开发库和独立测试库都需要应用迁移；运行测试前确认 TEST_DATABASE_URL 指向 orbit_test。
 6. **启动开发服务器**：
    ```powershell
    pnpm dev
@@ -101,5 +106,5 @@ Orbit 是面向个人与学生小团队的项目协作 Web App。产品围绕创
 ## 文档维护
 
 当前状态只读 [PROGRESS](PROGRESS.md) 与 backlog；当前验收只读
-[最新报告](docs/reviews/REVIEW-FIXES-2026-09-11.md)。过时分析和旧修复交接已清理，
+[最终审查报告](docs/reviews/PROJECT-FINAL-AUDIT-2026-09-13.md)。历史修复报告作为历史证据保留，
 规范、ADR、正式测试与原始运行证据保留。测试操作见 [tests/README](tests/README.md)。

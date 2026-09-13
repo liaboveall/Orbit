@@ -29,14 +29,8 @@ export default defineConfig({
           name: "unit",
           environment: "node",
           include: ["tests/unit/**/*.test.ts"],
-          // 为纯 Node 环境补齐浏览器 Web Storage（DraftManager/ORB-012 单测所需），
-          // 仅在缺失时注入内存实现，不影响其他 unit 测试。
-          setupFiles: [
-            fileURLToPath(new URL("./tests/setup/unit-globals.ts", import.meta.url)).replace(
-              /\\/g,
-              "/",
-            ),
-          ],
+          // F35：原 setupFiles(unit-globals) 仅服务于已删除的 conflict-handler 单测，
+          // 随死代码一并移除。
         },
       },
       {
@@ -51,6 +45,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: "integration",
+          globalSetup: ["./tests/setup/integration-isolation.ts"],
           setupFiles: ["./tests/setup/integration-state.ts"],
           environment: "node",
           include: ["tests/integration/**/*.test.ts"],

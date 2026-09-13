@@ -1,7 +1,6 @@
 "use client";
 
 import { LogOut, Settings } from "lucide-react";
-import { useRouter } from "next/navigation";
 import type { UserDTO } from "@/contracts";
 import { useToast } from "@/components/ui/toast";
 import { useState } from "react";
@@ -16,6 +15,7 @@ import {
 } from "@/components/ui";
 import { Avatar } from "@/components/ui/avatar";
 import { useSignOut } from "@/features/auth/use-auth";
+import { useGuardedNavigate } from "@/features/tasks/unsaved-changes";
 
 /**
  * 个人菜单（M1 / ORB-006）：AppShell 侧栏底部与平板 rail 态的用户入口。
@@ -51,7 +51,8 @@ export function UserMenu({
   side = "top",
   align = "start",
 }: UserMenuProps) {
-  const router = useRouter();
+  // B6 修复：程序化导航同样受未保存草稿保护。
+  const guardedNavigate = useGuardedNavigate();
   const { signOut, pending, error: signOutError } = useSignOut();
   const { toast } = useToast();
   const [signOutPromise, setSignOutPromise] = useState<Promise<{ error?: string }> | null>(null);
@@ -85,7 +86,7 @@ export function UserMenu({
   function handleSettings(): void {
     // 客户端软导航即可：设置页由服务端读取会话与账户档案（force-dynamic），
     // 每次进入都拿到最新数据，不存在跨账号的客户端缓存残留。
-    router.push("/app/settings");
+    guardedNavigate.push("/app/settings");
   }
 
   const trigger =

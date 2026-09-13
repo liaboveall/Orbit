@@ -25,11 +25,11 @@
 |---|---|---|
 | 400 | VALIDATION_ERROR / INVALID_CURSOR | 字段旁提示；不重试 |
 | 401 | UNAUTHENTICATED | 登录并保留合法 returnTo |
-| 403 | FORBIDDEN / EMAIL_UNVERIFIED / ORIGIN_NOT_ALLOWED | 显示访问限制 |
+| 403 | FORBIDDEN / EMAIL_UNVERIFIED / ORIGIN_NOT_ALLOWED | 显示访问限制。EMAIL_UNVERIFIED 为保留码（邮箱未验证由认证库流程拦截，V1 业务层不抛出） |
 | 404 | NOT_FOUND | 不区分不存在和非成员不可见 |
 | 409 | VERSION_CONFLICT / BOARD_CONFLICT | 保留草稿/回滚，重新获取 |
 | 409 | PROJECT_KEY_TAKEN / PROJECT_ARCHIVED | 项目字段冲突或只读 |
-| 409 | INVITATION_USED / ALREADY_EXISTS / IDEMPOTENCY_CONFLICT / UPLOAD_IN_PROGRESS / LOCKED | 按具体业务处理 |
+| 409 | INVITATION_USED / ALREADY_EXISTS / IDEMPOTENCY_CONFLICT / UPLOAD_IN_PROGRESS / LOCKED | 按具体业务处理。ALREADY_EXISTS 为保留码（V1 各创建路径用幂等/唯一键语义处理，不抛出该码） |
 | 410 | INVITATION_EXPIRED / INVITATION_REVOKED | 显示邀请失效 |
 | 413 | PAYLOAD_TOO_LARGE | 拒绝请求并提示 |
 | 415 | UNSUPPORTED_FILE_TYPE | 不支持的文件格式 |
@@ -140,3 +140,7 @@ PROJECT_CREATED、PROJECT_UPDATED、PROJECT_ARCHIVED、PROJECT_RESTORED、MEMBER
 附件 uploadId 保持 UUID；内部 DELETED + deletedAt 同步，公开 DTO 不返回 DELETED。下载端点保持 Download JSON，url 为 60 秒有效且绑定当前用户的应用签名链接。GET /attachments/{attachmentId}/content 校验签名、当前会话、当前项目成员、父任务未删除和附件 READY 后代理私有 S3 流，强制 attachment、private,no-store；不向客户端暴露 objectKey。该选择取代先前签名存储 URL 与直接二进制响应混用的实现。
 
 上传先持久预留，再有界流接收至私有临时文件并校验实际内容/大小/摘要、流写 S3，最后独立事务复核权限并提交 READY。请求总时限 120 秒；临时文件请求结束删除。维护命令 cleanup:attachments 处理一小时以上失效上传及 cleanupPending 对象；FAILED/DELETED 的待删标志保留至少 3 分钟，让取消中的 PUT 结束后再物理删除。对象删除失败保留待重试标志，已清理对象不重复释放配额。
+
+### HEAD 读取准入
+
+框架为 GET 路由提供的 HEAD 使用同一会话、授权与生产读取额度（300 次/用户/分钟）；不返回正文。私有文件 content 路由显式返回 405，避免 HEAD 打开对象流。该方法支持说明不新增 JSON 数据结构。

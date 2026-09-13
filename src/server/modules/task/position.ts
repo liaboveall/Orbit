@@ -134,22 +134,3 @@ export async function appendToColumnEnd(
  * @param beforePos 前一个任务的位置（null 表示追加到列尾）
  * @returns 安全的新 position
  */
-export async function ensureSafePositionForInsert(
-  tx: Prisma.TransactionClient,
-  projectId: string,
-  status: TaskStatus,
-  beforePos: bigint | null,
-): Promise<bigint> {
-  if (beforePos === null) {
-    // 追加到列尾，直接调用 appendToColumnEnd（已包含溢出检测）
-    return appendToColumnEnd(tx, projectId, status);
-  }
-  
-  // 中间位置插入前检查是否接近 MAX_SAFE
-  if (beforePos > BIGINT_MAX_SAFE - POSITION_GAP * 2n) {
-    // 这里应该在调用方（computeMovePosition）处理重编号
-    return beforePos / 2n;
-  }
-  
-  return beforePos / 2n;
-}

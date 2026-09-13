@@ -14,7 +14,6 @@ export {
 export { type UploadAttachmentResult } from "./service";
 export { toAttachmentDTO } from "./mappers";
 export {
-  canDeleteAttachment,
   attachmentNotFoundError,
   attachmentLimitExceededError,
   storageQuotaExceededError,
@@ -22,6 +21,4 @@ export {
   fileSizeExceededError,
   uploadInProgressError,
   idempotencyConflictError,
-  countActiveAttachments,
-  validateFileType,
 } from "./access";

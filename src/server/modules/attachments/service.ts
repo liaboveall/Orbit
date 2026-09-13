@@ -373,8 +373,11 @@ export async function downloadContent(
     throw attachmentNotFoundError();
   const row = await readableAttachment(id, userId);
   try {
+    // F15：同时返回存储端可信长度，供 HTTP 层设置 Content-Length（截断可被检测）。
+    const download = await streamDownload(row.objectKey, signal);
     return {
-      stream: await streamDownload(row.objectKey, signal),
+      stream: download.stream,
+      contentLength: download.contentLength,
       fileName: row.originalName,
     };
   } catch {

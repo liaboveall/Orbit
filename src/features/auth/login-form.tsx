@@ -26,7 +26,6 @@ export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
-  const [networkError, setNetworkError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -38,7 +37,6 @@ export function LoginForm() {
 
     // Clear previous errors on new submission
     setFieldErrors({});
-    setNetworkError(null);
     
     const ok = await signIn(email.trim(), password);
     if (ok) {
@@ -83,15 +81,8 @@ export function LoginForm() {
         </Link>
       </div>
 
-      {/* Display network errors separately if present */}
-      {networkError && (
-        <InlineError role="alert">{networkError}</InlineError>
-      )}
-      
       {/* Error from server/API credential validation or other issues */}
-      {!networkError && error && (
-        <InlineError role="alert">{error}</InlineError>
-      )}
+      {error && <InlineError role="alert">{error}</InlineError>}
 
       {needsVerification ? (
         <p className="rounded-control bg-brand-soft px-3 py-2 text-label text-brand">
@@ -105,10 +96,10 @@ export function LoginForm() {
 
       <SubmitButton 
         pending={pending} 
-        disabled={pending || !!networkError}
+        disabled={pending}
         pendingText="登录中…"
       >
-        {networkError ? "重试" : pending ? "登录中…" : "登录"}
+        {pending ? "登录中…" : "登录"}
       </SubmitButton>
 
       <p className="text-center text-label text-foreground-secondary">

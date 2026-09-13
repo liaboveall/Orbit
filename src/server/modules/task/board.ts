@@ -19,7 +19,7 @@ import {
 import { dateInTimezone } from "@/lib/calendar";
 import { registrationTimezone } from "@/server/auth/user-fields";
 import { fromDueDateString } from "./date-only";
-import { toTaskSummaryDTO, fetchTaskResourceCountsBatch } from "./mappers";
+import { TASK_SUMMARY_SELECT_FOR_BOARD, toTaskSummaryDTO, fetchTaskResourceCountsBatch } from "./mappers";
 
 /** One repeatable-read transaction for authorization, version, totals and all columns. */
 export async function getBoard(
@@ -120,14 +120,12 @@ export async function getBoard(
               ],
             });
           }
+          // F14：看板列使用显式投影（含 position 游标字段），不拉取 description。
           const rows = await tx.task.findMany({
             where: { AND: filters },
             orderBy: [{ position: "asc" }, { id: "asc" }],
             take: limit + 1,
-            include: {
-              assignee: { select: { id: true, name: true } },
-              creator: { select: { id: true, name: true } },
-            },
+            select: TASK_SUMMARY_SELECT_FOR_BOARD,
           });
           const page = rows.slice(0, limit);
           const batchCounts=await fetchTaskResourceCountsBatch(tx,page.map(task=>task.id));

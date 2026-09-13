@@ -4,7 +4,7 @@ Orbit is a Chinese-first project collaboration app for individuals and small stu
 
 ![Actual read-only demo screenshot with synthetic data](public/screenshots/demo.png)
 
-The implementation is available locally. Remote CI has passed; production deployment acceptance is pending; there is no claimed public deployment URL. See [current progress](PROGRESS.md) and the [M6 operations guide](docs/M6-OPERATIONS.md).
+The latest local remediation passed 871 tests, an independent source build, and checks of both container images. CI for the current changes and production deployment acceptance remain pending. Historical deleted test data has not been restored because the original records and backup are unavailable. See the [remediation report](docs/reviews/REMEDIATION-REWORK-CLOSURE-2026-09-13.md), [current progress](PROGRESS.md), and [M6 operations guide](docs/M6-OPERATIONS.md).
 
 ## Try it locally
 
@@ -51,7 +51,7 @@ pnpm audit --prod --audit-level=high
 node --conditions=react-server --import tsx scripts/recovery-drill.ts
 ```
 
-Integration tests use a real isolated PostgreSQL database. Browser suites start a separate production build, use Mailpit/MinIO, precisely clean their fixtures, and verify development/test database fingerprints. M6 includes axe scans, three viewports, a 1000-task HTTP workload at concurrency 10, and five throttled browser lab samples. Measurements describe the test environment; they are not real-user traffic or field Core Web Vitals.
+Integration tests use a real isolated PostgreSQL database. End-to-end tests start a separate production build; UI checks use the development server. The suites use Mailpit/MinIO, precisely clean their fixtures, and verify development/test database fingerprints. M6 includes axe scans, three viewports, a 1000-task HTTP workload at concurrency 10, and five throttled browser lab samples. Measurements describe the test environment; they are not real-user traffic or field Core Web Vitals.
 
 The Dockerfile has separate non-root web and operations targets. Database migration is a one-off release step. Production still requires hosting, a domain, managed database/storage/mail configuration, scheduled maintenance and backups, and HTTPS acceptance with two controlled accounts.
 

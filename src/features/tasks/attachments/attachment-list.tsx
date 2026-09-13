@@ -36,13 +36,14 @@ import {
   createApiClient,
   type AttachmentDTO,
 } from "@/contracts";
-import { SampleError } from "@/features/shell/state-views";
+import { ErrorPanel } from "@/features/shell/state-views";
 import {
   apiDelete,
   messageForError,
   redirectToLoginIfUnauthenticated,
 } from "../api-helpers";
 import { formatFileSize, getFileIcon } from "./types";
+import { formatEventDate, useUserTimezone } from "@/lib/user-timezone";
 import { UploadButton } from "./upload-button";
 
 const api = createApiClient();
@@ -133,25 +134,27 @@ export function AttachmentList({
         <p className="text-caption text-foreground-muted">
           你没有查看该任务附件的权限。
         </p>
-      ) : loadError ? (
-        <div>
-          <SampleError message={loadError} draftNote={null} />
-          <div className="mt-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                setLoadError(null);
-                setAttachments(null);
-                void load();
-              }}
-            >
-              重新加载
-            </Button>
-          </div>
-        </div>
+      ) : loadError && attachments === null ? (
+        // F24 修复：单一明确重试动作；已选文件草稿保留。
+        <ErrorPanel
+          message={loadError}
+          draftNote="你已选择的文件已保留。"
+          onRetry={() => {
+            setLoadError(null);
+            setAttachments(null);
+            void load();
+          }}
+        />
       ) : (
         <>
+          {loadError && (
+            <div>
+              <InlineError>{loadError}</InlineError>
+              <Button size="sm" variant="secondary" onClick={() => void load()}>
+                重新加载
+              </Button>
+            </div>
+          )}
           {total === 0 ? (
             <p className="text-caption text-foreground-muted">暂无附件。</p>
           ) : (
@@ -194,6 +197,7 @@ function AttachmentItem({
   onReload: () => Promise<void>;
 }) {
   const { toast } = useToast();
+  const tz = useUserTimezone(); // F23：账户时区。
   const [downloading, setDownloading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -323,7 +327,7 @@ function AttachmentItem({
               : attachment.uploader.name}
           </span>
           <span aria-hidden="true">·</span>
-          <span>{new Date(attachment.createdAt).toLocaleDateString()}</span>
+          <span>{formatEventDate(attachment.createdAt, tz)}</span>
         </div>
 
         {isFailed && (

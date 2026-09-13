@@ -63,10 +63,18 @@ export function isAllowedExtension(
   );
 }
 
-/** 人类可读的文件体积。 */
+/**
+ * 人类可读的文件体积（F27 修复）。
+ *
+ * 单位策略：二进制分母（1024）+ 通用标签 B/KB/MB（沿用既有产品文案，配额计算
+ * 一律使用原始字节数，从不使用本函数的输出）。边界修复：KB→MB 的显示切换点取
+ * 1023.95KB，使「四舍五入到一位小数」永远不会再出现「1024.0 KB」这类越界显示
+ * （1048575 字节现在显示为 1.0 MB）。
+ */
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  const kb = bytes / 1024;
+  if (kb < 1023.95) return `${kb.toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 

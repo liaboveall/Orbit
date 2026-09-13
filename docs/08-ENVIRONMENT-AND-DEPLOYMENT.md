@@ -154,12 +154,20 @@ pnpm dev
 
 `pnpm cleanup:attachments` 显式加载 .env.local/.env，通过 react-server 条件运行 server-only 业务模块；一次最多 100 条，打印 cleanedCount、failedCount、releasedBytes，不输出对象 key。错误返回非零退出码。UPLOADING 超过一小时释放预留；FAILED/DELETED 等待至少 3 分钟后物理删除，防止与取消中的 PUT 竞争。幂等重跑不会重复扣额度。真实定时调度仍属 M6，当前未配置。
 
-当前 11 个迁移均可从空库部署；uploadId 是 UUID，Attachment 的 task 关系是复合外键。中断遗留迁移会话可能持有 advisory lock；先核验持锁连接是否空闲、无事务及其来源，再处理旧迁移等待者与持锁者，不关闭迁移锁机制、不删除迁移历史。Windows 的 EACCES 端口错误可通过设置已确认可绑定的 E2E_PORT 避开；本轮使用 43127。
+「11 个迁移」为 M5 时期的历史口径（见下条历史记录）；当前迁移数量以 prisma/migrations 目录为准（2026-09-13 审查修复时为 15 个），均可从空库部署；uploadId 是 UUID，Attachment 的 task 关系是复合外键。中断遗留迁移会话可能持有 advisory lock；先核验持锁连接是否空闲、无事务及其来源，再处理旧迁移等待者与持锁者，不关闭迁移锁机制、不删除迁移历史。Windows 的 EACCES 端口错误可通过设置已确认可绑定的 E2E_PORT 避开；本轮使用 43127。
 
 ### 全项目审查修复后的运行约定（2026-09-11）
 
-上述 11 迁移为 M5 历史验收；本轮新增事件时间 timestamptz 转换和已删除评论缓存清理，共 13 个迁移。先核对旧 TIMESTAMP 的 UTC 语义，再执行增量部署；详情见 [本轮迁移与验收记录](reviews/REVIEW-FIXES-2026-09-11.md)。应用连接固定 UTC，以满足当前 adapter-pg 7.10.0 的时间解析约定，date-only 截止日不变。
+上述「11 迁移」为 M5 历史验收；后续新增事件时间 timestamptz 转换、已删除评论缓存清理（共 13 个）与 2026-09-13 审查修复新增的 IdempotencyRecord.resourceId 索引（共 15 个）。历史数字不再随每次迁移更新，当前数量以目录为准。先核对旧 TIMESTAMP 的 UTC 语义，再执行增量部署；详情见 [本轮迁移与验收记录](reviews/REVIEW-FIXES-2026-09-11.md)。应用连接固定 UTC，以满足当前 adapter-pg 7.10.0 的时间解析约定，date-only 截止日不变。
 
 认证与业务端点统一按 `TRUSTED_PROXY_COUNT` 选择转发链中的来源；默认 0 忽略客户端提供的转发头并使用共享桶。大于 0 仅适用于受控代理正确追加/清洗头且源站禁止直接访问的部署。
 
 附件集合端点不经过 Next Proxy，避免 Proxy 在路由准入之前缓冲请求体；会话、Origin、资源授权、通用写桶与上传专用门禁仍在路由/服务端执行。上传 10 次/用户/分钟、最多 2 条在途请求在 staging/production 使用 M6 PostgreSQL 共享租约；development/test 保留内存路径。部署、健康检查、维护与恢复演练见 [M6 运行手册](M6-OPERATIONS.md)。
+
+### 2026-09-12 传输、日志与对象保留
+
+staging/production 的 SMTP 强制 TLS：465 使用 SMTP_SECURE=true；587 使用 false 并由应用强制 STARTTLS，拒绝降级。开发/测试 Mailpit 可明文。测试邮件 API 通过 MAILPIT_API 覆盖，端口被占用时同步设置 Compose 宿主端口和测试 SMTP_PORT/MAILPIT_API。
+
+版本化 S3 使用 [生命周期配置](../infra/s3-lifecycle.json)：非当前版本保留 30 天、移除过期删除标记、终止超过一天的未完成分段上传。没有当前对象到期删除规则；历史版本在保留期间继续计费。更长数据库备份窗口需要同步延长对象保留时间。
+
+Nginx 在 http 上下文加载 [安全日志格式](../infra/nginx-http.conf)，server 使用 [代理配置](../infra/nginx.conf)。日志不记录路径、查询、Referer 等客户端字符串。Nginx 原始错误日志无法脱敏，应用虚拟主机将其定向 /dev/null，以安全访问日志状态/耗时和应用结构化错误诊断；禁止额外平台记录完整请求 URL。

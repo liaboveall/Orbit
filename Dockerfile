@@ -10,7 +10,7 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
 # Public synthetic build configuration only; runtime secrets are injected at deployment.
-RUN mkdir -p public && cp .env.example .env.local && pnpm build && rm .env.local && rm -f .next/standalone/.env.local
+RUN mkdir -p public && cp .env.example .env.local && BETTER_AUTH_SECRET=orbit-container-build-synthetic-not-for-runtime pnpm build && rm .env.local && rm -f .next/standalone/.env.local
 
 # One-off migration / maintenance job; never run migrations in web startup.
 FROM build AS operations

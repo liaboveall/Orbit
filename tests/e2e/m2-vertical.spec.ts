@@ -70,9 +70,10 @@ test.describe("M2 纵向闭环", () => {
     await withTestDb(async (client) => {
       const devCheck = await client.query('SELECT COUNT(*) FROM "User" WHERE email NOT LIKE $1', ['e2e-%']);
       const testCheck = await client.query('SELECT COUNT(*) FROM "Project"');
+      // F33④：此处连接的是 withTestDb 核验过的**测试库**（orbit_test），原日志误标为 dev 库。
       console.log(
         `[isolation] orbit_test 清理后统计：Project=${testCheck.rows[0].count}, ` +
-          `dev 库剩余用户数（非 e2e 前缀）=${devCheck.rows[0].count}`,
+          `测试库剩余用户数（非 e2e 前缀）=${devCheck.rows[0].count}`,
       );
     });
   });

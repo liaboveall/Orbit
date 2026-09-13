@@ -179,11 +179,10 @@ export const InvitePreviewSchema = z.strictObject({
 });
 export type InvitePreviewDTO = z.infer<typeof InvitePreviewSchema>;
 
-/** AcceptedInvitation：接受邀请结果。 */
+/** AcceptedInvitation：接受邀请结果（公开契约只含 projectId + alreadyMember，与 openapi 一致）。 */
 export const AcceptedInvitationSchema = z.strictObject({
   projectId: UuidSchema,
   alreadyMember: z.boolean(),
-  createdNewMembership: z.boolean().optional(),
 });
 export type AcceptedInvitationDTO = z.infer<typeof AcceptedInvitationSchema>;
 

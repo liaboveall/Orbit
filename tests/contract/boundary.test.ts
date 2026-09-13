@@ -18,14 +18,16 @@ const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 const contractsDir = join(repoRoot, "src", "contracts");
 const serverDir = join(repoRoot, "src", "server");
 
-/** 递归收集目录下所有 .ts 文件（忽略 README 等非源码）。 */
+/** 递归收集目录下所有 .ts/.tsx 文件（忽略 README 等非源码）。
+ *  F33②：纳入 .tsx——服务端目录未来出现 .tsx（如错误页/邮件模板）时，
+ *  server-only 守卫同样必须覆盖，不允许 .tsx 逃逸扫描。 */
 function collectTsFiles(dir: string): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       out.push(...collectTsFiles(full));
-    } else if (entry.isFile() && entry.name.endsWith(".ts")) {
+    } else if (entry.isFile() && (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx"))) {
       out.push(full);
     }
   }

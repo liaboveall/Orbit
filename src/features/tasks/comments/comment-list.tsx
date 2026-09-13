@@ -19,7 +19,7 @@ import {
   createApiClient,
   type CommentDTO,
 } from "@/contracts";
-import { SampleError } from "@/features/shell/state-views";
+import { ErrorPanel } from "@/features/shell/state-views";
 import {
   messageForError,
   redirectToLoginIfUnauthenticated,
@@ -33,7 +33,7 @@ const PAGE_LIMIT = 30;
 /**
  * 评论模块容器（ORB-017）。自取数据：分页读取 GET /tasks/{id}/comments（游标分页，每页 30 条），
  * 「加载更多」按 nextCursor 追加；发布走 POST（幂等键）。评论按返回顺序（时间正序）渲染，
- * 新发布的评论追加到列表末尾（贴近底部输入框的时间流阅读顺序）。
+ * 已读到末尾时显示新评论；仍有后续页时保留阅读窗口并提示继续加载。
  *
  * 六态：loading（骨架）/ empty（空提示）/ error（局部错误+重试）/ permission（403）/ 正常 /
  * long-content（列表天然可滚动，分页避免一次性渲染过多）。
@@ -62,6 +62,7 @@ export function CommentList({
   const [forbidden, setForbidden] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [rowBusy, setRowBusy] = useState(false);
+  const [postedOutsideWindow, setPostedOutsideWindow] = useState(false);
 
   const [draft, setDraft] = useState("");
   const [postError, setPostError] = useState<string | null>(null);
@@ -71,9 +72,13 @@ export function CommentList({
   const pages = useRef(1);
   useUnsavedChanges(draft.length > 0, posting);
   const generation = useRef(0);
+  const pagination = useRef<Promise<void> | null>(null);
 
-  /** 从头加载第一页（也用于冲突/删除后的刷新）。 */
+  /** 从头刷新已加载的页数（也用于冲突/删除后的刷新）。 */
   const load = useCallback(async () => {
+    // A focus/RSC refresh must not discard a pagination click. Wait for that
+    // page to settle, then refresh the expanded window with its new page count.
+    if (pagination.current) await pagination.current;
     const epoch = ++generation.current;
     try {
       let next: string | undefined,
@@ -117,6 +122,7 @@ export function CommentList({
       );
       setCursor(next ?? null);
       setHasMore(more);
+      if (!more) setPostedOutsideWindow(false);
       setLoadError(null);
       setForbidden(false);
     } catch {
@@ -132,14 +138,37 @@ export function CommentList({
   };
 
   async function handleLoadMore() {
-    if (loadingMore || !cursor) return;
+    if (pagination.current || !cursor) return;
+    let settled!: () => void;
+    pagination.current = new Promise<void>(resolve => { settled = resolve; });
     setLoadingMore(true);
+    const epoch = ++generation.current;
     try {
+      const res = await api.getList(`/tasks/${taskId}/comments`, CommentSchema, {
+        query: { limit: PAGE_LIMIT, cursor },
+      });
+      if (epoch !== generation.current) return;
+      if (!res.ok) {
+        if (redirectToLoginIfUnauthenticated(res.status)) return;
+        if (res.status === 403 || res.status === 404) {
+          setForbidden(true);
+          router.refresh();
+          return;
+        }
+        setLoadError(messageForError(res.error.code, res.status, "加载评论失败，请重试。"));
+        return;
+      }
       pages.current++;
-      await load();
+      setComments((previous) => [...new Map([...(previous ?? []), ...res.data].map((row) => [row.id, row])).values()]);
+      setCursor(res.meta.nextCursor ?? null);
+      setHasMore(res.meta.hasMore);
+      if (!res.meta.hasMore) setPostedOutsideWindow(false);
+      setLoadError(null);
     } catch {
       toast({ title: "无法连接服务器，请稍后重试。", variant: "danger" });
     } finally {
+      pagination.current = null;
+      settled();
       setLoadingMore(false);
     }
   }
@@ -174,8 +203,10 @@ export function CommentList({
         );
         return;
       }
-      // 时间正序：新评论追加到末尾。
-      pages.current = Number.POSITIVE_INFINITY;
+      // Preserve the reader's loaded window; never fetch the entire discussion on post.
+      // If already at its end, allow one extra page for the newly created row.
+      if (!hasMore) pages.current++;
+      else setPostedOutsideWindow(true);
       await load();
       submission.current = null;
       setDraft("");
@@ -212,22 +243,16 @@ export function CommentList({
           你没有查看该任务评论的权限。
         </p>
       ) : loadError && comments === null ? (
-        <div>
-          <SampleError message={loadError} draftNote={null} />
-          <div className="mt-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                setLoadError(null);
-                setComments(null);
-                void load();
-              }}
-            >
-              重新加载
-            </Button>
-          </div>
-        </div>
+        // F24 修复：单一明确重试动作（ErrorPanel onRetry），不再出现样例 toast 按钮。
+        <ErrorPanel
+          message={loadError}
+          draftNote="你已输入的评论草稿已保留。"
+          onRetry={() => {
+            setLoadError(null);
+            setComments(null);
+            void load();
+          }}
+        />
       ) : (
         <>
           {loadError && <div role="alert"><InlineError>{loadError}</InlineError><Button size="sm" variant="secondary" onClick={() => void load()}>重新加载</Button></div>}
@@ -269,6 +294,7 @@ export function CommentList({
 
       {canWrite && (
         <div className="rounded-control border border-line p-3">
+          {postedOutsideWindow && <p role="status" className="text-caption text-foreground-secondary">评论已发布到讨论末尾，可继续加载更多评论查看。</p>}
           <Textarea
             value={draft}
             disabled={posting}
@@ -277,15 +303,24 @@ export function CommentList({
               setPostError(null);
             }}
             onKeyDown={(e) => {
+              if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) {
+                e.stopPropagation();
+                return;
+              }
               if (e.key === "Escape") {
                 e.stopPropagation();
-                setDraft("");
-                setPostError(null);
+                // F21 修复：有草稿时 Escape 需确认才清空（与详情关闭/嵌套 Escape 一致）；
+                // IME 组合输入已在上方短路，不会误触。取消（不确认）可继续编辑。
+                if (draft.length === 0) return;
+                if (window.confirm("确定放弃当前评论草稿？")) {
+                  setDraft("");
+                  setPostError(null);
+                }
               }
             }}
             placeholder="发表评论（纯文本，最多 2000 字符）…"
             aria-label="评论正文"
-            className="text-label"
+            className="md:text-label"
             rows={3}
             maxLength={BODY_MAX}
           />

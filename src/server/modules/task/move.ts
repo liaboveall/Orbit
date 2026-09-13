@@ -108,7 +108,8 @@ async function renumberColumn(
  * - beforeTaskId !== null → 定位目标列任务列表，find beforeTaskId，取 predecessor & beforeTaskId 的中点；
  *   间隙耗尽则重编号整列再计算。
  */
-async function computeMovePosition(
+/** E2 验收导出：中点插入/重编号的生产入口（服务内部此前仅同文件使用）。 */
+export async function computeMovePosition(
   tx: Prisma.TransactionClient,
   projectId: string,
   toStatus: string,

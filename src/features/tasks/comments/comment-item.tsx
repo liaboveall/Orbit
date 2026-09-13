@@ -1,6 +1,7 @@
 "use client";
 
 import { useUnsavedChanges } from "../unsaved-changes";
+import { formatEventDateTime, useUserTimezone } from "@/lib/user-timezone";
 import { Pencil, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import {
@@ -56,6 +57,7 @@ export function CommentItem({
   onReload: () => Promise<void>;
 }) {
   const { toast } = useToast();
+  const tz = useUserTimezone(); // F23：账户时区。
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.body ?? "");
   const [base, setBase] = useState(comment.version);
@@ -183,7 +185,8 @@ export function CommentItem({
     }
   }
 
-  const createdLabel = new Date(comment.createdAt).toLocaleString();
+  // F23 修复：评论时间用账户时区（原 toLocaleString 用设备时区）。
+  const createdLabel = formatEventDateTime(comment.createdAt, tz);
 
   return (
     <li className="group/comment flex items-start gap-3 rounded-control border border-transparent p-2 transition-colors hover:bg-surface-sunken">
@@ -212,6 +215,10 @@ export function CommentItem({
                 setError(null);
               }}
               onKeyDown={(e) => {
+                if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) {
+                  e.stopPropagation();
+                  return;
+                }
                 if (e.key === "Escape") {
                   e.stopPropagation();
                   cancel();

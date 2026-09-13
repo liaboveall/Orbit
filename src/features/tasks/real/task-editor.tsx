@@ -263,7 +263,7 @@ function TaskEditorContent({
         disabled={busy || !dirty || conflict}
         onClick={() => void mutate(draft ?? {}, true)}
       >
-        {busy ? "保存中..." : "保存"}
+        {busy ? "保存中…" : "保存"}
       </Button>
       <Button size="sm" variant="ghost" disabled={busy} onClick={discard}>
         取消
@@ -289,7 +289,7 @@ function TaskEditorContent({
                 await navigator.clipboard.writeText(
                   `${location.origin}/app/projects/${task.projectId}/tasks/${task.id}`,
                 );
-                toast({ title: "链接已复制" });
+                toast({ title: "链接已复制到剪贴板" });
               } catch {
                 setError("无法复制，请从地址栏复制链接。");
               }

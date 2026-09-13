@@ -54,14 +54,15 @@ src/
     auth/                   # Better Auth、会话、项目授权
     db/                     # Prisma singleton、事务帮助函数
     modules/                # project/task/invite/comment/file 等服务
-    integrations/           # storage、mail、未来 AI provider
+    modules/                # 业务模块（attachments/storage、invitation、task 等）
     http/                   # 错误映射、origin 验证、请求 ID、限流
   lib/                      # 确实跨功能的纯工具，不能成为杂物目录
   styles/                   # tokens、globals
 prisma/                     # schema、迁移、seed
 tests/unit/ integration/ e2e/ contract/
 scripts/                    # seed、清理、导出测试报告
-infra/                      # compose、Dockerfile、部署说明
+Dockerfile / .dockerignore  # 仓库根目录（M6 容器构建）
+infra/                      # compose、nginx、备份脚本、生命周期 JSON
 artifacts/                  # 实际报告与截图（大文件按需忽略）
 docs/ planning/ prompts/ contracts/  # 本规划
 ~~~
@@ -109,11 +110,17 @@ V1 不引入数据库 RLS；所有查询必须经过项目授权服务，并用�
 
 ## 8. 错误、可观测性和限流
 
-结构化日志目标字段：requestId、route、method、status、durationMs、userId（内部ID）、projectId（授权后）、errorCode。敏感字段统一 redact；不记录密码、cookie、token、请求正文或 signed URL。**当前实现差距**：仅 requestId 已落地；route/method/status/durationMs/projectId 等为目标、尚未实现。`LOG_LEVEL` 环境变量已在 `src/server/env.ts` 中校验（枚举 debug/info/warn/error，默认 info），但当前从不被消费。上述未实现字段与日志级别消费属待补工作。
+认证请求先按实际字节数执行 64KiB 有界读取，再交给 Better Auth 解析；无/偏小 Content-Length 不能绕过限制，超限统一返回 413。读取期间客户端 abort 取消源流；超限取消不等待不合作的源完成。
+
+SMTP 每次发送使用独立可取消连接，TCP/greeting/空闲预算分别 10/10/15 秒，发送总预算 20 秒。总预算到期关闭真实 socket，不能只让 Promise 超时；保留 implicit TLS、生产强制 STARTTLS 和证书校验。同 env 并发发送互不取消。实现对照 [Nodemailer socket 选项](https://nodemailer.com/extras/smtp-connection) 与已安装 10.0.1 源码。
+
+附件下载获取响应头预算 10 秒，整个响应流预算 120 秒；成功、截断、客户端取消及超时均释放计时器/监听。按存储声明长度检查实际字节，流开始后只结束流并留脱敏事件，不伪造新的 JSON 错误响应。
+
+结构化日志分层：Nginx 安全访问日志记录 requestId、固定标签 route/method、status、bytes、durationSeconds，不记录路径、查询或 Referer，避免路径令牌泄露；代理覆盖 X-Request-Id 后传入应用用于关联。应用记录脱敏 errorClass/errorCode 和认证邮件事件，LOG_LEVEL 控制 debug/info/warn/error。业务 userId/projectId 仅在事件明确需要且完成授权后选取，禁止复制请求或错误原文。
 
 staging/production 使用 PostgreSQL 共享原子固定窗口限流：业务写 60 次/用户/分钟、GET 读取 300 次/用户/分钟、邀请预览/接受合计 20 次/IP/分钟；认证使用 Better Auth 1.7.3 customStorage.consume，并保持敏感端点原阈值。上传采用数据库滑动分钟 10 次和最多 2 个跨副本活跃租约（180 秒，覆盖 120 秒请求截止）；development/test 保留内存实现，真实双池并发测试直接验证共享实现。只信任 TRUSTED_PROXY_COUNT 指定代理链，默认 0 退化共享来源桶。细节与维护见 [M6 运行手册](M6-OPERATIONS.md)。
 
-计划提供 /health/live（进程可服务）和 /health/ready（数据库连接与迁移兼容）；不暴露版本、凭证、连接字符串。**当前两个端点尚未实现，属 M6 部署范围**。邮件/存储暂时不可用只影响对应操作，有独立可观测错误，不让整个看板持续 500。
+已提供 /health/live（进程可服务）和 /health/ready（数据库连接与迁移兼容），实现与测试见 M6 运行手册；不暴露版本、凭证、连接字符串。邮件/存储暂时不可用只影响对应操作，有独立可观测错误，不让整个看板持续 500。
 
 ## 9. V1.1 的扩展位置
 

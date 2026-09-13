@@ -1,5 +1,6 @@
 import { toNextJsHandler } from "better-auth/next-js";
 import { auth } from "@/server/auth";
+import { withAuthGuards } from "@/server/auth/body-limit";
 
 /**
  * Better Auth 全路由挂载（M1 / ORB-004）。
@@ -14,8 +15,17 @@ import { auth } from "@/server/auth";
  *  - 认证路由使用库内置 CSRF / trustedOrigins 控制，**不**叠加 src/server/http/origin.ts
  *    的自制 Origin 层，以免破坏回调（docs/03 §5）。
  *  - runtime=nodejs：认证依赖 Node 加密与数据库驱动，不在 Edge 运行（docs/03 §1）。
+ *  - 请求体预算（D4 修复）：见 src/server/auth/body-limit.ts——声明超限前置 413，
+ *    无/伪造 Content-Length 与 chunked 超限由计数流按真实字节数拒绝。
  */
+
+const handlers = toNextJsHandler(auth);
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export const { GET, POST, PATCH, PUT, DELETE } = toNextJsHandler(auth);
+export const GET = withAuthGuards(handlers.GET);
+export const POST = withAuthGuards(handlers.POST);
+export const PATCH = withAuthGuards(handlers.PATCH);
+export const PUT = withAuthGuards(handlers.PUT);
+export const DELETE = withAuthGuards(handlers.DELETE);

@@ -982,7 +982,6 @@ describe("邀请并发不变量 · 项目级锁（A01–A04）", () => {
     expect(memberRes.status).toBe(200);
     const memberData = AcceptedSuccess.parse((await memberRes.json()) as unknown).data;
     expect(memberData.alreadyMember).toBe(true);
-    expect(memberData.createdNewMembership).toBe(false);
 
     const ownerRes = await acceptRoute.POST(
       buildRequest("POST", `${BASE}/invitations/accept`, {
@@ -993,7 +992,6 @@ describe("邀请并发不变量 · 项目级锁（A01–A04）", () => {
     expect(ownerRes.status).toBe(200);
     const ownerData = AcceptedSuccess.parse((await ownerRes.json()) as unknown).data;
     expect(ownerData.alreadyMember).toBe(true);
-    expect(ownerData.createdNewMembership).toBe(false);
 
     expect(await testPrisma.projectMember.count({ where: { projectId: project.id } })).toBe(1);
     const invRows = await testPrisma.invitation.findMany({

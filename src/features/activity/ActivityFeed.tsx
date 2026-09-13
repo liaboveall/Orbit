@@ -21,6 +21,7 @@ import { STATUS_LABEL } from "@/features/tasks/task-meta";
 import { loginPathWithReturnTo as _loginPathWithReturnTo } from "@/lib/return-to";
 import { useAutoRefresh } from "@/features/tasks/real/use-auto-refresh";
 import { usePermissionLossHandler, PermissionLossOverlay } from "@/features/activity/use-permission-loss-handler";
+import { formatEventDateTime, useUserTimezone } from "@/lib/user-timezone";
 
 /**
  * 项目活动时间线（M4 / ORB-011，`/app/projects/[id]/activity`）。
@@ -72,26 +73,14 @@ const ENTITY_LABEL: Record<ActivityEntityType, string> = {
   ATTACHMENT: "附件",
 };
 
-/** ISO → 「2026年9月10日 14:03」（绝对时间，服务端/首屏用）。 */
-function formatDateTime(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat("zh-CN", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date);
-}
+// F23 修复：活动时间改用账户时区（formatEventDateTime），不再用设备时区。
 
 /** ISO → 相对时间（挂载后用）。 */
-function formatRelative(iso: string): string {
+function formatRelative(iso: string, tz: string): string {
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return iso;
   const diff = Date.now() - then;
-  if (diff < 0) return formatDateTime(iso);
+  if (diff < 0) return formatEventDateTime(iso, tz);
   const minutes = Math.floor(diff / 60_000);
   if (minutes < 1) return "刚刚";
   if (minutes < 60) return `${minutes} 分钟前`;
@@ -99,7 +88,7 @@ function formatRelative(iso: string): string {
   if (hours < 24) return `${hours} 小时前`;
   const days = Math.floor(hours / 24);
   if (days < 30) return `${days} 天前`;
-  return formatDateTime(iso);
+  return formatEventDateTime(iso, tz);
 }
 
 /**
@@ -224,11 +213,14 @@ export function ActivityFeed({
   useAutoRefresh();
   
   // R11 Enhanced: Handle permission loss gracefully
+  const tz = useUserTimezone(); // F23：账户时区。
   const {
     hasPermissionError,
-    isChecking: _isChecking, // not used - permission loss handler auto-rendirects
+    permissionLossReason,
     handlePermissionError,
     clearPermissionError,
+    goToLogin,
+    leaveProject,
   } = usePermissionLossHandler({
     projectId,
     onLoss: (reason) => {
@@ -257,16 +249,14 @@ export function ActivityFeed({
         return;
       }
       if (result.status === 401) {
-        // Clear existing errors to avoid confusion
-        clearPermissionError();
-        // Detect and handle permission loss with graceful UX
-        const error = new Error("Unauthorized - Access revoked or token expired");
-        handlePermissionError(error, "removed");
+        // F22：401 = 会话失效 → 引导重新登录（遮罩内主操作，不再自动强跳）。
+        const error = new Error("Unauthorized - session expired");
+        handlePermissionError(error, "expired");
         return;
       }
       if (result.status === 403) {
-        clearPermissionError();
-        const error = new Error("Forbidden - Insufficient permissions");
+        // F22：403 = 已无权限/被移出 → 引导离开项目（不再走会重弹回的登录流程）。
+        const error = new Error("Forbidden - insufficient permissions");
         handlePermissionError(error, "revoked");
         return;
       }
@@ -286,7 +276,7 @@ export function ActivityFeed({
     <div className="mx-auto w-full max-w-3xl">
       <header className="mb-6">
         <p className="font-mono text-caption uppercase tracking-[0.18em] text-foreground-muted">
-          activity · /api/v1/projects/{projectId}/activity
+          项目动态
         </p>
         <h1 className="mt-1 text-page font-semibold tracking-tight text-foreground">
           项目活动
@@ -335,10 +325,10 @@ export function ActivityFeed({
               </div>
               <time
                 dateTime={item.createdAt}
-                title={formatDateTime(item.createdAt)}
+                title={formatEventDateTime(item.createdAt, tz)}
                 className="mt-1 block text-caption text-foreground-muted"
               >
-                {mounted ? formatRelative(item.createdAt) : formatDateTime(item.createdAt)}
+                {mounted ? formatRelative(item.createdAt, tz) : formatEventDateTime(item.createdAt, tz)}
               </time>
             </li>
           ))}
@@ -362,14 +352,14 @@ export function ActivityFeed({
         </div>
       ) : null}
 
-      {/* Permission Loss Recovery Overlay */}
-      {hasPermissionError ? (
+      {/* 权限丢失恢复遮罩（F22：Dialog 焦点隔离，401/403 分流，无自动强跳） */}
+      {hasPermissionError && permissionLossReason ? (
         <PermissionLossOverlay
-          projectId={projectId}
           isVisible={hasPermissionError}
-          onDismiss={() => {
-            clearPermissionError();
-          }}
+          reason={permissionLossReason}
+          onDismiss={clearPermissionError}
+          onGoToLogin={goToLogin}
+          onLeaveProject={leaveProject}
         />
       ) : null}
     </div>

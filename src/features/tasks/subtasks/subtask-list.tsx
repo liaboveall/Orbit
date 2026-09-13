@@ -20,7 +20,7 @@ import {
   createApiClient,
   type SubtaskDTO,
 } from "@/contracts";
-import { SampleError } from "@/features/shell/state-views";
+import { ErrorPanel } from "@/features/shell/state-views";
 import {
   messageForError,
   redirectToLoginIfUnauthenticated,
@@ -167,22 +167,15 @@ export function SubtaskList({
           你没有查看该任务子任务的权限。
         </p>
       ) : loadError && subtasks === null ? (
-        <div>
-          <SampleError message={loadError} draftNote={null} />
-          <div className="mt-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                setLoadError(null);
-                setSubtasks(null);
-                void load();
-              }}
-            >
-              重新加载
-            </Button>
-          </div>
-        </div>
+        // F24 修复：单一明确重试动作。
+        <ErrorPanel
+          message={loadError}
+          onRetry={() => {
+            setLoadError(null);
+            setSubtasks(null);
+            void load();
+          }}
+        />
       ) : (
         <>
           {loadError && <div role="alert"><InlineError>{loadError}</InlineError><Button size="sm" variant="secondary" onClick={() => void load()}>重新加载</Button></div>}
@@ -215,6 +208,10 @@ export function SubtaskList({
                       setAddError(null);
                     }}
                     onKeyDown={(e) => {
+                      if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) {
+                        e.stopPropagation();
+                        return;
+                      }
                       if (e.key === "Escape") {
                         e.stopPropagation();
                         setAdding(false);
@@ -227,7 +224,7 @@ export function SubtaskList({
                     }}
                     placeholder="输入子任务标题（最多 200 字符）…"
                     aria-label="新子任务标题"
-                    className="text-label"
+                    className="md:text-label"
                     rows={2}
                     maxLength={TITLE_MAX}
                     autoFocus

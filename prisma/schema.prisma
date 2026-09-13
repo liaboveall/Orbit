@@ -221,7 +221,7 @@ model Invitation {
   expiresAt    DateTime @db.Timestamptz(3)
   revokedAt    DateTime? @db.Timestamptz(3)
   acceptedAt   DateTime? @db.Timestamptz(3) // Must be NULL if acceptedById is NULL, and vice versa (docs/04 §5)
-  acceptedById String? // Both must be NULL or both non-NULL - enforced by DB trigger
+  acceptedById String? // Both must be NULL or both non-NULL - enforced by DB CHECK constraint
   createdAt    DateTime  @default(now()) @db.Timestamptz(3)
 
   project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -268,6 +268,8 @@ model IdempotencyRecord {
 
   @@unique([userId, method, routeKey, key])
   @@index([expiresAt])
+  // F17：评论删除等按 resourceId 反查幂等缓存的热路径更新（docs/04 §3）。
+  @@index([resourceId])
 }
 
 // ── M2 任务域枚举（docs/04 §3）────────────────────────────────
@@ -345,7 +347,8 @@ model MoveRecord {
 }
 
 // ── M5 子任务域模型（docs/04 §3）───────────────────────────────────────
-// Subtask 跟随 Task 生命周期；onDelete: Cascade（Task 删除时子资源同步清除）。
+// Subtask 跟随 Task 生命周期；onDelete: Restrict（硬删除被存在子任务的任务所阻止，
+// 防误删；应用层软删除不触发本约束）。
 // version 用于并发冲突检测；deletedAt 支持软删除；显示顺序为 createdAt, id。
 
 model Subtask {

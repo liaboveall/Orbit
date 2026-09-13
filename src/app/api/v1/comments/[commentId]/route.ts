@@ -2,7 +2,7 @@ import { enforceWriteLimit } from "@/server/http/write-limit";
 import { parseRequestBody } from "@/contracts";
 import { UpdateCommentSchema } from "@/contracts";
 import { errorResponse, toErrorResponse } from "@/server/http/errors";
-import { jsonSuccess, readJsonBody, jsonEnvelope, noContent } from "@/server/http/json";
+import { jsonSuccess, readJsonBody, jsonEnvelope } from "@/server/http/json";
 import { verifyRequestOrigin } from "@/server/http/origin";
 import { resolveRequestIdFromRequest } from "@/server/http/request-id";
 import { requireSessionUser } from "@/server/auth/session";
@@ -78,8 +78,10 @@ export async function DELETE(
       return errorResponse("VALIDATION_ERROR", "expectedVersion must be a positive integer", requestId);
     }
 
-    await deleteComment(commentId, sessionUser.id, expectedVersion);
-    return noContent(requestId);
+    // 契约（contracts/openapi.json DELETE /comments/{commentId}）定义 200 + 删除占位
+    // Comment（body=null、isDeleted=true）；服务层返回的即该脱敏 DTO。
+    const comment = await deleteComment(commentId, sessionUser.id, expectedVersion);
+    return jsonSuccess(comment, requestId);
   } catch (err) {
     return toErrorResponse(err, requestId);
   }

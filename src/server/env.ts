@@ -61,7 +61,7 @@ const EXPECTED_FORMAT: Record<string, string> = {
   AI_MODEL: "AI_ENABLED=true 时必须提供 model",
   AI_API_KEY: "AI_ENABLED=true 时必须提供 API key（仅服务端）",
   AI_DAILY_REQUEST_LIMIT: "必须是 ≥ 1 的整数",
-  TRUSTED_PROXY_COUNT: "必须是 0–10 的整数（受信任反向代理跳数）",
+  TRUSTED_PROXY_COUNT: "必须是 0–10 的整数（受信任反向代理跳数）；production 环境必须 ≥ 1",
 };
 
 /** 布尔型环境变量解析：显式接受 true/false/1/0，避免 Boolean("false") === true 陷阱。 */
@@ -173,6 +173,15 @@ export const envSchema = z
     }
     if (testDb && NON_TEST_DB_PATTERN.test(testDb)) {
       ctx.addIssue({ code: "custom", path: ["TEST_DATABASE_URL"] });
+    }
+
+    // TRUSTED_PROXY_COUNT（D1 修复）：默认 0 保留直连场景的安全信任边界（拒绝一切
+    // X-Forwarded-For）；但生产拓扑是「Nginx 受信代理 + 源站不可直连」（docs/08 §3、
+    // infra/nginx.conf），0 会使按 IP 限流塌缩为全局单桶（匿名登录/邀请接口全体共享，
+    // 一个攻击者即可锁死所有人）。生产环境要求显式配置 ≥ 1，误配在启动期失败
+    // （可观测警报），不允许默默退化。
+    if (value.APP_ENV === "production" && value.TRUSTED_PROXY_COUNT < 1) {
+      ctx.addIssue({ code: "custom", path: ["TRUSTED_PROXY_COUNT"] });
     }
 
     // AI_ENABLED=true 时才要求 AI 凭证。

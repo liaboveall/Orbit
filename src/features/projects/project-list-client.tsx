@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmLeave } from "@/features/tasks/unsaved-changes";
+
 import { Archive, ArchiveRestore, FolderPlus, LayoutGrid, ListChecks, Plus, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -197,7 +199,7 @@ export function ProjectListClient({
       <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="font-mono text-caption uppercase tracking-[0.18em] text-foreground-muted">
-            projects · /api/v1/projects
+            项目空间
           </p>
           <h1 className="mt-1 text-page font-semibold tracking-tight text-foreground">
             全部项目
@@ -214,7 +216,8 @@ export function ProjectListClient({
             type="button"
             onClick={() => {
               setListError(null);
-              setCreating((prev) => !prev);
+              if (creating && !confirmLeave()) return;
+                  setCreating((prev) => !prev);
             }}
             aria-expanded={creating}
             aria-controls="project-create-form"

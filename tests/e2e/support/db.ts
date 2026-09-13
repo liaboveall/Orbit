@@ -1,4 +1,5 @@
 import pg from "pg";
+import { assertFixtureUsersOwned } from "../../support/fixture-ownership";
 import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 /**
@@ -103,11 +104,12 @@ export async function cleanupTestEmails(
   await withTestDb(async (client) => {
     await client.query("BEGIN");
     try {
-      const users = await client.query<{ id: string }>(
-        'SELECT id FROM "User" WHERE email=ANY($1::text[])',
+      const users = await client.query<{ id: string; createdAt: Date }>(
+        'SELECT id, "createdAt" FROM "User" WHERE email=ANY($1::text[]) FOR UPDATE',
         [emails],
       );
       const ids = users.rows.map((row) => row.id);
+      await assertFixtureUsersOwned(users.rows);
       const projects = await client.query<{ id: string }>(
         'SELECT id FROM "Project" WHERE "ownerId"=ANY($1::text[])',
         [ids],
@@ -189,8 +191,11 @@ export async function cleanupTestEmails(
           ])
         ).rowCount ?? 0;
       await client.query(
-        'DELETE FROM "Verification" WHERE identifier=ANY($1::text[])',
-        [emails],
+        // 重置令牌的 identifier 是 `reset-password:<token>`（不含邮箱），须按用户归属删除，
+        // 与 tests/support/auth-cleanup.ts 的集成侧规则一致（C4 修复）。
+        `DELETE FROM "Verification" WHERE identifier=ANY($1::text[])
+           OR (value=ANY($2::text[]) AND identifier LIKE 'reset-password:%')`,
+        [emails, ids],
       );
       const remaining = await client.query(
         'SELECT id FROM "User" WHERE email=ANY($1::text[])',

@@ -72,7 +72,9 @@ export function proxy(request: NextRequest): NextResponse {
 
 /**
  * 只在需要保护的前缀上运行：
- *  - /app/*（受保护页面）、/auth/*（已登录回跳）、/api/v1/*（受保护 API）。
+ *  - /app/*（受保护页面）、/api/v1/*（受保护 API）；/auth/* 页面**不在**拦截范围——
+ *    登录/注册/验证页自行检查真实会话并回跳（上面的 return NextResponse.next() 分支），
+ *    不按 Cookie 存在性做任何改写。
  *  - **不含** /api/auth/*（Better Auth catch-all 自管理，含限流/会话/邮件端点，绝不拦截）。
  *  - 不含静态资源与根路径，减少无谓执行。
  */

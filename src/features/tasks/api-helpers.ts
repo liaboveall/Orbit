@@ -6,8 +6,9 @@ import { loginPathWithReturnTo } from "@/lib/return-to";
  * M5 前端功能层共享的客户端 API 助手。
  *
  * 为什么存在（而非只用 `@/contracts` 的 createApiClient）：
- *  - 契约里所有 DELETE 返回 204 无响应体，而共享 api client 的 send() 遇到空 body 会抛
- *    ApiClientError（它面向「必有信封」的读写端点）。故删除走原生 fetch，把 204 视为成功。
+ *  - 删除端点的响应形态不统一（契约定义：DELETE /comments/{commentId} 返回 200+删除占位
+ *    Comment，其余 DELETE 返回 204 无 body），而共享 api client 的 send() 面向「必有信封」
+ *    的读写端点。故删除走原生 fetch，把 2xx 一律视为成功，不做信封解析。
  *  - 附件上传是 multipart/form-data，且需要真实上传进度；共享 client 只发 JSON，
  *    故上传走 XMLHttpRequest（uploadAttachment）。
  *

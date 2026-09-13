@@ -10,6 +10,7 @@ import { dateInTimezone } from "@/lib/calendar";
 import { registrationTimezone } from "@/server/auth/user-fields";
 import { fromDueDateString } from "@/server/modules/task/date-only";
 import {
+  TASK_SUMMARY_SELECT,
   toTaskSummaryDTO,
   fetchTaskResourceCountsBatch,
 } from "@/server/modules/task/mappers";
@@ -120,15 +121,12 @@ export async function listMyTasks(
     filters.push(
       keysetCondition(sort, decodeCursor(query.cursor, fingerprint)),
     );
+  // F14：工作台摘要使用显式投影（含 project.key），不拉取 description。
   const rows = await prisma.task.findMany({
     where: { AND: filters },
     orderBy: orderByFor(sort),
     take: limit + 1,
-    include: {
-      project: { select: { key: true } },
-      assignee: { select: { id: true, name: true } },
-      creator: { select: { id: true, name: true } },
-    },
+    select: { ...TASK_SUMMARY_SELECT, project: { select: { key: true } } },
   });
   const page = rows.slice(0, limit),
     counts = await fetchTaskResourceCountsBatch(

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Home, LayoutGrid, Menu } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import type { UserDTO } from "@/contracts";
@@ -19,6 +19,8 @@ import {
 import { SIDEBAR_PROJECTS } from "./fixtures";
 import { OrbitWordmark } from "./orbit-logo";
 import { UserMenu } from "./user-menu";
+import { useGuardedNavigate } from "@/features/tasks/unsaved-changes";
+import { UserTimezoneProvider } from "@/lib/user-timezone";
 
 /**
  * AppShell（ORB-002 布局，ORB-006 接入真实会话）：响应式应用外壳。
@@ -34,8 +36,8 @@ import { UserMenu } from "./user-menu";
  * 不再引用 fixture 的 CURRENT_USER；侧栏底部与个人菜单直达 `/app/settings`。
  *
  * M2 Phase 6 变更：「全部项目」按钮导航到真实项目列表 `/app/projects`；
- * 样例横幅改为白名单判定（isRealDataPage）：设置页与项目/任务/回收站真实数据页
- * 不挂横幅，today/board/task 详情/ui-samples 仍是 fixture 样例、继续显示。
+ * 样例横幅改为白名单判定（isRealDataPage）：设置页/项目/任务/回收站/真实工作台
+ * today 不挂横幅；/app/samples/* 与 /app/ui-samples 仍是 fixture 样例、继续显示。
  * 侧栏项目导航仍为 M0 fixture（保持 6 项，后续里程碑接真实项目列表）。
  */
 
@@ -43,10 +45,11 @@ import { UserMenu } from "./user-menu";
 const isDev = process.env.NODE_ENV === "development";
 
 /**
- * 真实数据页判定（M2 Phase 6）：白名单内的路由展示真实私有数据，
- * 不挂「使用 fixture 合成数据」样例横幅；其余（samples/today/
- * samples/board/sample/tasks/task 详情/ui-samples）仍是 M0 样例，
- * 必须继续显示横幅（docs/13：样例内容必须明确标识）。
+ * 真实数据页判定（M2 Phase 6；B1 修复改为**正向样例路由判定**的反向描述——
+ * 真实数据路由显式枚举，避免每接一个真实页就漏改白名单）：白名单内的路由展示
+ * 真实私有数据，不挂「使用 fixture 合成数据」样例横幅。/app/today 自 M5（ORB-019）
+ * 起是真实工作台数据，与设置/项目/任务一样属于白名单；仅 /app/samples/*、
+ * /app/ui-samples 是 M0 样例，必须继续显示横幅（docs/13：样例内容必须明确标识）。
  * 项目 id 为 UUID（不含 `/`），[^/]+ 即精确匹配单层动态段。
  */
 const PROJECT_TASKS_PATH = /^\/app\/projects\/[^/]+\/tasks$/;
@@ -62,6 +65,8 @@ const PROJECT_SETTINGS_PATH = /^\/app\/projects\/[^/]+\/settings$/;
 function isRealDataPath(pathname: string): boolean {
   return (
     pathname.startsWith("/app/settings") ||
+    // B1 修复：/app/today 是真实工作台（ORB-019），不挂 fixture 横幅。
+    pathname.startsWith("/app/today") ||
     pathname === "/app/projects" ||
     PROJECT_TASKS_PATH.test(pathname) ||
     // 真实任务详情独立页（ORB-010，M3 已接真实数据）不挂 fixture 横幅。
@@ -72,8 +77,8 @@ function isRealDataPath(pathname: string): boolean {
     PROJECT_INVITATIONS_PATH.test(pathname) ||
     PROJECT_ACTIVITY_PATH.test(pathname) ||
     PROJECT_SETTINGS_PATH.test(pathname)
-    // 注意：/app/samples/*、/app/today、/app/ui-samples 及仍为 fixture 的
-    // 样例页必须继续显示横幅（docs/13）。
+    // 注意：/app/samples/* 与 /app/ui-samples 仍为 fixture 样例页，必须继续显示横幅
+    // （docs/13）。样例路由在生产由服务端门禁关闭（见 samples 页面的 dev gate）。
   );
 }
 
@@ -112,7 +117,8 @@ function SidebarNav({
   user: UserDTO;
   onNavigate?: () => void;
 }) {
-  const router = useRouter();
+  // B6 修复：程序化导航同样受未保存草稿保护（脏表单未确认放弃时不离开）。
+  const guardedNavigate = useGuardedNavigate();
   const todayActive = pathname.startsWith("/app/today");
   const settingsActive = pathname.startsWith("/app/settings");
   // 项目列表页（/app/projects，不含 fixture 的 /app/projects/[id]/board 等）为激活态。
@@ -241,7 +247,7 @@ function SidebarNav({
             aria-label="全部项目"
             aria-current={projectsActive ? "page" : undefined}
             onClick={() => {
-              router.push("/app/projects");
+              guardedNavigate.push("/app/projects");
               onNavigate?.();
             }}
             className={cn(
@@ -318,12 +324,21 @@ export function AppShell({ user, children }: { user: UserDTO; children: ReactNod
   const { captureFocus, handleCloseAutoFocus } =
     useFocusReturn<HTMLButtonElement>();
 
-  // 真实数据页（设置 / 项目列表 / 任务列表 / 回收站）不挂样例横幅；
-  // fixture 页（today/board/task 详情/ui-samples）继续显示（白名单见 isRealDataPath）。
+  // 真实数据页（工作台 / 设置 / 项目 / 任务 / 回收站 / 成员 / 邀请 / 活动）不挂样例横幅；
+  // fixture 样例页（samples/ui-samples）继续显示（白名单见 isRealDataPath）。
   const isRealDataPage = isRealDataPath(pathname);
 
   return (
+    // F23 修复：会话用户的时区作为事件时间展示的统一来源（详情见 lib/user-timezone）。
+    <UserTimezoneProvider value={user.timezone}>
     <div className="min-h-dvh bg-background">
+      {/* F31⑥：键盘用户跳过导航直达主内容（docs/02 §6） */}
+      <a
+        href="#app-main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-control focus:bg-brand focus:px-4 focus:py-2 focus:text-label focus:font-medium focus:text-white"
+      >
+        跳到主内容
+      </a>
       {/* 固定侧栏：手机隐藏，平板 72px，桌面 224px */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[72px] border-r border-line bg-surface md:block xl:w-56">
         <SidebarNav mode="rail" pathname={pathname} user={user} />
@@ -378,12 +393,13 @@ export function AppShell({ user, children }: { user: UserDTO; children: ReactNod
           </span>
         </header>
 
-        <main className="flex-1 px-4 py-6 md:px-6 xl:px-8">
+        <main id="app-main" className="flex-1 px-4 py-6 md:px-6 xl:px-8">
           {isRealDataPage ? null : <SampleBanner showStateHint={isDev} />}
           {children}
         </main>
       </div>
     </div>
+    </UserTimezoneProvider>
   );
 }
 

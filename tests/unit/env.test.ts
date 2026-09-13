@@ -70,8 +70,39 @@ describe("parseEnv · 合法输入", () => {
   });
 
   it("production 下提供足够长度的 BETTER_AUTH_SECRET 时通过", () => {
-    const raw = { ...validEnv(), APP_ENV: "production", APP_URL: "https://orbit.example", BETTER_AUTH_URL: "https://orbit.example", STORAGE_ENDPOINT: "https://storage.example", BETTER_AUTH_SECRET: "x".repeat(48) };
+    const raw = { ...validEnv(), APP_ENV: "production", APP_URL: "https://orbit.example", BETTER_AUTH_URL: "https://orbit.example", STORAGE_ENDPOINT: "https://storage.example", BETTER_AUTH_SECRET: "x".repeat(48), TRUSTED_PROXY_COUNT: "1" };
     expect(() => parseEnv(raw)).not.toThrow();
+  });
+
+  it("D1：production 且 TRUSTED_PROXY_COUNT=0 被拒绝（限流塌缩为全局单桶的误配）", () => {
+    const raw = {
+      ...validEnv(),
+      APP_ENV: "production",
+      APP_URL: "https://orbit.example",
+      BETTER_AUTH_URL: "https://orbit.example",
+      STORAGE_ENDPOINT: "https://storage.example",
+      BETTER_AUTH_SECRET: "x".repeat(48),
+      TRUSTED_PROXY_COUNT: "0",
+    };
+    const { key, expected } = captureIssues(() => parseEnv(raw));
+    expect(key).toBe("TRUSTED_PROXY_COUNT");
+    expect(expected).toContain("production 环境必须 ≥ 1");
+  });
+
+  it("D1：production 且 TRUSTED_PROXY_COUNT=1 通过；development 默认 0 仍通过", () => {
+    expect(
+      () =>
+        parseEnv({
+          ...validEnv(),
+          APP_ENV: "production",
+          APP_URL: "https://orbit.example",
+          BETTER_AUTH_URL: "https://orbit.example",
+          STORAGE_ENDPOINT: "https://storage.example",
+          BETTER_AUTH_SECRET: "x".repeat(48),
+          TRUSTED_PROXY_COUNT: "1",
+        }),
+    ).not.toThrow();
+    expect(() => parseEnv(validEnv())).not.toThrow();
   });
 });
 

@@ -94,6 +94,8 @@ export function RealBoard({
     return () => controller.abort();
   }, [state.refreshing, state.source, state.previous, project.id, queryKey]);
   const [creating, setCreating] = useState(false);
+  // B8 修复：手机（<md）用状态 tab 单列查看，避免三列纵向长页堆叠；桌面保持三列。
+  const [mobileStatus, setMobileStatus] = useState<TaskStatus>(query.status ?? "TODO");
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true;
@@ -346,12 +348,43 @@ export function RealBoard({
           )}
         </div>
       )}
+      {/* 手机状态 tab（B8）：带列计数，选中列单列显示；筛选/分页/冲突回滚逻辑不变 */}
+      <div
+        role="tablist"
+        aria-label="看板状态"
+        className="flex gap-2 md:hidden"
+      >
+        {board.columns.map((column) => {
+          const active = mobileStatus === column.status;
+          return (
+            <button
+              key={column.status}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setMobileStatus(column.status)}
+              className={
+                "min-h-11 flex-1 rounded-control border px-3 py-2 text-label font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand " +
+                (active
+                  ? "border-brand bg-brand-soft text-brand"
+                  : "border-line bg-surface text-foreground-secondary hover:bg-surface-sunken")
+              }
+            >
+              {STATUS_LABEL[column.status]}
+              <span className="ml-1 font-mono text-caption text-foreground-muted">
+                {column.total}
+              </span>
+            </button>
+          );
+        })}
+      </div>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragEnd={dragEnd}
       >
-        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+        {/* F29：三列起点与任务列表/表格的 md(768) 切换点统一（原 lg）。 */}
+        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
           {board.columns.map((column) => (
             <Column
               key={column.status}
@@ -362,6 +395,7 @@ export function RealBoard({
               today={today}
               onMove={move}
               onLoad={() => void load(column.status)}
+              mobileVisible={column.status === mobileStatus}
             />
           ))}
         </div>
@@ -378,6 +412,7 @@ function Column({
   today,
   onMove,
   onLoad,
+  mobileVisible = true,
 }: {
   column: BoardColumnDTO;
   canDrag: boolean;
@@ -390,6 +425,8 @@ function Column({
     before: string | null,
   ) => Promise<void>;
   onLoad: () => void;
+  /** B8：手机 tab 下仅选中列可见（md+ 三列不受影响）。 */
+  mobileVisible?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: column.status,
@@ -399,7 +436,7 @@ function Column({
     <section
       ref={setNodeRef}
       aria-label={STATUS_LABEL[column.status] + "列"}
-      className={`min-h-40 rounded-card border p-3 ${isOver ? "border-brand bg-brand-soft" : "border-line bg-surface-sunken"}`}
+      className={`min-h-40 rounded-card border p-3 ${isOver ? "border-brand bg-brand-soft" : "border-line bg-surface-sunken"} ${mobileVisible ? "" : "hidden md:block"}`}
     >
       <h2 className="mb-3 flex justify-between text-label font-medium">
         <span>{STATUS_LABEL[column.status]}</span>
@@ -482,7 +519,11 @@ function Card({
         transition,
         opacity: isDragging ? 0.5 : 1,
       }}
-      className="space-y-3 rounded-card border border-line bg-surface p-3 shadow-popover"
+      className={
+        "space-y-3 rounded-card border border-line bg-surface p-3 " +
+        // F28 修复：影子只用于悬浮层；拖拽浮层用 shadow-drag 与静态表面区分。
+        (isDragging ? "shadow-drag" : "")
+      }
     >
       <div className="flex items-center justify-between gap-2">
         <span className="font-mono text-caption text-foreground-muted">
@@ -502,7 +543,8 @@ function Card({
         data-task-link={task.id}
         href={path + "?" + target.toString()}
         scroll={false}
-        className="block text-label font-medium [overflow-wrap:anywhere] hover:text-brand"
+        title={task.title}
+        className="line-clamp-2 block text-label font-medium [overflow-wrap:anywhere] hover:text-brand"
       >
         {task.title}
       </Link>
@@ -515,7 +557,7 @@ function Card({
       </div>
       <select
         aria-label={`移动 ${task.identifier}`}
-        className="w-full rounded-control border border-line bg-surface px-2 py-1.5 text-caption"
+        className="w-full rounded-control border border-line bg-surface px-2 py-1.5 text-body md:text-caption"
         value={task.status}
         disabled={!writable || busy}
         onChange={(e) => void onMove(task, e.target.value as TaskStatus, null)}

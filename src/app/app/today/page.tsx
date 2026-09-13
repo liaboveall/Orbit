@@ -5,6 +5,20 @@ import { getSessionUser } from "@/server/auth/session";
 import { getOverview, listMyTasks } from "@/server/modules/workbench/service";
 import { MyTasksQuerySchema, MyTaskBuckets } from "@/contracts";
 import { WorkbenchStats } from "@/features/workbench/workbench-stats";
+
+/** 与 workbench-stats.tsx 的 bucketQuery 相同口径（服务端组件内联副本，N03）。 */
+function bucketQuery(
+  query: Record<string, unknown>,
+  bucket: string,
+): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (key === "cursor" || key === "bucket" || value === undefined || value === null) continue;
+    params.set(key, String(value));
+  }
+  params.set("bucket", bucket);
+  return params;
+}
 import { MyTasksList } from "@/features/workbench/task-list";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "我的工作台 · Orbit" };
@@ -49,7 +63,11 @@ export default async function TodayPage({
           {overview.totalOpen}
         </p>
       </header>
-      <WorkbenchStats overview={overview} />
+      <WorkbenchStats
+        overview={overview}
+        query={query}
+        activeBucket={query.bucket ?? "all_open"}
+      />
       <nav aria-label="任务分类" className="flex flex-wrap gap-2">
         {MyTaskBuckets.map((bucket, i) => (
           <Link
@@ -60,14 +78,7 @@ export default async function TodayPage({
             className="rounded-control border border-line px-3 py-2 text-label aria-[current=page]:bg-brand aria-[current=page]:text-white focus-visible:outline-2 focus-visible:outline-brand"
             href={
               "/app/today?" +
-              new URLSearchParams({
-                ...Object.fromEntries(
-                  Object.entries(query)
-                    .filter(([k]) => k !== "cursor")
-                    .map(([k, v]) => [k, String(v)]),
-                ),
-                bucket,
-              }).toString()
+              bucketQuery(query, bucket).toString()
             }
           >
             {labels[i]}

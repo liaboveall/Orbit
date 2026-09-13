@@ -120,7 +120,7 @@ export default async function ProjectTrashPage({ params }: PageProps) {
               <span className="shrink-0 text-caption text-foreground-muted">
                 删除于{" "}
                 <time dateTime={task.deletedAt ?? undefined}>
-                  {task.deletedAt ? formatDateTimeCN(task.deletedAt) : "未知时间"}
+                  {task.deletedAt ? formatDateTimeCN(task.deletedAt, sessionUser.timezone) : "未知时间"}
                 </time>
               </span>
               {/* 401 硬跳转在客户端组件内完成：仅传可序列化的 returnTo（跨 RSC 边界不可传函数）。 */}

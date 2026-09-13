@@ -44,6 +44,9 @@ jobs:
       - run: pnpm test:e2e --retries=0
       - run: pnpm test:ui --retries=0
       - run: pnpm audit --prod --audit-level=high
+      # F39：开发依赖扫描仅作可观测信号（漏洞公告随时变化，不作为阻塞门禁）。
+      - run: pnpm audit --audit-level=high
+        continue-on-error: true
       - run: docker build --target runner -t orbit:${{ github.sha }} .
       - run: docker build --target operations -t orbit-operations:${{ github.sha }} .
       - uses: actions/upload-artifact@v4

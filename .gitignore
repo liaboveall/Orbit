@@ -6,6 +6,7 @@ node_modules/
 .next/
 out/
 build/
+next-env.d.ts
 next-env.d.ts.bak
 
 # --- Prisma generated client (regenerated via `pnpm db:generate`) ---
@@ -73,3 +74,6 @@ Thumbs.db
 
 # --- Misc ---
 *.tsbuildinfo
+# F36：个人 IDE 生成物不入库（保留本地副本，不重写历史）。
+.qoder/
+.kiro/

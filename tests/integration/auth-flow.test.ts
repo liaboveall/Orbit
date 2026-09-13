@@ -1,3 +1,6 @@
+import { cleanupAuthUsers } from "../support/auth-cleanup";
+import { createServer } from "node:net";
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import dotenv from "dotenv";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -47,7 +50,7 @@ const EMAIL_GHOST = `${RUN_TAG}-ghost@${domain}`; // 从不注册：登录失败
 const PASSWORD = "Str0ng!Passw0rd-OrbitTest"; // ≥12 位
 const NEW_PASSWORD = "An0ther!Str0ng-OrbitPwd"; // 重设后的新密码
 
-const MAILPIT_API = "http://localhost:8025/api/v1";
+const MAILPIT_API = process.env.MAILPIT_API ?? "http://localhost:8025/api/v1";
 const AUTH_BASE = "http://localhost:3000";
 
 const adapter = new PrismaPg({ connectionString: env.TEST_DATABASE_URL });
@@ -146,9 +149,42 @@ beforeAll(async () => {
   await testPrisma.user.deleteMany({ where: { email: { contains: RUN_TAG } } });
 });
 
+it("SMTP failure teardown removes unconsumed reset tokens without touching other users", async () => {
+  const tag = `reset-failure-${randomUUID()}`;
+  const id = randomUUID();
+  const unrelatedId = randomUUID();
+  let rejectedConnections = 0;
+  const server = createServer((socket) => { rejectedConnections++; socket.end("421 synthetic unavailable\r\n"); });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("Missing SMTP port");
+  try {
+    const email = `${tag}@orbit.test`;
+    await testPrisma.user.create({ data: { id, email, name: "failure fixture", emailVerified: true } });
+    await testPrisma.verification.create({ data: {
+      id: unrelatedId, identifier: `reset-password:${randomUUID()}`,
+      value: randomUUID(), expiresAt: new Date(Date.now() + 60000),
+    } });
+    const failingAuth = createAuth(testPrisma, {
+      ...env, APP_ENV: "test", SMTP_HOST: "127.0.0.1", SMTP_PORT: address.port, SMTP_SECURE: false,
+    });
+    // Better Auth deliberately returns the same success envelope on delivery failure.
+    await expect(failingAuth.api.requestPasswordReset({ body: { email } })).resolves.toMatchObject({ status: true });
+    expect(rejectedConnections).toBe(1);
+    expect(await testPrisma.verification.count({ where: { value: id } })).toBe(1);
+    await cleanupAuthUsers(testPrisma, tag);
+    expect(await testPrisma.verification.count({ where: { value: id } })).toBe(0);
+    expect(await testPrisma.user.count({ where: { id } })).toBe(0);
+    expect(await testPrisma.verification.count({ where: { id: unrelatedId } })).toBe(1);
+  } finally {
+    await cleanupAuthUsers(testPrisma, tag);
+    await testPrisma.verification.deleteMany({ where: { id: unrelatedId } });
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
 afterAll(async () => {
-  await testPrisma.user.deleteMany({ where: { email: { contains: RUN_TAG } } });
-  await testPrisma.verification.deleteMany({ where: { identifier: { contains: RUN_TAG } } });
+  await cleanupAuthUsers(testPrisma, RUN_TAG);
   await testPrisma.$disconnect();
 });
 

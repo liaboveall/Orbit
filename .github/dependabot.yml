@@ -1,0 +1,13 @@
+# F37：受控依赖更新机制。每周检查 npm（pnpm 锁文件）与 GitHub Actions 版本；
+# 更新 PR 必须通过冻结安装（--frozen-lockfile）与全套验收，禁止自动合并。
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

@@ -13,3 +13,15 @@ attachments
 *.dump
 *.log
 *.tsbuildinfo
+# F38：凭证类文件与派生产物不进构建上下文（Dockerfile 与 operations 目标同样受益）。
+*.pem
+*.key
+*.p12
+*.pfx
+*credentials*
+.credential*
+coverage
+src/generated
+.qoder
+.kiro
+next-env.d.ts

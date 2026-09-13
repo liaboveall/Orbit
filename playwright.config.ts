@@ -1,4 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import { resolve } from "node:path";
 
 import dotenv from "dotenv";
 dotenv.config({path:[".env.local", ".env"],quiet:true});
@@ -15,6 +17,7 @@ const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${E2E_PORT}`;
 // E2E_PORT/E2E_AUTH_ORIGIN，不需要在每个 spec 文件里各自猜测端口号。
 process.env.E2E_PORT = E2E_PORT;
 process.env.E2E_AUTH_ORIGIN = baseURL;
+process.env.ORBIT_TEST_FAULT_FILE ??= resolve("test-results", `render-fault-${randomUUID()}.json`);
 
 export default defineConfig({
   globalSetup: "./tests/e2e/support/isolation-setup.ts",
@@ -27,7 +30,7 @@ export default defineConfig({
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : [["list"]],
   use: {
     baseURL,
-    trace: "on-first-retry",
+    trace: "retain-on-failure",
   },
   projects: [
     {

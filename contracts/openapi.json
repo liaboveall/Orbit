@@ -3,7 +3,7 @@
   "info": {
     "title": "Orbit V1 Business API",
     "version": "1.0.0",
-    "description": "开发前契约。认证由 /api/auth/* Better Auth 管理。业务规则见docs/01、04、05。当前尚未实现。"
+    "description": "V1 业务契约。认证由 /api/auth/* Better Auth 管理。业务规则见 docs/01、04、05，实际验收见 PROGRESS。GET 路由自动 HEAD 共用读取限流且不返回正文；附件 content 路由 HEAD 返回 405。"
   },
   "servers": [
     {

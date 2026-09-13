@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import { spawn } from "node:child_process";
 import net from "node:net";
 import pg from "pg";
+import { killProcessTree } from "./process-tree.mjs";
 
 /**
  * scripts/e2e-server.mjs —— E2E 专用应用服务启动器（A10 修复，docs/08 §1：
@@ -93,21 +94,6 @@ function sleep(ms) {
  * 直接 kill 父进程不会带走它启动的 next 二进制；改用 taskkill /T 递归终止整个树，
  * 非 Windows 平台上给整个进程组发信号）。
  */
-function killProcessTree(child) {
-  if (!child || child.killed || child.exitCode !== null) return;
-  if (process.platform === "win32") {
-    spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], {
-      stdio: "ignore",
-      windowsHide: true,
-    });
-  } else {
-    try {
-      process.kill(-child.pid, "SIGKILL");
-    } catch {
-      child.kill("SIGKILL");
-    }
-  }
-}
 
 /**
  * 轮询健康检查端点直到收到 401（未认证，该端点在无 cookie 时的唯一预期响应）或超时。
@@ -240,6 +226,10 @@ async function main() {
     AUTH_TRUSTED_ORIGINS: baseURL,
     PORT: String(E2E_PORT),
     APP_ENV: "test",
+    // Loaded only by this verified test runner; production has no fault hook.
+    NODE_OPTIONS: process.env.ORBIT_TEST_FAULT_FILE
+      ? `${process.env.NODE_OPTIONS ?? ""} --import ${JSON.stringify(new URL("../tests/e2e/support/render-fault.mjs", import.meta.url).href)}`
+      : process.env.NODE_OPTIONS,
   };
 
   console.log(`[e2e-server] 启动测试专用服务：${baseURL}（DATABASE_URL -> ${testTarget.dbName}）`);
@@ -249,6 +239,9 @@ async function main() {
     stdio: "inherit",
     shell: true,
     windowsHide: true,
+    // F41：POSIX 下让子进程成为独立进程组（-child.pid 组 kill 才有效）；
+    // Windows 由 taskkill /T 按进程树清理，不需要也不应使用 detached（会改变控制台行为）。
+    detached: process.platform !== "win32",
   });
 
   let cleanedUp = false;

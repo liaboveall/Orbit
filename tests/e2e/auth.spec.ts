@@ -46,11 +46,8 @@ test.beforeAll(async ({}) => {
     mailpitReady = false;
   }
   
-  // 如果之前有残留邮箱，先尝试清理
-  if (createdEmails.length > 0) {
-    const result = await cleanupTestEmails(createdEmails);
-    console.log(`[auth beforeAll] 清理前置残留：${createdEmails.length}个邮箱，cleanedCount=${result.cleanedCount}${result.error ? ` (${result.error})` : ''}`);
-  }
+  // F33③：此处不再清理——createdEmails 在 beforeAll 时刻恒为空（用例尚未运行），
+  // 原分支是死代码；残留数据由 afterAll 的 cleanupTestEmails（按邮箱精确清理）回收。
 });
 
 test.afterAll(async () => {
@@ -114,13 +111,23 @@ test("未登录访问 /app/today 被 proxy 重定向到 /auth/login 并携带 re
   await expect(page.getByLabel("邮箱")).toBeVisible();
 });
 
-test("登录失败展示统一文案，不泄露账户是否存在", async ({ page }) => {
+test("登录失败展示统一文案，不泄露账户是否存在（不存在账户 / 存在账户错误密码 两分支）", async ({ page }) => {
+  const UNIFORM_MESSAGE = "邮箱或密码不正确";
+
+  // 分支 1：账户不存在。
   await page.goto("/auth/login");
   await page.getByLabel("邮箱").fill(`${RUN}-nobody@orbit.test`);
   await page.getByLabel("密码", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "登录" }).click();
-  // 统一文案：不区分「账户不存在」与「密码错误」。
-  await expect(page.getByText("邮箱或密码不正确")).toBeVisible();
+  await expect(page.getByText(UNIFORM_MESSAGE)).toBeVisible();
+
+  // 分支 2：账户存在但密码错误（EMAIL 在注册用例中创建；若该用例尚未运行则为
+  // 不存在账户——两种情况都必须命中同一文案，这正是本测试要保护的性质）。
+  await page.goto("/auth/login");
+  await page.getByLabel("邮箱").fill(EMAIL);
+  await page.getByLabel("密码", { exact: true }).fill(`${PASSWORD}-wrong`);
+  await page.getByRole("button", { name: "登录" }).click();
+  await expect(page.getByText(UNIFORM_MESSAGE)).toBeVisible();
 });
 
 test.use({ timezoneId: "America/New_York" });

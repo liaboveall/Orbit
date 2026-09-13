@@ -22,7 +22,7 @@
 | 实时体验 | 乐观更新 + 失焦恢复/定时刷新；V1 无 WebSocket |
 | 存储 | PostgreSQL；附件在私有 S3 兼容存储 |
 | 架构 | Next.js 模块化单体，REST API，业务与路由分层 |
-| 生产形态 | 持续运行的 Node 容器 + 托管 PostgreSQL/对象存储/邮件服务 |
+| 生产形态 | 持续运行的 Node 容器；个人展示采用 EC2 同机 PostgreSQL + 私有 S3/SES，见 AWS micro 指南 |
 | 开发环境 | Windows/macOS/Linux；文档命令避免依赖 Bash 专有语法 |
 
 ## 发布边界

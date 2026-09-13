@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { cleanupExpiredRecords } from "../src/server/modules/maintenance/cleanup";
+import { cleanupExpiredRecords, drainExpiredRecords } from "../src/server/modules/maintenance/cleanup";
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 dotenv.config({ path: [".env.local", ".env"], quiet: true });
 const target = new URL(process.env.TEST_DATABASE_URL ?? "");
@@ -22,7 +22,10 @@ function docker(args: string[], input?: Buffer) {
   return result.stdout;
 }
 const start = performance.now();
+// F41：分阶段记录失败位置；只输出错误类别，不输出可能含凭证的原始 message。
+let stage = "init";
 try {
+  stage = "prepare";
   for (const name of names) {
     docker(["createdb", "-U", "orbit", name]); created.push(name);
     const url = new URL(target); url.pathname = `/${name}`;
@@ -32,6 +35,7 @@ try {
   const migration = spawnSync(process.execPath, ["node_modules/prisma/build/index.js", "migrate", "deploy"], { env: { ...process.env, DATABASE_URL: sourceUrl.toString() }, stdio: "pipe" });
   if (migration.status !== 0) throw new Error("Recovery source migration failed");
   const db = clients[0]!;
+  stage = "maintenance-dry-run";
   await db.rateLimitBucket.createMany({ data: [
     { keyHash: "a".repeat(64), windowStart: new Date(0), count: 1, expiresAt: new Date(0) },
     { keyHash: "b".repeat(64), windowStart: new Date(), count: 1, expiresAt: new Date(Date.now() + 3600000) },
@@ -40,6 +44,13 @@ try {
   const maintenance = await cleanupExpiredRecords(db);
   const repeated = await cleanupExpiredRecords(db);
   if (maintenance.buckets !== 1 || maintenance.leases !== 1 || repeated.buckets !== 0 || repeated.leases !== 0 || await db.rateLimitBucket.count() !== 1) throw new Error("Maintenance isolation or idempotency failed");
+  await db.rateLimitBucket.createMany({ data: Array.from({ length: 1001 }, (_, i) => ({
+    keyHash: createHash("sha256").update(`drain-${tag}-${i}`).digest("hex"),
+    windowStart: new Date(0), expiresAt: new Date(0), count: 1,
+  })) });
+  const drained = await drainExpiredRecords(db);
+  if (drained.buckets !== 1001 || drained.batches !== 2 || drained.saturated || await db.rateLimitBucket.count() !== 1) throw new Error("Maintenance batch drain failed");
+  stage = "fixture-seed";
   const owner = await db.user.create({ data: { email: `${tag}@recovery.orbit.test`, name: "恢复演练", emailVerified: true } });
   const project = await db.project.create({ data: { ownerId: owner.id, key: "RESTORE", name: "恢复演练", color: "BLUE" } });
   await db.projectMember.create({ data: { projectId: project.id, userId: owner.id } });
@@ -48,6 +59,7 @@ try {
   await db.activityLog.create({ data: { projectId: project.id, actorId: owner.id, entityType: "TASK", entityId: task.id, action: "TASK_CREATED" } });
   const bytes = Buffer.from("Orbit synthetic recovery sample\n");
   const digest = createHash("sha256").update(bytes).digest("hex");
+  stage = "storage-upload";
   await storage.send(new PutObjectCommand({ Bucket: bucket, Key: keys[0], Body: bytes, ContentType: "text/plain" }));
   await db.attachment.create({ data: { projectId: project.id, taskId: task.id, uploaderId: owner.id, clientUploadId: randomUUID(), claimedSha256: digest, sha256: digest, originalName: "sample.txt", objectKey: keys[0]!, mimeType: "text/plain", declaredSizeBytes: BigInt(bytes.length), sizeBytes: BigInt(bytes.length), state: "READY" } });
   await db.project.update({ where: { id: project.id }, data: { usedBytes: BigInt(bytes.length) } });
@@ -68,8 +80,13 @@ try {
   await mkdir("artifacts/release", { recursive: true });
   await writeFile("artifacts/release/recovery.json", JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report));
-} catch {
-  console.error("Synthetic recovery drill failed; inspect local services and configuration."); process.exitCode = 1;
+} catch (error) {
+  console.error(JSON.stringify({
+    event: "recovery_drill_failed",
+    stage,
+    errorClass: error instanceof Error ? error.name : "unknown",
+  }));
+  process.exitCode = 1;
 } finally {
   await Promise.all(clients.map(c => c.$disconnect()));
   for (const key of keys) await storage.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));

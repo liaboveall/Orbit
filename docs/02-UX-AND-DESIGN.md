@@ -37,11 +37,11 @@ Orbit 的气质是清晰、安静、可信。主要视觉来自排版、对齐�
 | 路由 | 页面 | 访问 |
 |---|---|---|
 | / | 简洁介绍页：用途、产品截图、开始使用、只读演示 |
-| /login | 登录 | 访客 |
-| /register | 注册 | 访客 |
-| /verify-email | 验证邮件提示/回调结果 | 访客 |
-| /forgot-password | 申请重置 | 访客 |
-| /reset-password | 设置新密码 | 持有效认证库 token |
+| /auth/login | 登录 | 访客 |
+| /auth/register | 注册 | 访客 |
+| /auth/verify | 验证邮件提示/回调结果 | 访客 |
+| /auth/forgot-password | 申请重置 | 访客 |
+| /auth/reset-password | 设置新密码 | 持有效认证库 token |
 | /invite | 邀请预览与接受；token 在 fragment | 访客预览，已验证用户接受 |
 | /demo | 与真实账户隔离的只读合成数据展示 | 公开 |
 | /app/today | 我的工作台 | 登录 |
@@ -50,6 +50,8 @@ Orbit 的气质是清晰、安静、可信。主要视觉来自排版、对齐�
 | /app/projects/[projectId]/tasks | 任务列表 | 项目成员 |
 | /app/projects/[projectId]/tasks/[taskId] | 可直达的任务详情 | 项目成员 |
 | /app/projects/[projectId]/activity | 项目活动 | 项目成员 |
+| /app/projects/[projectId]/members | 项目成员 | 项目成员 |
+| /app/projects/[projectId]/invitations | 邀请管理 | owner |
 | /app/projects/[projectId]/settings | 项目与成员设置 | 成员可读，owner 管理 |
 | /app/projects/[projectId]/trash | 回收站 | 成员可读，按权限恢复 |
 | /app/settings | 姓名与时区 | 登录 |
@@ -153,6 +155,8 @@ M0 产出三张关键页面布局草图（工作台、看板、详情）和可�
 允许开发 Agent 在规范内微调视觉；若改变导航结构、主要流程或 token 系统，需要先更新本文件。视觉对比截图只能证明一致性，不能替代真实键盘操作与主流程测试。
 
 ### 草稿与后台刷新补充（2026-09-11）
+
+项目/任务创建的取消、收起按钮与页面离开使用相同的未保存确认；用户拒绝放弃时保留全部输入，接受后才卸载。多个编辑作用域共享一套浏览器离开监听，单次操作只确认一次；成功保存自动关闭时不再次询问。
 
 已有评论/子任务列表在后台网络失败或 500 时持续挂载，显示局部错误和重试；首次读取失败才显示整块错误态。远端更新不替换正在编辑的文字及原 expectedVersion。提交期间冻结对应输入，失败后恢复编辑并保留草稿。
 

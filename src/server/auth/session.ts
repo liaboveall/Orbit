@@ -39,9 +39,11 @@ export async function requireSessionUser(source: Request | Headers): Promise<Use
   if (!user) {
     throw new DomainError("UNAUTHENTICATED", "请先登录后再访问该资源。");
   }
-  if (source instanceof Request && source.method === "GET" && sharedLimitsEnabled()) {
+  if (source instanceof Request && ["GET", "HEAD"].includes(source.method) && sharedLimitsEnabled()) {
     const result = await consumeBucket((await import("@/server/db/prisma")).prisma, "read", user.id, 300);
-    if (!result.allowed) throw new DomainError("RATE_LIMITED", "读取过于频繁，请稍后重试。");
+    // F02 修复：携带精确 resetAfter，供 Retry-After 头使用。
+    if (!result.allowed)
+      throw new DomainError("RATE_LIMITED", "读取过于频繁，请稍后重试。", undefined, undefined, result.resetAfter);
   }
   return user;
 }

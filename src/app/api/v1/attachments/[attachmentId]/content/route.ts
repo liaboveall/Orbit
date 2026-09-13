@@ -4,6 +4,13 @@ import { requireSessionUser } from "@/server/auth/session";
 import { downloadContent } from "@/server/modules/attachments/service";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export async function HEAD() {
+  // F03：与其他响应一致携带 x-request-id（405 是方法不允许，不下载文件）。
+  return new Response(null, {
+    status: 405,
+    headers: { Allow: "GET", "Cache-Control": "private, no-store", "X-Request-Id": resolveRequestIdFromRequest(new Request("http://local/HEAD")) },
+  });
+}
 export async function GET(
   request: Request,
   context: { params: Promise<{ attachmentId: string }> },
@@ -12,7 +19,7 @@ export async function GET(
   try {
     const user = await requireSessionUser(request),
       url = new URL(request.url);
-    const { stream, fileName } = await downloadContent(
+    const { stream, contentLength, fileName } = await downloadContent(
       (await context.params).attachmentId,
       user.id,
       url.searchParams.get("expires") ?? "",
@@ -24,6 +31,8 @@ export async function GET(
         "Content-Type": "application/octet-stream",
         "Content-Disposition":
           "attachment; filename*=UTF-8''" + encodeURIComponent(fileName),
+        // F15：长度可信时携带 Content-Length，截断由 HTTP 层暴露，而非交付损坏文件。
+        ...(contentLength !== null ? { "Content-Length": String(contentLength) } : {}),
         "Cache-Control": "private, no-store",
         "X-Content-Type-Options": "nosniff",
         "X-Request-Id": requestId,

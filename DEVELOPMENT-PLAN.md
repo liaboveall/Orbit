@@ -29,7 +29,7 @@
 | 实时体验 | 乐观更新 + 失焦恢复/定时刷新；V1 无 WebSocket |
 | 存储 | PostgreSQL；附件在私有 S3 兼容存储 |
 | 架构 | Next.js 模块化单体，REST API，业务与路由分层 |
-| 生产形态 | 持续运行的 Node 容器 + 托管 PostgreSQL/对象存储/邮件服务 |
+| 生产形态 | 持续运行的 Node 容器；个人展示采用 EC2 同机 PostgreSQL + 私有 S3/SES，见 AWS micro 指南 |
 | 开发环境 | Windows/macOS/Linux；文档命令避免依赖 Bash 专有语法 |
 
 ## 发布边界
@@ -197,6 +197,10 @@ V1 不承诺实时协同。可见页面每 30 秒后台刷新一次，并在窗�
 
 上传先持久预留，再有界流接收至私有临时文件并校验实际内容/大小/摘要、流写 S3，最后独立事务复核权限并提交 READY。请求总时限 120 秒；临时文件请求结束删除。维护命令 cleanup:attachments 处理一小时以上失效上传及 cleanupPending 对象；FAILED/DELETED 的待删标志保留至少 3 分钟，让取消中的 PUT 结束后再物理删除。对象删除失败保留待重试标志，已清理对象不重复释放配额。
 
+### 讨论与输入的故障行为（2026-09-12）
+
+附件列表后台刷新失败保留已选文件与进行中的上传；重试不卸载上传组件。中文 IME 组合输入期间 Enter/Escape 不作为提交/取消快捷键。评论加载更多只请求下一页，刷新只更新已加载范围；发布时若仍有未读后续页，不自动拉取全部讨论，显示已发布提示并保留加载更多入口。已在末尾时显示新评论。
+
 
 ---
 
@@ -240,11 +244,11 @@ Orbit 的气质是清晰、安静、可信。主要视觉来自排版、对齐�
 | 路由 | 页面 | 访问 |
 |---|---|---|
 | / | 简洁介绍页：用途、产品截图、开始使用、只读演示 |
-| /login | 登录 | 访客 |
-| /register | 注册 | 访客 |
-| /verify-email | 验证邮件提示/回调结果 | 访客 |
-| /forgot-password | 申请重置 | 访客 |
-| /reset-password | 设置新密码 | 持有效认证库 token |
+| /auth/login | 登录 | 访客 |
+| /auth/register | 注册 | 访客 |
+| /auth/verify | 验证邮件提示/回调结果 | 访客 |
+| /auth/forgot-password | 申请重置 | 访客 |
+| /auth/reset-password | 设置新密码 | 持有效认证库 token |
 | /invite | 邀请预览与接受；token 在 fragment | 访客预览，已验证用户接受 |
 | /demo | 与真实账户隔离的只读合成数据展示 | 公开 |
 | /app/today | 我的工作台 | 登录 |
@@ -253,6 +257,8 @@ Orbit 的气质是清晰、安静、可信。主要视觉来自排版、对齐�
 | /app/projects/[projectId]/tasks | 任务列表 | 项目成员 |
 | /app/projects/[projectId]/tasks/[taskId] | 可直达的任务详情 | 项目成员 |
 | /app/projects/[projectId]/activity | 项目活动 | 项目成员 |
+| /app/projects/[projectId]/members | 项目成员 | 项目成员 |
+| /app/projects/[projectId]/invitations | 邀请管理 | owner |
 | /app/projects/[projectId]/settings | 项目与成员设置 | 成员可读，owner 管理 |
 | /app/projects/[projectId]/trash | 回收站 | 成员可读，按权限恢复 |
 | /app/settings | 姓名与时区 | 登录 |
@@ -357,6 +363,8 @@ M0 产出三张关键页面布局草图（工作台、看板、详情）和可�
 
 ### 草稿与后台刷新补充（2026-09-11）
 
+项目/任务创建的取消、收起按钮与页面离开使用相同的未保存确认；用户拒绝放弃时保留全部输入，接受后才卸载。多个编辑作用域共享一套浏览器离开监听，单次操作只确认一次；成功保存自动关闭时不再次询问。
+
 已有评论/子任务列表在后台网络失败或 500 时持续挂载，显示局部错误和重试；首次读取失败才显示整块错误态。远端更新不替换正在编辑的文字及原 expectedVersion。提交期间冻结对应输入，失败后恢复编辑并保留草稿。
 
 详情关闭统一检查父任务、评论、子任务、附件选择和在途上传；明确放弃才关闭。关闭嵌套弹框、取消导航或浏览器后退不清除草稿。关闭时取消未完成上传，但不能承诺撤销已到达服务端的保存。
@@ -423,14 +431,15 @@ src/
     auth/                   # Better Auth、会话、项目授权
     db/                     # Prisma singleton、事务帮助函数
     modules/                # project/task/invite/comment/file 等服务
-    integrations/           # storage、mail、未来 AI provider
+    modules/                # 业务模块（attachments/storage、invitation、task 等）
     http/                   # 错误映射、origin 验证、请求 ID、限流
   lib/                      # 确实跨功能的纯工具，不能成为杂物目录
   styles/                   # tokens、globals
 prisma/                     # schema、迁移、seed
 tests/unit/ integration/ e2e/ contract/
 scripts/                    # seed、清理、导出测试报告
-infra/                      # compose、Dockerfile、部署说明
+Dockerfile / .dockerignore  # 仓库根目录（M6 容器构建）
+infra/                      # compose、nginx、备份脚本、生命周期 JSON
 artifacts/                  # 实际报告与截图（大文件按需忽略）
 docs/ planning/ prompts/ contracts/  # 本规划
 ~~~
@@ -478,11 +487,17 @@ V1 不引入数据库 RLS；所有查询必须经过项目授权服务，并用�
 
 ## 8. 错误、可观测性和限流
 
-结构化日志目标字段：requestId、route、method、status、durationMs、userId（内部ID）、projectId（授权后）、errorCode。敏感字段统一 redact；不记录密码、cookie、token、请求正文或 signed URL。**当前实现差距**：仅 requestId 已落地；route/method/status/durationMs/projectId 等为目标、尚未实现。`LOG_LEVEL` 环境变量已在 `src/server/env.ts` 中校验（枚举 debug/info/warn/error，默认 info），但当前从不被消费。上述未实现字段与日志级别消费属待补工作。
+认证请求先按实际字节数执行 64KiB 有界读取，再交给 Better Auth 解析；无/偏小 Content-Length 不能绕过限制，超限统一返回 413。读取期间客户端 abort 取消源流；超限取消不等待不合作的源完成。
+
+SMTP 每次发送使用独立可取消连接，TCP/greeting/空闲预算分别 10/10/15 秒，发送总预算 20 秒。总预算到期关闭真实 socket，不能只让 Promise 超时；保留 implicit TLS、生产强制 STARTTLS 和证书校验。同 env 并发发送互不取消。实现对照 [Nodemailer socket 选项](https://nodemailer.com/extras/smtp-connection) 与已安装 10.0.1 源码。
+
+附件下载获取响应头预算 10 秒，整个响应流预算 120 秒；成功、截断、客户端取消及超时均释放计时器/监听。按存储声明长度检查实际字节，流开始后只结束流并留脱敏事件，不伪造新的 JSON 错误响应。
+
+结构化日志分层：Nginx 安全访问日志记录 requestId、固定标签 route/method、status、bytes、durationSeconds，不记录路径、查询或 Referer，避免路径令牌泄露；代理覆盖 X-Request-Id 后传入应用用于关联。应用记录脱敏 errorClass/errorCode 和认证邮件事件，LOG_LEVEL 控制 debug/info/warn/error。业务 userId/projectId 仅在事件明确需要且完成授权后选取，禁止复制请求或错误原文。
 
 staging/production 使用 PostgreSQL 共享原子固定窗口限流：业务写 60 次/用户/分钟、GET 读取 300 次/用户/分钟、邀请预览/接受合计 20 次/IP/分钟；认证使用 Better Auth 1.7.3 customStorage.consume，并保持敏感端点原阈值。上传采用数据库滑动分钟 10 次和最多 2 个跨副本活跃租约（180 秒，覆盖 120 秒请求截止）；development/test 保留内存实现，真实双池并发测试直接验证共享实现。只信任 TRUSTED_PROXY_COUNT 指定代理链，默认 0 退化共享来源桶。细节与维护见 [M6 运行手册](docs/M6-OPERATIONS.md)。
 
-计划提供 /health/live（进程可服务）和 /health/ready（数据库连接与迁移兼容）；不暴露版本、凭证、连接字符串。**当前两个端点尚未实现，属 M6 部署范围**。邮件/存储暂时不可用只影响对应操作，有独立可观测错误，不让整个看板持续 500。
+已提供 /health/live（进程可服务）和 /health/ready（数据库连接与迁移兼容），实现与测试见 M6 运行手册；不暴露版本、凭证、连接字符串。邮件/存储暂时不可用只影响对应操作，有独立可观测错误，不让整个看板持续 500。
 
 ## 9. V1.1 的扩展位置
 
@@ -618,6 +633,16 @@ move 带 expectedVersion 与 expectedBoardVersion。任一不匹配返回409，�
 
 项目锁内计数并检查配额。文件预算条件 usedBytes+reservedBytes+declaredSizeBytes<=200MiB。子任务/任务/成员等上限同样在锁内判断，不能只靠前端。
 
+### 数据保留策略（F19 审查裁定，2026-09-13）
+
+以下数据**刻意不自动清理**，保留是产品决策而非疏漏：
+
+- 软删除任务（回收站）：用户可自行恢复/彻底删除；系统不代为清空。
+- 已过期/已撤销/已使用的邀请：作为操作审计与防重放记录保留；撤销邀请是显式动作。
+- MoveRecord（移动历史）：看板顺序争议时的审计依据；不做自动裁剪。
+
+容量风险按附录监测（必要时人工清理或由产品变更明确授权后新增迁移），不得由维护脚本自动删除。
+
 软删除任务仍占用附件空间，恢复不需要重新上传。删除附件先把数据库状态变 DELETED 并扣 usedBytes，再尝试删除对象；失败保留 cleanupPending。过期 UPLOADING 清理扣 reservedBytes。清理命令重复运行不重复扣减，所有计数保持非负。
 
 未通过验证的上传不会产生 FILE_UPLOADED 活动；成功后才记。上传期间权限丢失则失败并清理。对象存储与数据库不可能共享事务，必须依靠状态与补偿实现最终一致性。
@@ -679,11 +704,11 @@ fixture 的 now 是可注入基准时间，日期相对基准生成，以便覆�
 |---|---|---|
 | 400 | VALIDATION_ERROR / INVALID_CURSOR | 字段旁提示；不重试 |
 | 401 | UNAUTHENTICATED | 登录并保留合法 returnTo |
-| 403 | FORBIDDEN / EMAIL_UNVERIFIED / ORIGIN_NOT_ALLOWED | 显示访问限制 |
+| 403 | FORBIDDEN / EMAIL_UNVERIFIED / ORIGIN_NOT_ALLOWED | 显示访问限制。EMAIL_UNVERIFIED 为保留码（邮箱未验证由认证库流程拦截，V1 业务层不抛出） |
 | 404 | NOT_FOUND | 不区分不存在和非成员不可见 |
 | 409 | VERSION_CONFLICT / BOARD_CONFLICT | 保留草稿/回滚，重新获取 |
 | 409 | PROJECT_KEY_TAKEN / PROJECT_ARCHIVED | 项目字段冲突或只读 |
-| 409 | INVITATION_USED / ALREADY_EXISTS / IDEMPOTENCY_CONFLICT / UPLOAD_IN_PROGRESS / LOCKED | 按具体业务处理 |
+| 409 | INVITATION_USED / ALREADY_EXISTS / IDEMPOTENCY_CONFLICT / UPLOAD_IN_PROGRESS / LOCKED | 按具体业务处理。ALREADY_EXISTS 为保留码（V1 各创建路径用幂等/唯一键语义处理，不抛出该码） |
 | 410 | INVITATION_EXPIRED / INVITATION_REVOKED | 显示邀请失效 |
 | 413 | PAYLOAD_TOO_LARGE | 拒绝请求并提示 |
 | 415 | UNSUPPORTED_FILE_TYPE | 不支持的文件格式 |
@@ -794,6 +819,10 @@ PROJECT_CREATED、PROJECT_UPDATED、PROJECT_ARCHIVED、PROJECT_RESTORED、MEMBER
 附件 uploadId 保持 UUID；内部 DELETED + deletedAt 同步，公开 DTO 不返回 DELETED。下载端点保持 Download JSON，url 为 60 秒有效且绑定当前用户的应用签名链接。GET /attachments/{attachmentId}/content 校验签名、当前会话、当前项目成员、父任务未删除和附件 READY 后代理私有 S3 流，强制 attachment、private,no-store；不向客户端暴露 objectKey。该选择取代先前签名存储 URL 与直接二进制响应混用的实现。
 
 上传先持久预留，再有界流接收至私有临时文件并校验实际内容/大小/摘要、流写 S3，最后独立事务复核权限并提交 READY。请求总时限 120 秒；临时文件请求结束删除。维护命令 cleanup:attachments 处理一小时以上失效上传及 cleanupPending 对象；FAILED/DELETED 的待删标志保留至少 3 分钟，让取消中的 PUT 结束后再物理删除。对象删除失败保留待重试标志，已清理对象不重复释放配额。
+
+### HEAD 读取准入
+
+框架为 GET 路由提供的 HEAD 使用同一会话、授权与生产读取额度（300 次/用户/分钟）；不返回正文。私有文件 content 路由显式返回 405，避免 HEAD 打开对象流。该方法支持说明不新增 JSON 数据结构。
 
 
 ---
@@ -914,6 +943,12 @@ V1.1须得到明确开发指令后执行；本轮项目规划包含设计，不�
 
 ## 1. 测试策略
 
+认证超限回归必须使用合法 JSON 并调用真实 handler 断言 413；“非法 JSON 自然抛错”不能证明限流。SMTP 用持续慢速推进的协议替身验证 20 秒后真实连接关闭；下载覆盖响应头及响应体停滞、截断、取消与正常字节一致。
+
+工作台错误恢复通过测试服务器进程预加载模块，在真实 pg 查询上仅对本轮指定用户注入失败；生产源码没有测试路由、请求参数或开关。浏览器断言真实错误边界出现、点击 retry 发出新 RSC 请求、故障解除后恢复内容。
+
+测试清理在所有关联删除之前验证本轮用户所有权清单，拒绝历史夹具；前后内容指纹仍为最终门禁。历史事故与无法恢复的证据缺口见 [测试数据事件追溯](docs/reviews/TEST-DATA-INCIDENT-2026-09-13.md)。验证记录由 scripts/verify-remediation.mjs 捕获真实子进程退出码、完整日志散列和源码摘要；遇失败停止，不用后续命令退出码覆盖失败。
+
 单元测试覆盖日期、权限决策、排序和输入规则；集成测试用真实 PostgreSQL 验证事务/并发/权限；契约测试验证自有API；E2E覆盖主要用户流程。不要用全部mock的成功响应代替后端测试，也不要为纯样式和复制实现逻辑的代码堆测试。
 
 外部邮件/存储/AI在多数测试中使用受控替身，但M1邮件、M5存储和M7 AI各要实际联调。CI使用本地Mailpit/MinIO及测试数据库，不能连接生产账户。计划文件的静态校验不等于本章应用测试。
@@ -993,7 +1028,13 @@ AC-01对应AUTH；AC-02对应PROJECT/TASK；AC-03对应INVITE；AC-04对应PERM�
 
 关键端到端套件固定3条：单用户完整任务生命周期；双用户邀请协作和移除；私有附件上传下载失败恢复。发布前另跑三种视口、键盘、性能与备份恢复。
 
-不设会诱导无意义测试的覆盖率百分比；按关键业务规则覆盖验收。允许记录尚未验证的外部条件，但对应任务不得标为done。
+不设会诱导无意义测试的覆盖率百分比；按关键业务规则覆盖验收。允许记录尚未验证的外部条件，但对应任务不得标为done。可按需生成**信息性**覆盖率报告（工具/套件/排除范围需注明），不作为门禁。
+
+勘误（2026-09-13，E6）：生产 requireTLS 分支**有**真实回归——tests/integration/review-20260912.test.ts 以生产配置连接无 STARTTLS 的真实 SMTP 协议替身，断言 AUTH 未发送；「生产分支无测试」的原说法作废。性能参数（页大小、池上限、预算）均为已审阅的固定值，采样环境与样本量记录在各验收报告；不因环境差异临时放宽。
+
+### 2026-09-12 上线前回归要求
+
+SMTP 在 staging/production 拒绝无 STARTTLS 服务且不发送 AUTH；GET/HEAD 共用生产读取额度；附件后台 503 与重试保留选中文件和上传；IME Enter/Escape 不提交或销毁草稿；认证失败 teardown 精确清理重置记录且全量集成前后两库内容指纹一致。代理以合成查询令牌、路径令牌和 Referer 分别验证成功/失败日志无秘密。S3 非当前版本保留 30 天，覆盖数据库 7 天备份窗口；不自动过期当前文件。
 
 
 ---
@@ -1155,15 +1196,23 @@ pnpm dev
 
 `pnpm cleanup:attachments` 显式加载 .env.local/.env，通过 react-server 条件运行 server-only 业务模块；一次最多 100 条，打印 cleanedCount、failedCount、releasedBytes，不输出对象 key。错误返回非零退出码。UPLOADING 超过一小时释放预留；FAILED/DELETED 等待至少 3 分钟后物理删除，防止与取消中的 PUT 竞争。幂等重跑不会重复扣额度。真实定时调度仍属 M6，当前未配置。
 
-当前 11 个迁移均可从空库部署；uploadId 是 UUID，Attachment 的 task 关系是复合外键。中断遗留迁移会话可能持有 advisory lock；先核验持锁连接是否空闲、无事务及其来源，再处理旧迁移等待者与持锁者，不关闭迁移锁机制、不删除迁移历史。Windows 的 EACCES 端口错误可通过设置已确认可绑定的 E2E_PORT 避开；本轮使用 43127。
+「11 个迁移」为 M5 时期的历史口径（见下条历史记录）；当前迁移数量以 prisma/migrations 目录为准（2026-09-13 审查修复时为 15 个），均可从空库部署；uploadId 是 UUID，Attachment 的 task 关系是复合外键。中断遗留迁移会话可能持有 advisory lock；先核验持锁连接是否空闲、无事务及其来源，再处理旧迁移等待者与持锁者，不关闭迁移锁机制、不删除迁移历史。Windows 的 EACCES 端口错误可通过设置已确认可绑定的 E2E_PORT 避开；本轮使用 43127。
 
 ### 全项目审查修复后的运行约定（2026-09-11）
 
-上述 11 迁移为 M5 历史验收；本轮新增事件时间 timestamptz 转换和已删除评论缓存清理，共 13 个迁移。先核对旧 TIMESTAMP 的 UTC 语义，再执行增量部署；详情见 [本轮迁移与验收记录](docs/reviews/REVIEW-FIXES-2026-09-11.md)。应用连接固定 UTC，以满足当前 adapter-pg 7.10.0 的时间解析约定，date-only 截止日不变。
+上述「11 迁移」为 M5 历史验收；后续新增事件时间 timestamptz 转换、已删除评论缓存清理（共 13 个）与 2026-09-13 审查修复新增的 IdempotencyRecord.resourceId 索引（共 15 个）。历史数字不再随每次迁移更新，当前数量以目录为准。先核对旧 TIMESTAMP 的 UTC 语义，再执行增量部署；详情见 [本轮迁移与验收记录](docs/reviews/REVIEW-FIXES-2026-09-11.md)。应用连接固定 UTC，以满足当前 adapter-pg 7.10.0 的时间解析约定，date-only 截止日不变。
 
 认证与业务端点统一按 `TRUSTED_PROXY_COUNT` 选择转发链中的来源；默认 0 忽略客户端提供的转发头并使用共享桶。大于 0 仅适用于受控代理正确追加/清洗头且源站禁止直接访问的部署。
 
 附件集合端点不经过 Next Proxy，避免 Proxy 在路由准入之前缓冲请求体；会话、Origin、资源授权、通用写桶与上传专用门禁仍在路由/服务端执行。上传 10 次/用户/分钟、最多 2 条在途请求在 staging/production 使用 M6 PostgreSQL 共享租约；development/test 保留内存路径。部署、健康检查、维护与恢复演练见 [M6 运行手册](docs/M6-OPERATIONS.md)。
+
+### 2026-09-12 传输、日志与对象保留
+
+staging/production 的 SMTP 强制 TLS：465 使用 SMTP_SECURE=true；587 使用 false 并由应用强制 STARTTLS，拒绝降级。开发/测试 Mailpit 可明文。测试邮件 API 通过 MAILPIT_API 覆盖，端口被占用时同步设置 Compose 宿主端口和测试 SMTP_PORT/MAILPIT_API。
+
+版本化 S3 使用 [生命周期配置](infra/s3-lifecycle.json)：非当前版本保留 30 天、移除过期删除标记、终止超过一天的未完成分段上传。没有当前对象到期删除规则；历史版本在保留期间继续计费。更长数据库备份窗口需要同步延长对象保留时间。
+
+Nginx 在 http 上下文加载 [安全日志格式](infra/nginx-http.conf)，server 使用 [代理配置](infra/nginx.conf)。日志不记录路径、查询、Referer 等客户端字符串。Nginx 原始错误日志无法脱敏，应用虚拟主机将其定向 /dev/null，以安全访问日志状态/耗时和应用结构化错误诊断；禁止额外平台记录完整请求 URL。
 
 
 ---
@@ -1410,7 +1459,7 @@ artifacts 复制多份“完成报告”。已被覆盖且无独立价值的分�
 
 | 主题 | 官方来源 | 本项目使用点 |
 |---|---|---|
-| Agent仓库指令 | [OpenAI AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md) | AGENTS.md作短入口，按任务读取详细规格；其他IDE手动附加 |
+| Agent仓库指令 | [AGENTS.md 社区规范](https://agents.md/) | AGENTS.md作短入口，按任务读取详细规格；其他IDE手动附加 |
 | Next安装 | [Next.js installation](https://nextjs.org/docs/app/getting-started/installation) | M0核对runtime与React兼容条件 |
 | Server/Client边界 | [Next.js Server and Client Components](https://nextjs.org/docs/app/getting-started/server-and-client-components) | 数据与秘密在server，交互局部client以减少客户端JS |
 | Node支持周期 | [Node.js releases](https://nodejs.org/en/about/previous-releases) | 本规划选Node24 LTS，并非追逐Current版本 |
@@ -1418,6 +1467,7 @@ artifacts 复制多份“完成报告”。已被覆盖且无独立价值的分�
 | 邮箱密码/验证/重置 | [Email & Password](https://better-auth.com/docs/authentication/email-password) | 邮件回调和验证逻辑按锁定版本实现 |
 | Prisma runtime | [System requirements](https://docs.prisma.io/docs/orm/reference/system-requirements) | 核对Node/TS/系统环境 |
 | Prisma7迁移差异 | [Upgrade to Prisma ORM 7](https://www.prisma.io/docs/guides/upgrade-prisma-orm/v7) | ESM、生成器、adapter与配置差异；不要混用旧版示例 |
+| SMTP发送预算 | [Nodemailer SMTP](https://nodemailer.com/smtp/) | connectionTimeout/greetingTimeout/socketTimeout 与 requireTLS 语义；默认超时不能当作请求预算 |
 | 客户端数据流 | [Next.js Server and Client Components](https://nextjs.org/docs/app/getting-started/server-and-client-components) | 实际采用 RSC 直查 + router.refresh（非 TanStack Query）；服务器组件为数据真源，写后刷新 |
 | 数据库锁 | [PostgreSQL explicit locking](https://www.postgresql.org/docs/current/explicit-locking.html) | 项目写锁与统一锁顺序；实现时选择17版本页面 |
 | CSRF | [OWASP CSRF](https://owasp.org/www-community/attacks/csrf) | 自有变更API同源检查，认证路由遵循库机制 |

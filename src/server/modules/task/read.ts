@@ -21,7 +21,7 @@ import {
 } from "@/server/modules/pagination/cursor";
 import { requireProjectMember } from "@/server/modules/authorization/project-access";
 import { fromDueDateString, isValidDueDate } from "./date-only";
-import { toTaskDTO, toTaskSummaryDTO, fetchTaskResourceCounts, fetchTaskResourceCountsBatch } from "./mappers";
+import { TASK_SUMMARY_SELECT, toTaskDTO, toTaskSummaryDTO, fetchTaskResourceCounts, fetchTaskResourceCountsBatch } from "./mappers";
 import { taskNotFoundError } from "./access";
 
 /**
@@ -205,14 +205,12 @@ export async function listProjectTasks(
     conditions.push(keysetCondition(sort, decoded));
   }
 
+  // F14：摘要列表使用显式投影，不拉取 description 等大字段。
   const rows = await prisma.task.findMany({
     where: { AND: conditions },
     orderBy: orderByFor(sort),
     take: limit + 1,
-    include: {
-      assignee: { select: { id: true, name: true } },
-      creator: { select: { id: true, name: true } },
-    },
+    select: TASK_SUMMARY_SELECT,
   });
 
   const hasMore = rows.length > limit;
