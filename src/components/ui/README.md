@@ -1,6 +1,5 @@
-# src/components/ui · 通用视觉原语
+# 通用界面组件
 
-跨功能复用的 UI 原语（基于 Radix primitives + Lucide，只选一种组件原语体系，见 docs/03 §1）。
-以设计 tokens 为唯一视觉源。
+基于 Radix UI、Lucide 和共享设计变量的按钮、表单控件、弹窗、抽屉、菜单、提示、分页与状态组件。
 
-具体控件、AppShell 与主题在 **ORB-002** 实现，M0 仅保留目录边界，不提前拼凑 UI。
+业务组件放在 src/features；这里维护跨功能复用的视觉与交互行为，包括键盘操作、焦点返回和无障碍语义。规范见 [交互与设计](../../../docs/02-UX-AND-DESIGN.md)。

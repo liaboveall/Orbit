@@ -10,9 +10,9 @@
 
 `pnpm check` 包含 lint、typecheck、unit、contract；集成测试、浏览器测试和
 `pnpm typecheck:scripts` 单独运行。最新实际结果见
-[最新审查与验证报告](../docs/reviews/REVIEW-FIXES-2026-09-12.md)。
+[当前验证状态](../PROGRESS.md)。
 
-E2E/UI 默认先生产构建，再由 runner 启动 3100 端口的独立测试服务，连接 orbit_test。
+E2E 先生产构建，UI 为验证开发专用样例页使用 dev 模式；两者均由 runner 启动 3100 端口的独立测试服务，连接 orbit_test。
 `E2E_BASE_URL` 外部服务复用已禁用，不能指向日常开发服务。UI 继承相同隔离配置。
 集成与两套浏览器测试均精确清理夹具，并在结束时核对开发库、测试库内容指纹。
 数据库集成与浏览器套件顺序执行，避免同时修改测试库造成隔离校验冲突。

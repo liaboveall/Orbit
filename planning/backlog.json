@@ -1110,9 +1110,17 @@
   }
  },
  "documentationMaintenance": {
-  "date": "2026-09-12",
-  "summary": "AWS micro 指南补齐安全日志、强制 TLS、S3 历史版本、维护积压和每日异地备份；当前状态与产品/API/测试规范同步。",
-  "validation": "planning/VALIDATION.md"
+  "date": "2026-09-13",
+  "summary": "重写中英文应用 README，增加文档索引，移除重复规划副本、打包器、一次性脚本和停用 SQL 空文件；修正目录说明与 UI 测试模式，保留审计和事件证据。",
+  "status": "done",
+  "validation": "planning/VALIDATION.md",
+  "checks": [
+   "pnpm check: lint/typecheck, 261 unit + 161 contract passed",
+   "pnpm typecheck:scripts: passed",
+   "python planning/validate_plan.py: PASS",
+   "git diff --check: passed"
+  ],
+  "limitations": "Documentation and retired tooling cleanup only; no database, E2E/UI or production build run. M6 external acceptance and incident evidence remain pending."
  },
  "sourceControl": {
   "repository": "https://github.com/liaboveall/Orbit",

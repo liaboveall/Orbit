@@ -22,3 +22,5 @@ M6：`pnpm maintenance:cleanup` 限批清理过期运行记录和附件；
 修改数据需显式传入 `--apply --database=<精确数据库名>`，事务失败返回非零状态。
 历史 `cleanup-migration.ts` 已停用，不可用于删除迁移历史。完整规则见
 [环境与维护文档](../docs/08-ENVIRONMENT-AND-DEPLOYMENT.md)。
+
+早期 M0–M2 一次性浏览器脚本与仅打印结果的邀请协议脚本已移除；使用 [正式测试套件](../tests/README.md) 获取隔离环境下的验证结果。停用迁移修复的 SQL 空文件已移除，TypeScript 入口保留明确的拒绝执行提示。

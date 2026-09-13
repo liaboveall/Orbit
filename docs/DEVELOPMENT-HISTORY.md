@@ -13,7 +13,7 @@
 ## 开发过程阅读入口
 
 - 当前状态和累计交接：[PROGRESS](../PROGRESS.md)、[backlog](../planning/backlog.json)。
-- 产品与实施规划：[执行总览](00-EXECUTION-OVERVIEW.md)、[完整规划阅读副本](../DEVELOPMENT-PLAN.md)。
+- 产品与实施规划：[执行总览](00-EXECUTION-OVERVIEW.md)、[专题文档索引](README.md)。
 - M0–M4 审查与准入：[独立审查](https://github.com/liaboveall/Orbit/blob/archive/snapshot-775af6e23ddf/docs/reviews/M0-M4-INDEPENDENT-AUDIT-2026-09-11.md)、[修复关闭](reviews/M0-M4-FIX-CLOSURE-2026-09-11.md)。
 - M5 深入审查：[审查报告](reviews/M5-DEEP-REVIEW-2026-09-11.md)。
 - 全项目审查与最后修复：[问题清单](reviews/PROJECT-DEEP-REVIEW-2026-09-11.md)、[R01–R09 修复验收](reviews/REVIEW-FIXES-2026-09-11.md)。

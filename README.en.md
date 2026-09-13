@@ -1,62 +1,86 @@
 # Orbit
 
-Orbit is a Chinese-first project collaboration app for individuals and small student teams. It brings projects, task lists, boards, comments, subtasks and private files into one place.
+A project collaboration app for individuals and small student teams. Keep tasks, discussions, and deliverables together for coursework, competitions, and software projects.
 
-![Actual read-only demo screenshot with synthetic data](public/screenshots/demo.png)
+[简体中文](README.md) · [Documentation](docs/README.md) · [Deployment](docs/AWS-MICRO-DEPLOYMENT.md)
 
-The latest local remediation passed 871 tests, an independent source build, and checks of both container images. CI for the current changes and production deployment acceptance remain pending. Historical deleted test data has not been restored because the original records and backup are unavailable. See the [remediation report](docs/reviews/REMEDIATION-REWORK-CLOSURE-2026-09-13.md), [current progress](PROGRESS.md), and [M6 operations guide](docs/M6-OPERATIONS.md).
+## Features
 
-## Try it locally
+- Create projects, invite teammates through single-use links, manage members, and archive completed projects.
+- Search and filter task lists and a three-column board, with assignees, priorities, due dates, drag-and-drop, and menu alternatives.
+- Collaborate through Markdown descriptions, subtasks, comments, private attachments, and project activity.
+- Track assigned work in a personal dashboard, restore deleted tasks, and handle editing conflicts with draft protection.
+- Email registration, verification, password recovery, and account timezone settings.
 
-Use Node 24+, pnpm 10.34.5 and Docker. Copy `.env.example` to `.env.local`, supply a random authentication secret, and check the local ports.
+The interface is in Simplified Chinese, with desktop and mobile support for core workflows. Project permissions are enforced on the server.
 
-```text
+## Try it
+
+After starting the app, open the [read-only demo](http://localhost:3000/demo). It uses synthetic data and needs no login or database seed.
+
+For real collaboration, register, verify your email in [Mailpit](http://localhost:8025), create a project, and share an invitation link with a teammate.
+
+## Getting started
+
+Requires Node.js 24+, pnpm 10.34.5, and running Docker Compose.
+
+```sh
+git clone https://github.com/liaboveall/Orbit.git
+cd Orbit
+npm install -g pnpm@10.34.5
 pnpm install --frozen-lockfile
-docker compose -f infra/compose.dev.yml up -d
-pnpm db:migrate:dev
-pnpm db:seed
-pnpm dev
 ```
 
-Open `/demo` for a public, read-only synthetic dataset. It supports search, board/list/activity views and task details without reading private projects or issuing API mutations. Register and verify your email through local Mailpit to try real collaboration. Do not share writable accounts publicly.
+1. Copy `.env.example` to `.env.local`: `Copy-Item .env.example .env.local` in PowerShell, or `cp .env.example .env.local` on macOS/Linux.
+2. Generate a local secret and set `BETTER_AUTH_SECRET` in `.env.local`:
 
-## Architecture
+   ```sh
+   node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+   ```
 
-```mermaid
-flowchart LR
-  Browser --> Next[Next.js routes and React UI]
-  Next --> Auth[Better Auth database sessions]
-  Next --> Services[Server domain services]
-  Services --> PG[(PostgreSQL 17)]
-  Auth --> PG
-  Services --> S3[Private S3 storage]
-  Auth --> SMTP[SMTP]
-  Job[Bounded maintenance job] --> PG
-  Job --> S3
-```
+3. Start the local services:
 
-Next.js 16.3.4, React 19, strict TypeScript and Prisma 7.10.0 form a modular monolith. Routes live under `src/app`, business rules under `src/server`, runtime schemas under `src/contracts`, and UI features under `src/features`. PostgreSQL stores shared production rate limits and upload leases. There is no Redis or WebSocket service.
+   ```sh
+   docker compose -f infra/compose.dev.yml up -d
+   ```
 
-Project membership is verified server-side. Version checks detect stale edits, project locks serialize conflicting board operations, and idempotency records protect retries. Files are private and served after authorization; failed uploads use bounded compensation. See [data model](docs/04-DATA-MODEL.md), [API contract](contracts/openapi.json), and [architecture decisions](docs/11-DECISIONS-AND-RISKS.md).
+4. Open the [MinIO console](http://localhost:9001), sign in with the local storage credentials from `.env.example`, and create the private bucket `orbit-dev`, matching `STORAGE_BUCKET`.
+5. Apply committed migrations and start Orbit:
 
-## Validation
+   ```sh
+   pnpm db:migrate:deploy
+   pnpm dev
+   ```
 
-```text
-pnpm check
-pnpm typecheck:scripts
-pnpm test:integration
-pnpm test:e2e --retries=0
-pnpm test:ui --retries=0
-pnpm audit --prod --audit-level=high
-node --conditions=react-server --import tsx scripts/recovery-drill.ts
-```
+Open [Orbit](http://localhost:3000) and register an account. Optional `pnpm db:seed` creates development fixtures, not a login account. Never commit local credentials. See the [environment guide](docs/08-ENVIRONMENT-AND-DEPLOYMENT.md) for port overrides and test database setup.
 
-Integration tests use a real isolated PostgreSQL database. End-to-end tests start a separate production build; UI checks use the development server. The suites use Mailpit/MinIO, precisely clean their fixtures, and verify development/test database fingerprints. M6 includes axe scans, three viewports, a 1000-task HTTP workload at concurrency 10, and five throttled browser lab samples. Measurements describe the test environment; they are not real-user traffic or field Core Web Vitals.
+## Development
 
-The Dockerfile has separate non-root web and operations targets. Database migration is a one-off release step. Production still requires hosting, a domain, managed database/storage/mail configuration, scheduled maintenance and backups, and HTTPS acceptance with two controlled accounts.
+| Command | Purpose |
+| --- | --- |
+| `pnpm dev` | Development server |
+| `pnpm build` / `pnpm start` | Production build / server |
+| `pnpm check` | Lint, application types, unit and contract tests |
+| `pnpm typecheck:scripts` | Tool script types |
+| `pnpm test:integration` | PostgreSQL integration tests |
+| `pnpm test:e2e` / `pnpm test:ui` | Browser workflows / UI tests |
+| `pnpm db:migrate:dev` | Create development migrations |
+| `pnpm db:migrate:deploy` | Apply committed migrations |
 
-## Demo and trade-offs
+Run database and browser suites sequentially against the separate `orbit_test` database. See [test instructions](tests/README.md).
 
-The [three-minute demo script](docs/13-DEMO-AND-PORTFOLIO.md) covers task creation, board movement, collaboration, an intentional conflict and verification evidence. Public demo data is independent from real project data. Fixed workflows and explicit saves keep the first release understandable; there is no realtime co-editing, billing, organization hierarchy or shipped AI assistant.
+## Stack and structure
 
-AI assistance was used for implementation and verification. The repository preserves actual evidence and recovered snapshots without inventing commit history. Planned production results are never reported as completed work.
+Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, and Radix UI; PostgreSQL 17, Prisma 7, Better Auth, and private S3-compatible storage. Exact versions are in [package.json](package.json) and the lockfile.
+
+- `src/app`: pages and API routes.
+- `src/features`: frontend product features.
+- `src/server`: authentication, authorization, persistence, and business services.
+- `src/contracts` and `contracts`: runtime validation and OpenAPI.
+- `prisma`, `tests`, and `infra`: migrations, verification, and deployment.
+
+## Deployment and status
+
+Orbit runs as a persistent Node.js container. The [AWS guide](docs/AWS-MICRO-DEPLOYMENT.md) and [operations manual](docs/M6-OPERATIONS.md) cover PostgreSQL, private storage, email, HTTPS, and backups.
+
+Core collaboration features are implemented and locally verified. Production deployment and external acceptance remain in progress; the AI project planning assistant is not implemented. [PROGRESS](PROGRESS.md) and the [backlog](planning/backlog.json) track current evidence and remaining work. Engineering documentation is primarily in Chinese.

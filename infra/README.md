@@ -1,17 +1,14 @@
-# infra · 本地编排与部署
+# 环境与部署
 
-| 文件 | 用途 |
-|---|---|
-| `compose.dev.yml` | 本地开发依赖：PostgreSQL 17（5432）、MinIO（9000/9001）、Mailpit（SMTP 宿主 25025 → 容器 1025 / Web 8025）。全部只绑 127.0.0.1。 |
-| `postgres/init/01-create-test-db.sql` | 容器首次初始化时创建独立测试库 `orbit_test`（与 `orbit_dev` 隔离）。 |
+- compose.dev.yml：本地 PostgreSQL、MinIO、Mailpit，仅绑定 localhost。
+- postgres/init/01-create-test-db.sql：首次初始化独立测试库。
+- compose.production.yml：生产服务编排。
+- nginx.conf / nginx-http.conf：HTTPS 反向代理 / HTTP 引导配置。
+- backup-database.sh：数据库备份。
+- s3-lifecycle.json / s3-backup-lifecycle.json：对象存储生命周期配置。
 
-启动 / 停止：
+启动：`docker compose -f infra/compose.dev.yml up -d`。停止并保留数据卷：`docker compose -f infra/compose.dev.yml down`。
 
-```bash
-docker compose -f infra/compose.dev.yml up -d      # 起库
-docker compose -f infra/compose.dev.yml down        # 停止（保留数据卷）
-docker compose -f infra/compose.dev.yml down -v      # 停止并清空数据卷
-```
+默认端口：PostgreSQL 5432、MinIO 9000/9001、Mailpit SMTP 25025/Web 8025。附件私有桶按根 README 创建。
 
-> 生产 Dockerfile、多阶段构建与部署编排属 **M6（ORB-021）**，见 docs/08 §4，本目录 M0 不含。
-> MinIO bucket 创建与附件联调属 M5（ORB-018）；Mailpit 邮件流程属 M1（ORB-005）。
+生产镜像定义在 [Dockerfile](../Dockerfile)。配置与端口覆盖见 [环境文档](../docs/08-ENVIRONMENT-AND-DEPLOYMENT.md)；发布、备份和恢复见 [运行手册](../docs/M6-OPERATIONS.md)。

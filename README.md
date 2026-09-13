@@ -1,110 +1,94 @@
-[English](README.en.md) · [只读演示（本地 /demo）](docs/M6-OPERATIONS.md)
+# 有序 Orbit
 
-# 有序 Orbit · 项目仓库
+面向个人与学生小团队的项目协作应用。把课程设计、比赛和开发项目中的任务、讨论与成果放在一起，让每个人知道接下来做什么。
 
-**最新验收（2026-09-13）：本地返工已验证，871项正式测试通过。** 已修复认证超限、SMTP取消、草稿关闭、错误恢复和评论分页竞态；历史误删恢复及M6外部证据仍待补齐。以 [返工交付报告](docs/reviews/REMEDIATION-REWORK-CLOSURE-2026-09-13.md)、[事件追溯](docs/reviews/TEST-DATA-INCIDENT-2026-09-13.md) 和 [PROGRESS](PROGRESS.md) 为准。
+[English](README.en.md) · [开发文档](docs/README.md) · [部署指南](docs/AWS-MICRO-DEPLOYMENT.md)
 
-个人展示部署：[AWS t3.micro 逐步部署指南（不足再升级 small）](docs/AWS-MICRO-DEPLOYMENT.md)。
+## 功能
 
-GitHub：[liaboveall/Orbit](https://github.com/liaboveall/Orbit)（私有） · [开发历史与 15 份恢复快照](docs/DEVELOPMENT-HISTORY.md)。
+- **项目协作**：创建项目、生成一次性邀请链接、管理成员、归档项目。
+- **任务与看板**：列表与三列看板、搜索筛选、负责人、优先级、截止日，支持拖拽与菜单操作。
+- **讨论与成果**：Markdown 描述、子任务、评论、私有附件和项目动态。
+- **个人工作台**：集中查看分配给自己的任务与进度。
+- **工作保护**：任务回收站、编辑冲突提示、未保存草稿保护和账户时区设置。
 
-版本：1.0 · 最新复验：2026-09-13 · 状态：**M0–M5本地功能完成，M6生产部署/当前交付CI待验收，历史测试数据证据待补齐，M7未启动**。审计台账保留70组及58个独立子项；本地测试通过不代表历史数据已恢复。
+中文界面，支持桌面与手机核心操作。账户支持邮箱注册、验证和密码找回；项目区分所有者与成员，服务端校验访问权限。
 
-Orbit 是面向个人与学生小团队的项目协作 Web App。产品围绕创建项目、邀请成员、拆分任务、看板推进、讨论与成果附件展开。通过完整业务、清晰设计和可靠交付展示全栈能力。
+## 体验
 
-本目录是应用仓库根目录。M0 工程与组件、M1 真实认证与设置、M2 项目与任务生命周期、M3 列表/看板/详情、M4 成员协作及 M5 子任务、评论、私有附件与真实工作台均已有实现和历史本地验收。此前已修复限流、草稿保护、分页刷新等问题，2026-09-12 审查的 7 项问题已完成仓库修复和本地验收；2026-09-13 最终复核与返工中的本地契约、交互和故障边界修复已复验；外部条件和历史事件仍按台账跟踪。M6 实现、质量测量和运行手册见 [M6 验收报告](docs/reviews/M6-ACCEPTANCE-2026-09-11.md)，生产部署仍待外部配置。实际锁定版本见 [版本记录](docs/versions.md)，当前验收以 [PROGRESS.md](PROGRESS.md) 为准。
+启动后访问 [只读演示](http://localhost:3000/demo)，无需登录即可浏览合成项目的看板、列表和任务详情，不读写私人项目。
 
-## 交给 AI IDE 的最快方式
+真实协作流程：注册并验证邮箱 → 创建项目 → 复制邀请链接给队友 → 创建和分配任务 → 讨论、上传成果并完成任务。本地验证邮件在 [Mailpit](http://localhost:8025) 查看。
 
-1. 将整个 Orbit 目录作为项目根目录打开。
-2. 先读 [开发状态](PROGRESS.md) 和 [返工交付报告](docs/reviews/REMEDIATION-REWORK-CLOSURE-2026-09-13.md)，下一步补齐报告列出的历史事件证据和 M6 外部验收；已有修复不重复实施。E2E/UI 使用独立测试服务，结束时校验开发库和测试库内容指纹。集成测试使用独立 orbit_test。
-3. 使用 [继续开发指令](prompts/CONTINUE.md)，每次推进一个里程碑。
-4. 交接时让 Agent 更新 [开发状态](PROGRESS.md) 和 [任务清单](planning/backlog.json)。
+## 本地运行
 
-不自动读取 AGENTS.md 的工具，请在消息中明确附加该文件与当前里程碑涉及的文档；无需安装特定 IDE 插件或修改全局配置。
+需要 Node.js 24+、pnpm 10.34.5 和已启动的 Docker Compose。
 
-## 本地开发准备（M0 实测可用）
+```sh
+git clone https://github.com/liaboveall/Orbit.git
+cd Orbit
+npm install -g pnpm@10.34.5
+pnpm install --frozen-lockfile
+```
 
-> 前置：Node.js ≥ 24（本机在 v26.8.1 上实测通过，见 [docs/versions.md](docs/versions.md)）、Docker Desktop（用于本地 PostgreSQL/MinIO/Mailpit）。Windows 使用 pwsh。
+1. 将 `.env.example` 复制为 `.env.local`（PowerShell：`Copy-Item .env.example .env.local`；macOS/Linux：`cp .env.example .env.local`）。
+2. 运行以下命令生成随机值，填入 `.env.local` 的 `BETTER_AUTH_SECRET`；其余默认值用于本地 Compose。
 
-1. **安装 pnpm（一次性）**：本机 Node 25+ 不再内置 corepack，使用全局安装的 pnpm 10.x：
-   ```powershell
-   npm install -g pnpm@10.34.5
+   ```sh
+   node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
    ```
-   `package.json` 的 `packageManager` 字段已锁定该版本。
-2. **安装依赖**（在仓库根目录）：
-   ```powershell
-   pnpm install --frozen-lockfile
-   ```
-   依赖锁定在 `pnpm-lock.yaml`。pnpm 10 默认拦截依赖构建脚本，本项目已在 `package.json` 的 `pnpm.onlyBuiltDependencies` 显式批准 Prisma 引擎、esbuild 等原生构建。
-3. **配置环境变量**：复制模板为本地文件（已被 `.gitignore` 忽略，切勿提交任何真实密钥）：
-   ```powershell
-   Copy-Item .env.example .env.local
-   ```
-   开发默认值可直接用于本地 compose；服务启动时由 `src/server/env.ts` 用 Zod 校验必需项（错误只显示变量名与预期格式，不回显值）。测试库使用独立的 `orbit_test`。
-4. **启动本地依赖服务**（仅绑定 127.0.0.1）：
-   ```powershell
+
+3. 启动本地 PostgreSQL、MinIO 和 Mailpit：
+
+   ```sh
    docker compose -f infra/compose.dev.yml up -d
    ```
-   拉起 PostgreSQL 17（5432）、MinIO（9000/9001）、Mailpit（25025/8025）。init 脚本会自动创建 `orbit_dev` 与 `orbit_test`。
-   > 若本机 5432 已被其它 PostgreSQL 占用，用宿主端口覆盖（不改动仓库默认值）：`$env:POSTGRES_HOST_PORT=5433; docker compose -f infra/compose.dev.yml up -d`，并把 `.env.local` 里连接串端口同步改为 5433。
-   > 若 Mailpit 的 8025 被 Windows 保留，设置 `$env:MAILPIT_WEB_HOST_PORT=28025` 后仅重建 Mailpit 服务，并设置 `$env:MAILPIT_API="http://localhost:28025/api/v1"`。SMTP 宿主端口用 MAILPIT_SMTP_HOST_PORT 覆盖，同时同步 SMTP_PORT；不要修改或清空数据库卷。
-5. **应用数据库迁移**（Prisma 7 使用 driver adapter；env 由 `prisma.config.ts` 显式加载 `.env.local`）：
-   ```powershell
-   pnpm db:migrate:dev
-   pnpm db:seed
-   ```
-   当前包含 14 个迁移。开发库和独立测试库都需要应用迁移；运行测试前确认 TEST_DATABASE_URL 指向 orbit_test。
-6. **启动开发服务器**：
-   ```powershell
+
+4. 打开 [MinIO 控制台](http://localhost:9001)，使用 `.env.example` 中的本地存储账户登录，创建私有桶 `orbit-dev`（与 `STORAGE_BUCKET` 一致），用于附件上传。
+5. 应用现有迁移并启动：
+
+   ```sh
+   pnpm db:migrate:deploy
    pnpm dev
    ```
-   访问 http://localhost:3000。
 
-常用命令契约：`pnpm lint`（独立 `eslint .`，非 `next lint`）、`pnpm typecheck`、`pnpm build`、`pnpm test:unit` / `test:integration` / `test:e2e` / `test:contract`，以及 `pnpm check`（= lint + typecheck + test:unit + test:contract）。
+访问 [Orbit](http://localhost:3000)，注册自己的账户。可选的 `pnpm db:seed` 仅创建开发数据，不提供可登录的演示账户；只读 `/demo` 无需 seed。
 
-## 阅读地图
+端口冲突、测试库初始化和完整变量说明见 [环境文档](docs/08-ENVIRONMENT-AND-DEPLOYMENT.md)。本地配置与凭证不提交到 Git。
 
-| 文件 | 解决的问题 |
-|---|---|
-| [AGENTS.md](AGENTS.md) | 开发 Agent 的工作规则与规范优先级 |
-| [00 · 执行总览](docs/00-EXECUTION-OVERVIEW.md) | 已确定的决策、版本边界、完成标准 |
-| [01 · 产品需求](docs/01-PRODUCT-SPEC.md) | 用户、功能、业务规则、范围与验收 |
-| [02 · 页面与视觉](docs/02-UX-AND-DESIGN.md) | 页面结构、视觉变量、交互、异常与无障碍 |
-| [03 · 技术架构](docs/03-ARCHITECTURE.md) | 技术栈、目录、边界、缓存、并发与集成 |
-| [04 · 数据与一致性](docs/04-DATA-MODEL.md) | 表、字段、索引、事务、排序和删除规则 |
-| [05 · API 语义](docs/05-API-CONTRACT.md) | 接口约定、权限、错误、幂等与示例 |
-| [OpenAPI](contracts/openapi.json) | V1 业务 API 的机器可读契约，不含认证库内部协议 |
-| [06 · 开发里程碑](docs/06-IMPLEMENTATION-PLAN.md) | 任务依赖、实现内容、阶段验收和估时 |
-| [07 · 测试与质量](docs/07-QUALITY-AND-TESTING.md) | 关键测试、性能、可访问性与安全验收 |
-| [08 · 环境与交付](docs/08-ENVIRONMENT-AND-DEPLOYMENT.md) | 环境变量、开发、CI、发布、备份和恢复 |
-| [09 · AI 增强功能](docs/09-AI-ASSISTANT-V1.1.md) | 核心完成后的项目拆解助手 |
-| [10 · Agent 协作](docs/10-AGENT-HANDOFF.md) | 开发过程、任务交接、审查与需求变更 |
-| [11 · 决策与风险](docs/11-DECISIONS-AND-RISKS.md) | 技术取舍、默认假设、风险应对 |
-| [12 · 官方资料](docs/12-REFERENCES.md) | 技术来源与阅读方法 |
-| [13 · 演示与求职](docs/13-DEMO-AND-PORTFOLIO.md) | 演示数据、演示路线、项目说明与简历证据 |
-| [任务清单](planning/backlog.json) | 可交接任务、依赖、状态、对应验收项 |
-| [规划校验](planning/validate_plan.py) | 文档链接、任务图和 OpenAPI 引用的静态检查 |
+## 开发与检查
 
-## 固定边界
+| 命令 | 用途 |
+| --- | --- |
+| `pnpm dev` | 开发服务器 |
+| `pnpm build` / `pnpm start` | 构建 / 启动生产应用 |
+| `pnpm check` | ESLint、应用类型检查、单元和契约测试 |
+| `pnpm typecheck:scripts` | 工具脚本类型检查 |
+| `pnpm test:integration` | 真实 PostgreSQL 集成测试 |
+| `pnpm test:e2e` / `pnpm test:ui` | 业务流程 / 界面与键盘操作测试 |
+| `pnpm db:migrate:dev` | 开发新功能时创建迁移 |
+| `pnpm db:migrate:deploy` | 应用已提交的迁移 |
 
-- V1：账户、项目、两种角色、邀请、任务列表/看板、子任务、评论、私有附件、活动记录、我的工作台、部署与质量验证。
-- V1.1：AI 项目拆解助手。基础产品无 AI 凭证也必须正常工作。
-- 暂不做：原生手机 App、即时聊天、甘特图、收费订阅、自定义工作流、复杂组织体系、实时共同编辑。
-- 桌面优先，手机可用；中文优先；API 与代码标识符使用英文。
-- 不使用其他公司的品牌、素材或业务数据。与目标岗位对齐的是工程能力与设计质量。
+数据库和浏览器测试使用独立的 `orbit_test`，顺序执行。准备步骤见 [测试说明](tests/README.md)。
 
-技术基线：Node.js 24 LTS、TypeScript、Next.js 16 App Router、React、PostgreSQL 17、Prisma 7、Better Auth。客户端数据流采用 RSC + createApiClient / API 直调（服务器组件直查为数据真源，写操作后 router.refresh()）；`@tanstack/react-query` 已作为依赖安装但当前实现未导入使用（属预留，非第二套缓存真源）。具体兼容补丁版本由 M0 实测并写入锁文件，禁止使用无版本边界的 latest 作为长期依赖策略。
+## 技术栈
 
-## 阅读副本与规划检查
+Next.js 16 App Router、React 19、TypeScript、Tailwind CSS 4、Radix UI；PostgreSQL 17、Prisma 7、Better Auth 和私有 S3 兼容存储。具体版本以 [package.json](package.json) 和锁文件为准。
 
-希望一次通读时使用 [完整开发规划](DEVELOPMENT-PLAN.md)。它由专题文档汇总生成；开发时仍按主题和里程碑读取原文件，修改后重新生成。
+```text
+src/app/         页面与 API 路由
+src/features/    项目、任务、看板等前端功能
+src/server/      认证、权限、数据库与业务服务
+src/contracts/   运行时校验、DTO 与 API 客户端
+src/components/  通用界面组件
+prisma/          数据模型、迁移与开发种子
+contracts/       OpenAPI 契约
+tests/           单元、契约、集成与浏览器测试
+infra/           本地服务、生产编排与备份工具
+```
 
-规划检查：python planning/validate_plan.py。重新生成阅读副本：python planning/package_plan.py bundle。打包规划：python planning/package_plan.py zip。脚本只检查/打包规划，不运行应用，也不证明应用已完成。
+## 部署与状态
 
+支持持续运行的 Node.js 容器部署。参见 [AWS 部署指南](docs/AWS-MICRO-DEPLOYMENT.md) 和 [运行维护手册](docs/M6-OPERATIONS.md)，配置 PostgreSQL、私有对象存储、邮件、HTTPS 与备份。
 
-## 文档维护
-
-当前状态只读 [PROGRESS](PROGRESS.md) 与 backlog；当前验收只读
-[最终审查报告](docs/reviews/PROJECT-FINAL-AUDIT-2026-09-13.md)。历史修复报告作为历史证据保留，
-规范、ADR、正式测试与原始运行证据保留。测试操作见 [tests/README](tests/README.md)。
+核心协作功能已实现并完成本地验收；生产部署与外部验收仍在推进，AI 项目拆解助手尚未实现。当前状态、验收证据和待办见 [PROGRESS](PROGRESS.md) 与 [backlog](planning/backlog.json)。
