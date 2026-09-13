@@ -1,3 +1,11 @@
+# 2026-09-13 — CI 镜像拉取修复
+
+- 提交 7dff454 的 CI 34731446195 在服务初始化失败：Docker Hub 拒绝拉取 minio/minio:latest，尚未进入测试。
+- infra/compose.dev.yml 改用官方 Quay 的 RELEASE.2025-09-07T16-13-09Z 并固定多架构 SHA256；与本地已验收版本一致。实际 pull、容器 --version 和 compose config --quiet 均通过。
+- 官方镜像说明：https://github.com/minio/minio/blob/master/docs/docker/README.md 。下一步：推送后完整复验远程 CI；生产与历史数据限制不变。
+
+---
+
 # 2026-09-13 — 验收返工完成与复验（当前最新状态）
 
 **已确认的本地功能缺陷修复并通过871项测试；生产外部验收与历史误删证据仍未完成。** 最新依据：[返工交付报告](docs/reviews/REMEDIATION-REWORK-CLOSURE-2026-09-13.md)、[事件追溯](docs/reviews/TEST-DATA-INCIDENT-2026-09-13.md)。下方旧记录保留历史原貌。

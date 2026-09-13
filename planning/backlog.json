@@ -1090,7 +1090,18 @@
    "prevention": "verified",
    "historicalRecovery": "missing_original_records_and_backup"
   },
-  "additionalFixedFinding": "评论加载更多与后台刷新竞态：分页完成后再刷新扩展窗口；可控时序回归通过。"
+  "additionalFixedFinding": "评论加载更多与后台刷新竞态：分页完成后再刷新扩展窗口；可控时序回归通过。",
+  "ciRemediation": {
+   "failedRun": "https://github.com/liaboveall/Orbit/actions/runs/34731446195",
+   "cause": "Docker Hub denied minio/minio:latest pull",
+   "fix": "Official Quay matching release pinned by multi-architecture digest",
+   "localVerification": [
+    "compose pull minio",
+    "container --version",
+    "compose config --quiet"
+   ],
+   "status": "awaiting_remote_ci"
+  }
  },
  "documentationMaintenance": {
   "date": "2026-09-12",
