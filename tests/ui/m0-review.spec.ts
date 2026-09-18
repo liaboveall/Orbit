@@ -21,6 +21,7 @@ test.afterAll(async () => { if(sessionMeta.email) await cleanupTestEmails([sessi
 let sessionCookies: Cookie[] | null = null;
 let realProjectId: string | null = null;
 let realTaskId: string | null = null;
+let realBoardReady = false;
 
 test.beforeEach(async ({ context, request, baseURL }) => {
   if (!sessionCookies) {
@@ -32,6 +33,17 @@ test.beforeEach(async ({ context, request, baseURL }) => {
     realTaskId = tid;
   }
   await context.addCookies(sessionCookies);
+  // This suite intentionally uses next dev for development-only sample pages.
+  // Compile the real destination before testing keyboard navigation: on a cold
+  // CI runner its first compilation can exceed the interaction's 5s assertion.
+  // A real authenticated HTTP response is required; no sleeps or test retries.
+  if (!realBoardReady) {
+    const destination = `/app/projects/${realProjectId}/board`;
+    const response = await request.get(destination);
+    expect(response.status()).toBe(200);
+    expect(new URL(response.url()).pathname).toBe(destination);
+    realBoardReady = true;
+  }
 });
 
 async function openBoard(page: Page) {
@@ -70,6 +82,7 @@ for (const width of [768, 1024, 1440]) {
     }
     const destination = nav.locator(`a[href="/app/projects/${realProjectId}/board"]`);
     await destination.focus();
+    await expect(destination).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(new RegExp(`/app/projects/${realProjectId}/board$`));
   });

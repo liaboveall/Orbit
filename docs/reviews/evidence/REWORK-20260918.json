@@ -1253,5 +1253,16 @@
   "Local database history check exited 1; not included in all-green application claim.",
   "Native IME/browser zoom and cloud acceptance remain open.",
   "Raw ignored logs are reproducible through repository scripts and CI."
- ]
+ ],
+ "followupUiVerification": {
+  "recordedAt": "2026-09-18T11:46:08.898537+00:00",
+  "causeEvidence": "CI 35339857713: target RSC request started; screenshot showed Compiling while the 5s navigation assertion expired.",
+  "change": "Await an authenticated target-page HTTP response during dev UI setup; retain original 5s URL assertion and zero retries; assert focused link.",
+  "command": "pnpm test:ui --retries=0",
+  "passed": 13,
+  "exitCode": 0,
+  "logSha256": "5e6d27d73263a8b5cb25e458cbd95a3494bc993326e9661d0dbf84cf00aeddef",
+  "testFileSha256": "06c129d02cd0b53a0cb484140a3ebef78c70f90c2ec13929383c8686008b95c6",
+  "remoteResult": "Use the new run for the current PR head."
+ }
 }
