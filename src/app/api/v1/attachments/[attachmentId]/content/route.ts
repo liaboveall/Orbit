@@ -4,11 +4,11 @@ import { requireSessionUser } from "@/server/auth/session";
 import { downloadContent } from "@/server/modules/attachments/service";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export async function HEAD() {
+export async function HEAD(request: Request) {
   // F03：与其他响应一致携带 x-request-id（405 是方法不允许，不下载文件）。
   return new Response(null, {
     status: 405,
-    headers: { Allow: "GET", "Cache-Control": "private, no-store", "X-Request-Id": resolveRequestIdFromRequest(new Request("http://local/HEAD")) },
+    headers: { Allow: "GET", "Cache-Control": "private, no-store", "X-Request-Id": resolveRequestIdFromRequest(request) },
   });
 }
 export async function GET(

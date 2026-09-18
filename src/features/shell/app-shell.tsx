@@ -16,7 +16,7 @@ import {
   DrawerDescription,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { SIDEBAR_PROJECTS } from "./fixtures";
+import { useRecentProjects } from "./use-recent-projects";
 import { OrbitWordmark } from "./orbit-logo";
 import { UserMenu } from "./user-menu";
 import { useGuardedNavigate } from "@/features/tasks/unsaved-changes";
@@ -38,7 +38,7 @@ import { UserTimezoneProvider } from "@/lib/user-timezone";
  * M2 Phase 6 变更：「全部项目」按钮导航到真实项目列表 `/app/projects`；
  * 样例横幅改为白名单判定（isRealDataPage）：设置页/项目/任务/回收站/真实工作台
  * today 不挂横幅；/app/samples/* 与 /app/ui-samples 仍是 fixture 样例、继续显示。
- * 侧栏项目导航仍为 M0 fixture（保持 6 项，后续里程碑接真实项目列表）。
+ * 侧栏按当前会话读取最近六个未归档项目，路由切换/聚焦/定时重取，不共享用户缓存。
  */
 
 /** NODE_ENV 是构建期常量：生产构建把开发分支作为死代码消除。 */
@@ -111,7 +111,9 @@ function SidebarNav({
   pathname,
   user,
   onNavigate,
+  recent,
 }: {
+  recent: ReturnType<typeof useRecentProjects>;
   mode: NavMode;
   pathname: string;
   user: UserDTO;
@@ -174,14 +176,16 @@ function SidebarNav({
             mode === "rail" ? "hidden xl:block" : "px-3",
           )}
         >
-          样例项目
+          最近项目
         </p>
 
+        {recent.loading && <p role="status" className={cn("px-3 text-caption text-foreground-muted", labelClass(mode))}>加载项目中…</p>}
+        {recent.error && <button type="button" onClick={recent.retry} aria-label="重新加载最近项目" className="min-h-11 w-full rounded-control px-2 text-caption text-danger focus-visible:outline-2">项目加载失败，重试</button>}
+        {!recent.loading && !recent.error && recent.projects.length === 0 && <p className={cn("px-3 text-caption text-foreground-muted", labelClass(mode))}>暂无项目，从全部项目开始。</p>}
         <ul className="space-y-1">
-          {SIDEBAR_PROJECTS.map((project) => {
-            // M3 样例路由（分叉 1）：把 M0 fixture 看板迁移到 /app/samples/board/[projectId]
-            const href = `/app/samples/board/${project.id}`;
-            const active = pathname.startsWith(href);
+          {recent.projects.map((project) => {
+            const href = `/app/projects/${project.id}/board`;
+            const active = pathname.startsWith(`/app/projects/${project.id}/`);
             const dot = (
               <span
                 className={cn(
@@ -240,7 +244,7 @@ function SidebarNav({
 
         {/* 项目列表入口（M2 Phase 6：导航到真实数据页 /app/projects）。
             门禁约束：必须保持 <button type="button"> + aria-label（tests/ui/m0-review.spec.ts
-            用 getByRole("button") 断言），且绝不能移入上方 <ul>（ul a 数量锁定为 6）。 */}
+            用 getByRole("button") 断言），且绝不能移入上方 <ul>（ul 仅包含当前用户的最近项目）。 */}
         <Tooltip content="全部项目" side="right">
           <button
             type="button"
@@ -319,6 +323,7 @@ function SidebarNav({
 
 export function AppShell({ user, children }: { user: UserDTO; children: ReactNode }) {
   const pathname = usePathname();
+  const recent = useRecentProjects(user.id);
   const [drawerOpen, setDrawerOpen] = useState(false);
   // 编程式打开的手机抽屉导航：打开瞬间记录焦点，关闭后还给汉堡按钮（docs/02：关闭后恢复焦点）。
   const { captureFocus, handleCloseAutoFocus } =
@@ -341,7 +346,7 @@ export function AppShell({ user, children }: { user: UserDTO; children: ReactNod
       </a>
       {/* 固定侧栏：手机隐藏，平板 72px，桌面 224px */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[72px] border-r border-line bg-surface md:block xl:w-56">
-        <SidebarNav mode="rail" pathname={pathname} user={user} />
+        <SidebarNav mode="rail" pathname={pathname} user={user} recent={recent} />
       </aside>
 
       {/* 手机抽屉导航（Radix Dialog：焦点陷阱 / Escape / 焦点恢复） */}
@@ -357,6 +362,7 @@ export function AppShell({ user, children }: { user: UserDTO; children: ReactNod
           <div className="pt-10">
             <SidebarNav
               mode="drawer"
+              recent={recent}
               pathname={pathname}
               user={user}
               onNavigate={() => setDrawerOpen(false)}

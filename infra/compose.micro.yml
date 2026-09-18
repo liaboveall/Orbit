@@ -1,0 +1,47 @@
+# Single-host EC2 deployment; authoritative configuration for the AWS guide.
+name: orbit-showcase
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    env_file: [/opt/orbit/db.env]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    logging: *logging
+  web:
+    image: orbit-web:showcase
+    restart: unless-stopped
+    init: true
+    env_file: [/opt/orbit/app.env]
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    stop_grace_period: 150s
+    logging: *logging
+  operations:
+    image: orbit-operations:showcase
+    profiles: [tools]
+    init: true
+    env_file: [/opt/orbit/app.env]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    logging: *logging
+volumes:
+  pgdata:

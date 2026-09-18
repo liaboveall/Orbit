@@ -1,0 +1,701 @@
+{
+  "schemaVersion": 1,
+  "baselineHead": "abe4149",
+  "report": "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md",
+  "sourceReport": "docs/reviews/COMPREHENSIVE-REVIEW-2026-09-13.md",
+  "entries": [
+    {
+      "id": "CR-1.1",
+      "title": "维护入口目标守卫",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "默认只读，APP_ENV/目标指纹/执行开关在创建客户端前校验；生产允许明确确认后的限批维护。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "历史18用户事故缺原始记录与备份，未宣称恢复；生产调度仍需部署验收。"
+      ],
+      "originalTitle": "破坏性维护脚本无环境强守卫（曾真实误删数据）",
+      "changedFiles": [
+        "scripts/lib/maintenance-target.ts",
+        "scripts/lib/run-maintenance.ts",
+        "tests/unit/maintenance-target.test.ts"
+      ],
+      "conclusion": "默认只读，APP_ENV/目标指纹/执行开关在创建客户端前校验；生产允许明确确认后的限批维护。"
+    },
+    {
+      "id": "CR-1.2",
+      "title": "当前状态与审计闭环",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "当前摘要由 backlog 生成；审计 ID 唯一、关闭证据、任务状态和 openAuditGroups 双向校验。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "历史记录保留，不再作为当前状态。"
+      ],
+      "originalTitle": "项目状态无单一真相源 —— 返工循环的根因",
+      "changedFiles": [
+        "planning/current_status.py",
+        "planning/validate_plan.py",
+        "planning/backlog.json"
+      ],
+      "conclusion": "当前摘要由 backlog 生成；审计 ID 唯一、关闭证据、任务状态和 openAuditGroups 双向校验。"
+    },
+    {
+      "id": "CR-1.3",
+      "title": "代理限流与脱敏故障日志",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "真实 Nginx 验证认证429/Retry-After、健康访问、上游503及耗时日志，合成 token/cookie/referer 不入日志。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "error_log 无自定义脱敏格式，维持禁用；故障由安全访问日志与应用结构日志诊断。"
+      ],
+      "originalTitle": "Nginx 层无限流 + 错误日志全丢弃",
+      "changedFiles": [
+        "infra/nginx.conf",
+        "infra/nginx-http.conf",
+        "scripts/verify-nginx.mjs"
+      ],
+      "conclusion": "真实 Nginx 验证认证429/Retry-After、健康访问、上游503及耗时日志，合成 token/cookie/referer 不入日志。"
+    },
+    {
+      "id": "CR-2.1",
+      "title": "连接池可配置与测量",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "DATABASE_POOL_MAX 限1–20、默认5；1000任务/10并发/三种排序各30采样，无错误。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "本机结果不证明 micro 容量，也未证明默认5是瓶颈。"
+      ],
+      "originalTitle": "数据库连接池 `max: 5` 过窄",
+      "changedFiles": [
+        "src/server/env.ts",
+        "src/server/db/prisma.ts",
+        "tests/integration/comprehensive-review.test.ts"
+      ],
+      "conclusion": "DATABASE_POOL_MAX 限1–20、默认5；1000任务/10并发/三种排序各30采样，无错误。"
+    },
+    {
+      "id": "CR-2.2",
+      "title": "1GiB 主机内存预算",
+      "originalClaimIsInstruction": false,
+      "status": "blocked_external",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "已明确采集内存/OOM/swap/连接和维护重叠负载后设置容器与 PostgreSQL 预算的步骤。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "未提供实际1GiB部署主机与负载证据；不以桌面Docker数据编造生产内存上限或容量结论。"
+      ],
+      "originalTitle": "PostgreSQL 未针对 1GiB 主机调优，且无容器内存上限",
+      "changedFiles": [
+        "docs/14-CHANGE-AND-UPGRADE-CHECKLIST.md",
+        "docs/AWS-MICRO-DEPLOYMENT.md"
+      ],
+      "conclusion": "已明确采集内存/OOM/swap/连接和维护重叠负载后设置容器与 PostgreSQL 预算的步骤。"
+    },
+    {
+      "id": "CR-2.3",
+      "title": "真实行为契约覆盖",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "原报告忽略既有真实 handler + 状态码 + Schema 测试；补充DELETE参数矩阵、HEAD追踪和204客户端兼容。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "静态OpenAPI互验与真实集成互补，不能仅凭测试总数保证所有语义。"
+      ],
+      "originalTitle": "契约测试只做静态结构比对，捕获不了契约漂移",
+      "changedFiles": [
+        "tests/integration/task.test.ts",
+        "tests/integration/subresource-routes.test.ts",
+        "tests/contract/client.test.ts"
+      ],
+      "conclusion": "原报告忽略既有真实 handler + 状态码 + Schema 测试；补充DELETE参数矩阵、HEAD追踪和204客户端兼容。"
+    },
+    {
+      "id": "CR-2.4",
+      "title": "附件失败补偿与积压可观测",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "已有即时failUpload补偿；补充候选计数和只读配额对账，验证持久清理兜底与幂等额度。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "1小时是过期阈值而非最长恢复承诺；实际恢复还取决于调度、积压和存储可用性。"
+      ],
+      "originalTitle": "附件配额泄漏窗口（最长 1 小时）",
+      "changedFiles": [
+        "src/server/modules/attachments/cleanup.ts",
+        "src/server/modules/maintenance/inspect.ts",
+        "tests/integration/attachment-quota.test.ts"
+      ],
+      "conclusion": "已有即时failUpload补偿；补充候选计数和只读配额对账，验证持久清理兜底与幂等额度。"
+    },
+    {
+      "id": "CR-2.5",
+      "title": "成员移除与看板版本",
+      "originalClaimIsInstruction": false,
+      "status": "accepted_design",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "规范明确成员退出不增加boardVersion；保留任务版本更新和既有刷新行为。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "不改变已定乐观并发语义。"
+      ],
+      "originalTitle": "移除成员未 bump `boardVersion`",
+      "changedFiles": [
+        "docs/04-DATA-MODEL.md",
+        "tests/integration/members.test.ts"
+      ],
+      "conclusion": "规范明确成员退出不增加boardVersion；保留任务版本更新和既有刷新行为。"
+    },
+    {
+      "id": "CR-2.6",
+      "title": "演示固定日期可见",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "横幅明确展示 SAMPLE_TODAY 的固定快照日期，真实日期逻辑不受影响。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "演示是可重复的合成快照，不是实时工作台。"
+      ],
+      "originalTitle": "公开演示页的截止日徽标被硬编码日期冻结",
+      "changedFiles": [
+        "src/features/demo/demo-view.tsx"
+      ],
+      "conclusion": "横幅明确展示 SAMPLE_TODAY 的固定快照日期，真实日期逻辑不受影响。"
+    },
+    {
+      "id": "CR-2.7",
+      "title": "移动看板Tabs语义及键盘",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "tab/panel ID关联、单一tab停靠点、方向/Home/End键与跨断点语义；axe与键盘回归通过。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [],
+      "originalTitle": "看板移动端 tab 缺少 tabpanel 语义关联",
+      "changedFiles": [
+        "src/features/board/real-board.tsx",
+        "tests/e2e/comprehensive-review.spec.ts"
+      ],
+      "conclusion": "tab/panel ID关联、单一tab停靠点、方向/Home/End键与跨断点语义；axe与键盘回归通过。"
+    },
+    {
+      "id": "CR-2.8",
+      "title": "排序索引收益验证",
+      "originalClaimIsInstruction": false,
+      "status": "accepted_design",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "1000任务局部排序 EXPLAIN 使用projectId索引并小范围排序；10并发p95不足54ms，无证据支持机械追加索引。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "只测本地单项目与三种排序；大规模跨项目/生产负载仍需测量。"
+      ],
+      "originalTitle": "排序与过滤缺少索引支撑",
+      "changedFiles": [
+        "tests/integration/comprehensive-review.test.ts",
+        "docs/14-CHANGE-AND-UPGRADE-CHECKLIST.md"
+      ],
+      "conclusion": "1000任务局部排序 EXPLAIN 使用projectId索引并小范围排序；10并发p95不足54ms，无证据支持机械追加索引。"
+    },
+    {
+      "id": "CR-2.9",
+      "title": "镜像扫描及发现漏洞",
+      "originalClaimIsInstruction": false,
+      "status": "blocked_external",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "runner/operations HIGH/CRITICAL阻断扫描均落地、固定Action与工具版本并保留JSON；安装PCRE2补丁、移除未使用npm及运维包管理器后，Node依赖扫描0项。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "两镜像仍各56条系统包记录（52HIGH/4CRITICAL、18唯一CVE），扫描库无修复版本；未加忽略、未声称发布门禁通过。"
+      ],
+      "originalTitle": "CI 缺容器镜像漏洞扫描",
+      "changedFiles": [
+        "Dockerfile",
+        ".github/workflows/ci.yml"
+      ],
+      "conclusion": "runner/operations HIGH/CRITICAL阻断扫描均落地、固定Action与工具版本并保留JSON；安装PCRE2补丁、移除未使用npm及运维包管理器后，Node依赖扫描0项。"
+    },
+    {
+      "id": "CR-2.10",
+      "title": "领域变更检查清单",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "把产品/数据/契约/路由/页面/测试/交付层同步要求纳入PR验收，未引入未经证明的代码生成框架。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "清单仍需要评审，不能自动证明语义正确。"
+      ],
+      "originalTitle": "新增业务领域需手工同步 8 处，无脚手架",
+      "changedFiles": [
+        "docs/14-CHANGE-AND-UPGRADE-CHECKLIST.md",
+        ".github/PULL_REQUEST_TEMPLATE.md"
+      ],
+      "conclusion": "把产品/数据/契约/路由/页面/测试/交付层同步要求纳入PR验收，未引入未经证明的代码生成框架。"
+    },
+    {
+      "id": "CR-2.11",
+      "title": "框架升级与兼容回归",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "定义官方迁移资料、Next本地文档、Radix嵌套焦点/IME、Prisma真实并发和缓存升级回归。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "固定现有兼容版本，不为消除文档提醒而迁移框架。"
+      ],
+      "originalTitle": "框架版本锁定与私有行为依赖",
+      "changedFiles": [
+        "docs/14-CHANGE-AND-UPGRADE-CHECKLIST.md",
+        "tests/ui/m0-review.spec.ts"
+      ],
+      "conclusion": "定义官方迁移资料、Next本地文档、Radix嵌套焦点/IME、Prisma真实并发和缓存升级回归。"
+    },
+    {
+      "id": "CR-3.1",
+      "title": "共享重编号逻辑",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "统一renumberColumn与RawColRow、可选excludeTaskId；360数据库集成通过。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [],
+      "originalTitle": "`src/server/modules/task/position.ts:71` 与 `move.ts:72` | `renumberColumnAll` / `renumberColumn` 逻辑重复，`RawColRow` 双份声明。合并为单一 `renumberColumn(tx, projectId, status, { excludeTaskId? })` |",
+      "changedFiles": [
+        "src/server/modules/task/position.ts",
+        "src/server/modules/task/move.ts"
+      ],
+      "conclusion": "统一renumberColumn与RawColRow、可选excludeTaskId；360数据库集成通过。"
+    },
+    {
+      "id": "CR-3.2",
+      "title": "样例与真实任务卡区分",
+      "originalClaimIsInstruction": false,
+      "status": "accepted_design",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "样例卡改名SampleTaskCard；合成和真实DTO/交互不同，不强行合并为多分支巨型组件。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [],
+      "originalTitle": "`src/features/board/task-card.tsx:36` 与 `src/features/tasks/real/task-list-client.tsx:347` | 两个 `TaskCard` 实现并存 |",
+      "changedFiles": [
+        "src/features/board/task-card.tsx",
+        "src/features/board/board-view.tsx",
+        "src/features/demo/demo-view.tsx"
+      ],
+      "conclusion": "样例卡改名SampleTaskCard；合成和真实DTO/交互不同，不强行合并为多分支巨型组件。"
+    },
+    {
+      "id": "CR-3.3",
+      "title": "同列末尾移动no-op",
+      "originalClaimIsInstruction": false,
+      "status": "not_reproduced",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "基线已有末尾no-op检测及回归，本次保留且全量集成通过。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [],
+      "originalTitle": "`src/server/modules/task/move.ts:236-247` | 同列\"已在末尾\"的 move 仍重排末位 position、写 MoveRecord + TASK_MOVED + bump boardVersion → 活动流噪声 |",
+      "changedFiles": [
+        "src/server/modules/task/move.ts",
+        "tests/integration/move-task.test.ts"
+      ],
+      "conclusion": "基线已有末尾no-op检测及回归，本次保留且全量集成通过。"
+    },
+    {
+      "id": "CR-3.4",
+      "title": "移动任务UUID规范化",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "统一使用normalizedTaskId与规范化锚点，移除过期注释与类型别名。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [],
+      "originalTitle": "`src/server/modules/task/move.ts:219/253` | 用未规范化 `taskId`，而 `:205` 用 `normalizedTaskId`（PG UUID 不分大小写故功能正确，但不一致） |",
+      "changedFiles": [
+        "src/server/modules/task/move.ts"
+      ],
+      "conclusion": "统一使用normalizedTaskId与规范化锚点，移除过期注释与类型别名。"
+    },
+    {
+      "id": "CR-3.5",
+      "title": "邀请接受者外键与CHECK一致",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "新增迁移改acceptedBy为RESTRICT；真实数据库验证删除约束，迁移前后业务内容指纹不变。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "不增加V1账号删除能力。"
+      ],
+      "originalTitle": "`prisma/schema.prisma:229` + `20260910001347/migration.sql:16-19` | `Invitation.acceptedBy` 的 `onDelete: SetNull` 与 `checked_accepted_at_and_by_id` CHECK 冲突：删除\"接受过邀请\"的用户会置空 `acceptedById` 而 `acceptedAt` 非空 → CHECK 失败。当前无删用户路径故为 Latent；建议改 `Restrict` 或放宽 CHECK |",
+      "changedFiles": [
+        "prisma/schema.prisma",
+        "prisma/migrations/20260913090000_align_invitation_restrict/migration.sql",
+        "tests/integration/comprehensive-review.test.ts"
+      ],
+      "conclusion": "新增迁移改acceptedBy为RESTRICT；真实数据库验证删除约束，迁移前后业务内容指纹不变。"
+    },
+    {
+      "id": "CR-3.6",
+      "title": "预留公共错误码兼容",
+      "originalClaimIsInstruction": false,
+      "status": "accepted_design",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "保留既有公共枚举并注释当前无抛出点，避免无必要破坏契约。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [],
+      "originalTitle": "`src/contracts/error-codes.ts:37,47` | `EMAIL_UNVERIFIED`、`ALREADY_EXISTS` 全仓库无抛出点，死错误码 |",
+      "changedFiles": [
+        "src/contracts/error-codes.ts",
+        "docs/14-CHANGE-AND-UPGRADE-CHECKLIST.md"
+      ],
+      "conclusion": "保留既有公共枚举并注释当前无抛出点，避免无必要破坏契约。"
+    },
+    {
+      "id": "CR-3.7",
+      "title": "HEAD请求追踪",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "HEAD沿用真实Request中的requestId，删除伪造请求。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [],
+      "originalTitle": "`src/app/api/v1/tasks/[taskId]/attachments/[attachmentId]/content/route.ts:11` | HEAD 分支用 `new Request(\"http://local/HEAD\")` 伪造请求取 requestId，破坏链路追踪一致性 |",
+      "changedFiles": [
+        "src/app/api/v1/attachments/[attachmentId]/content/route.ts",
+        "tests/integration/subresource-routes.test.ts"
+      ],
+      "conclusion": "HEAD沿用真实Request中的requestId，删除伪造请求。"
+    },
+    {
+      "id": "CR-3.8",
+      "title": "DELETE版本查询统一校验",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "VersionQuerySchema与parseQueryParams统一解析正整数、重复参数和中文错误；保留HTTP契约。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [],
+      "originalTitle": "`subtasks/[subtaskId]/route.ts:73-79`、`comments/[commentId]/route.ts:73-79` | 手工解析 `expectedVersion` 且返回英文 `VALIDATION_ERROR`，绕过统一 `parseQueryParams` 与中文文案约定 |",
+      "changedFiles": [
+        "src/contracts/dto.ts",
+        "src/app/api/v1/comments/[commentId]/route.ts",
+        "src/app/api/v1/subtasks/[subtaskId]/route.ts",
+        "tests/unit/version-query.test.ts"
+      ],
+      "conclusion": "VersionQuerySchema与parseQueryParams统一解析正整数、重复参数和中文错误；保留HTTP契约。"
+    },
+    {
+      "id": "CR-3.9",
+      "title": "嵌套弹层Escape与IME",
+      "originalClaimIsInstruction": false,
+      "status": "accepted_design",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "保留经过嵌套弹层验证的window捕获兼容逻辑，组合态调用preventDefault；13UI验证顶层关闭和焦点恢复。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "不能仅按猜测删掉兼容层。"
+      ],
+      "originalTitle": "`src/components/ui/dialog.tsx:51-73` | window 级 Escape 监听与 Radix `onEscapeKeyDown` 可能双重触发；建议只保留 Radix 回调，在回调内判 `isComposing` |",
+      "changedFiles": [
+        "src/components/ui/dialog.tsx",
+        "tests/ui/m0-review.spec.ts"
+      ],
+      "conclusion": "保留经过嵌套弹层验证的window捕获兼容逻辑，组合态调用preventDefault；13UI验证顶层关闭和焦点恢复。"
+    },
+    {
+      "id": "CR-3.10",
+      "title": "设置姓名IME提交",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "组合Enter/提交守卫和composition生命周期；实际保存回归通过，同时修正文案1–40字。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [],
+      "originalTitle": "`src/features/settings/settings-form.tsx:217-238` | 姓名输入框 Enter 提交缺少 IME 组合态守卫（疑似，多数浏览器已缓解） |",
+      "changedFiles": [
+        "src/features/settings/settings-form.tsx",
+        "tests/e2e/comprehensive-review.spec.ts"
+      ],
+      "conclusion": "组合Enter/提交守卫和composition生命周期；实际保存回归通过，同时修正文案1–40字。"
+    },
+    {
+      "id": "CR-3.11",
+      "title": "附件配额只读对账",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "同一SQL快照计算READY/UPLOADING汇总、覆盖软删除任务，不匹配非零退出；默认预览实测17项目0差异。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "不自动修账，正式周期调度仍由部署负责。"
+      ],
+      "originalTitle": "`src/server/modules/attachments/*` | `reservedBytes/usedBytes` 仅靠事务维护，无周期对账（建议加 `SUM(READY.sizeBytes) = usedBytes` 安全网） |",
+      "changedFiles": [
+        "src/server/modules/maintenance/inspect.ts",
+        "scripts/lib/run-maintenance.ts",
+        "tests/integration/attachment-quota.test.ts"
+      ],
+      "conclusion": "同一SQL快照计算READY/UPLOADING汇总、覆盖软删除任务，不匹配非零退出；默认预览实测17项目0差异。"
+    },
+    {
+      "id": "CR-3.12",
+      "title": "依赖精确锁定与dotenv分类",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "AWS/dnd直接版本精确锁定，dotenv移devDependencies；生产及全量pnpm audit均0漏洞。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [],
+      "originalTitle": "`package.json:34` vs `:38-59`；`package.json:50` | 版本策略不一致（AWS SDK 用 `^`，其余精确）；`dotenv` 仅构建/脚本使用，应移入 devDependencies |",
+      "changedFiles": [
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "conclusion": "AWS/dnd直接版本精确锁定，dotenv移devDependencies；生产及全量pnpm audit均0漏洞。"
+    },
+    {
+      "id": "CR-3.13",
+      "title": "双数据库迁移命名",
+      "originalClaimIsInstruction": false,
+      "status": "accepted_design",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "两次迁移分别服务orbit_dev与orbit_test，明确step名称并保留隔离。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [],
+      "originalTitle": "`.github/workflows/ci.yml:37` 与 `:38-41` | 重复 `db:migrate:deploy`（先默认库后 `orbit_test`），语义冗余易误读 |",
+      "changedFiles": [
+        ".github/workflows/ci.yml"
+      ],
+      "conclusion": "两次迁移分别服务orbit_dev与orbit_test，明确step名称并保留隔离。"
+    },
+    {
+      "id": "CR-3.14",
+      "title": "CI Action不可变引用",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "checkout/setup-node/pnpm/upload-artifact/Trivy固定经远端核对的commit SHA。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "本工作区当前修改未推送，未验证远端本修订CI。"
+      ],
+      "originalTitle": "`.github/workflows/ci.yml:20,24,55` | Action 仅 pin 主版本 tag（`@v4`），存在漂移风险 |",
+      "changedFiles": [
+        ".github/workflows/ci.yml"
+      ],
+      "conclusion": "checkout/setup-node/pnpm/upload-artifact/Trivy固定经远端核对的commit SHA。"
+    },
+    {
+      "id": "CR-3.15",
+      "title": "健康探针分层",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "路由委托服务层执行数据库就绪查询。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [],
+      "originalTitle": "`src/app/health/ready/route.ts:1` | 路由层直接 `import { prisma }`，是分层边界的唯一泄漏点 |",
+      "changedFiles": [
+        "src/server/modules/maintenance/readiness.ts",
+        "src/app/health/ready/route.ts"
+      ],
+      "conclusion": "路由委托服务层执行数据库就绪查询。"
+    },
+    {
+      "id": "CR-3.16",
+      "title": "历史artifact与正式输入边界",
+      "originalClaimIsInstruction": false,
+      "status": "accepted_design",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "保持历史恢复证据忽略状态，规划校验仅扫描正式输入；不删除用户或事故材料。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "磁盘历史快照仍保留。"
+      ],
+      "originalTitle": "`artifacts/rework-20260913/fresh-source/` | 磁盘上含整份源码快照 + node_modules 副本。已被 `.gitignore:63` 正确忽略，**未入库**，但占磁盘且存在 `git add -f` 灾难性膨胀风险 |",
+      "changedFiles": [
+        ".gitignore",
+        "planning/validate_plan.py",
+        "docs/14-CHANGE-AND-UPGRADE-CHECKLIST.md"
+      ],
+      "conclusion": "保持历史恢复证据忽略状态，规划校验仅扫描正式输入；不删除用户或事故材料。"
+    },
+    {
+      "id": "CR-3.17",
+      "title": "移除冗余非负CHECK",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "新增迁移仅移除重复组合CHECK，两条独立非负约束保留并真实验证。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [],
+      "originalTitle": "`prisma/migrations/20260909001003:116` 与 `20260911033000:5-9` | `Project_bytes_non_negative_check` 与新增的两个非负 CHECK 语义重复 |",
+      "changedFiles": [
+        "prisma/migrations/20260913090000_align_invitation_restrict/migration.sql",
+        "tests/integration/comprehensive-review.test.ts"
+      ],
+      "conclusion": "新增迁移仅移除重复组合CHECK，两条独立非负约束保留并真实验证。"
+    },
+    {
+      "id": "CR-3.18",
+      "title": "真实会话侧栏项目",
+      "originalClaimIsInstruction": false,
+      "status": "fixed",
+      "taskIds": [
+        "ORB-020"
+      ],
+      "closureEvidence": [
+        "读取当前成员最近六个未归档项目，真实看板链接、loading/empty/error重试、路由/聚焦/30秒刷新、用户隔离；三断点键盘回归。",
+        "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
+      ],
+      "remainingLimitations": [
+        "客户端当前实例状态，不使用跨用户共享缓存。"
+      ],
+      "originalTitle": "`src/features/shell/app-shell.tsx:19,41` | 真实侧栏仍渲染 `SIDEBAR_PROJECTS`（6 个 fixture 项目），代码注释自述\"仍为 M0 fixture\"。若侧栏属生产路径则为真实缺陷，需确认接线状态 |",
+      "changedFiles": [
+        "src/features/shell/app-shell.tsx",
+        "src/features/shell/use-recent-projects.ts",
+        "tests/e2e/comprehensive-review.spec.ts",
+        "tests/ui/m0-review.spec.ts"
+      ],
+      "conclusion": "读取当前成员最近六个未归档项目，真实看板链接、loading/empty/error重试、路由/聚焦/30秒刷新、用户隔离；三断点键盘回归。"
+    }
+  ],
+  "additionalVerifiedChanges": [
+    "client.delete 对 z.void 的204支持并保留错误信封校验。",
+    "任务详情子任务/评论/附件使用不同React key，UI断言无重复key日志。"
+  ],
+  "excludedClaimsReview": "报告第4节其他三项与账号枚举取舍保持既有规范：boardVersion游标并发控制、生产可信代理启动守卫、V1不提供自助注销；未引入范围外产品功能。"
+}

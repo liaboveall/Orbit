@@ -74,6 +74,11 @@ Thumbs.db
 
 # --- Misc ---
 *.tsbuildinfo
+__pycache__/
+*.pyc
 # F36：个人 IDE 生成物不入库（保留本地副本，不重写历史）。
 .qoder/
 .kiro/
+.workbuddy/
+# OI-17：本轮会话在仓库根产生的临时探针输出（锚定根目录的窄规则，不匹配子目录业务文件）。
+/_*.txt

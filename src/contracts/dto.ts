@@ -279,6 +279,12 @@ export const VersionInputSchema = z.strictObject({
 });
 export type VersionInputDTO = z.infer<typeof VersionInputSchema>;
 
+/** Query transport for versioned DELETE: canonical positive decimal, no exponent/hex/duplicates. */
+export const VersionQuerySchema = z.object({
+  expectedVersion: z.string({ error: "请提供版本号" }).regex(/^[1-9]\d*$/, "版本号必须是正整数")
+    .transform(Number).pipe(VersionSchema),
+});
+
 /** DeletedTask：删除任务响应。 */
 export const DeletedTaskSchema = z.strictObject({
   id: UuidSchema,
@@ -513,3 +519,9 @@ export const MyTasksQuerySchema=PaginationQuerySchema.extend({
   priority:TaskPrioritySchema.optional(),sort:TaskSortSchema.optional(),
 });
 export type MyTasksQueryDTO=z.infer<typeof MyTasksQuerySchema>;
+
+/** Shape only; expiry and user-bound MAC verification remain in the service. */
+export const SignedDownloadQuerySchema = z.strictObject({
+  expires: z.string().regex(/^[0-9]{13}$/),
+  signature: z.string().regex(/^[0-9a-f]{64}$/),
+});

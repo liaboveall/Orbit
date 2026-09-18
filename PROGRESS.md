@@ -1,3 +1,38 @@
+<!-- BEGIN CURRENT STATUS -->
+# 当前交付状态
+
+由 planning/current_status.py 从 backlog 生成；下方为历史交接记录。
+
+- 状态：V1_RELEASE_ACCEPTANCE_PENDING
+- 当前依据：[IMPROVEMENT-ACCEPTANCE-2026-09-18.md](docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md)
+- 说明：2026-09-18 独立验收需返工：基础检查、270 unit 与173 contract 独立通过；发现10项开放问题，包括临时配置副本残留、V1完成绕过、Linux容器烟测兼容性及契约验证盲区。保留已完成改动，不接受仓库内全部修复完成的声明；M6 review，V1未发布。
+- 里程碑：M0 done；M1 done；M2 done；M3 done；M4 done；M5 done；M6 review；M7 todo
+- 历史数据恢复：missing_original_records_and_backup
+
+<!-- END CURRENT STATUS -->
+
+---
+
+# 2026-09-18 — 全面完善交付独立验收：需返工
+
+- 当前依据：[独立验收报告](docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md)、[10 项开放验收问题](planning/improvement-acceptance-2026-09-18.json)。原交付报告及 26 fixed 声明保留为交付方记录，不代表独立验收认可；新增 IA-01—IA-10 已关联 ORB-020/021，M6 保持 review，M7 不启动。
+- 独立执行 lint、脚本 typecheck、tsc --noEmit、270 unit、173 contract、runner 自测均退出 0；核读交付方 360 integration/85 E2E/13 UI 日志与指纹成功消息，但本轮未重跑全套数据库/浏览器测试，未连接业务数据库。
+- 受控反例：M6 改归 V1.1 后可绕过 V1 完成校验；损坏参数与响应绑定的新契约测试仍 11 passed；池断言失败跳过 pool.end；交付镜像 /api/v1 根路径仍是 HTML 404。临时目录存在 66 份探针遗留 .env.local 副本，只核查存在性，未读取值或删除。
+- 本轮只写审查材料、正式开放问题与交接状态；未改业务源码、旧测试、原交付台账或历史日志，未提交/推送。合成配置的只读 HTTP 容器已清理。下一步按独立报告先处理敏感副本生成、Linux CI 和治理，再补契约/维护/证据缺口。
+
+---
+
+# 2026-09-18 — 审查复核与 Agent 执行资料交接（仅资料准备）
+
+- 已生成 [审查复核与完善任务书](docs/reviews/REVIEW-ANALYSIS-2026-09-18.md) 和 [Agent 执行指令](prompts/AGENT-IMPROVEMENT-2026-09-18.md)，覆盖 OI-01—OI-30、G0—G6 执行顺序、保护范围及逐项关闭条件。尚未实施这些优化，不改变里程碑完成状态；M7 不在本次范围。
+- **证据更正：不能把此前 884 项描述继续当作本轮完整门禁通过。** 本机 artifacts/audit-20260917/integration.log 记录 360 用例通过，但开发库指纹收尾失败且命令退出 1；并行冒烟干扰是待核实假设。上方生成摘要引用的 2026-09-13 记录属于先前验收，不证明 2026-09-17 这次运行成功。
+- 只读复核在内存中确认 ORB-021 置 done/清空开放组仍通过校验，非法里程碑与应用状态亦未被拒绝；复核没有改写实际 backlog 进行探针。资料要求执行 Agent 在 G0/G1 修复正式状态与关联校验。
+- 历史数据恢复、当前数据库迁移应用状态、实时远端/CI 和新镜像扫描未在本轮复验。不因无 Session/Account 删除历史用户，不改写已应用迁移，不将材料交付标成修复完成。
+- 资料验证：只读执行规划校验逻辑（跳过写 VALIDATION.md）通过，59 份 Markdown/181 个本地链接无错误；30 个唯一 OI 编号、G0—G6 和交接路径核对通过；python planning/current_status.py --check 与 git diff --check 退出 0。本轮没有运行应用测试。
+- 下一步：由用户将执行指令交给 Agent，从 G0 开始按阶段实现；逐项纳入强化后的正式审计体系，完成可执行的本地工作并单列外部阻塞。
+
+---
+
 # 2026-09-13 — 项目清理与应用 README
 
 - 中英文 README 改为应用介绍、功能、只读演示、本地启动、技术栈和部署入口；补齐随机认证密钥、MinIO 私有桶和 seed 不提供登录账户的说明。
@@ -26,7 +61,7 @@
 
 ---
 
-# 2026-09-13 — 验收返工完成与复验（当前最新状态）
+# 2026-09-13 — 验收返工完成与复验（历史验收记录）
 
 **已确认的本地功能缺陷修复并通过871项测试；生产外部验收与历史误删证据仍未完成。** 最新依据：[返工交付报告](docs/reviews/REMEDIATION-REWORK-CLOSURE-2026-09-13.md)、[事件追溯](docs/reviews/TEST-DATA-INCIDENT-2026-09-13.md)。下方旧记录保留历史原貌。
 
@@ -145,9 +180,9 @@ M6 的共享准入、维护、容器、CI 工作流、恢复演练、质量测�
 
 ---
 
-# Orbit 当前开发状态
+# Orbit 历史开发状态
 
-### 2026-09-11 — 全项目审查 R01–R09 修复完成（当前最新状态）
+### 2026-09-11 — 全项目审查 R01–R09 修复完成（历史验收记录）
 
 **本次审查 9 项问题全部关闭，M0–M5 done；M6/M7 仍 todo。** 当前验收依据：[全量修复与验收报告](docs/reviews/REVIEW-FIXES-2026-09-11.md)。下方历史审查与修复编号须结合各自报告阅读。
 

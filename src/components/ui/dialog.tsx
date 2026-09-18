@@ -51,8 +51,6 @@ export function DialogContent({
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.defaultPrevented) return;
-      // F31⑬：IME 组合输入期间按 Escape 是取消候选词，不应关闭对话框。
-      if (event.isComposing || event.keyCode === 229) return;
       const dialog = closeRef.current?.closest('[role="dialog"]');
       // Radix 1.1.23 can retain the parent drawer's Escape listener after a
       // nested dialog opens. Route by the focused layer before document capture.
@@ -61,6 +59,9 @@ export function DialogContent({
         ? event.target.closest('[role="dialog"], [role="menu"], [role="listbox"]')
         : null;
       if (!dialog || layer !== dialog) return;
+      // Keep native IME candidate cancellation while preventing Radix/parent
+      // layers from treating the same composing Escape as a dialog dismissal.
+      if (event.isComposing || event.keyCode === 229) { event.stopImmediatePropagation(); return; }
       event.stopImmediatePropagation();
       onEscapeKeyDown?.(event);
       if (!event.defaultPrevented) {
@@ -82,7 +83,10 @@ export function DialogContent({
           className,
         )}
         {...props}
-        onEscapeKeyDown={onEscapeKeyDown}
+        onEscapeKeyDown={(event) => {
+          if (event.isComposing || event.keyCode === 229) { event.preventDefault(); return; }
+          onEscapeKeyDown?.(event);
+        }}
       >
         {children}
         <DialogPrimitive.Close asChild>

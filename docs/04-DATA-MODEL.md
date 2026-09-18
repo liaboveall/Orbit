@@ -146,6 +146,12 @@ move 带 expectedVersion 与 expectedBoardVersion。任一不匹配返回409，�
 
 fixture 的 now 是可注入基准时间，日期相对基准生成，以便覆盖昨天/今天/未来/无日期/跨时区。不用多年后失效的硬编码“今天”。V1 不需要 AI 表，后续在09新增迁移。
 
+### 迁移 16（20260913090000_align_invitation_restrict）语义与回滚口径
+
+- 变更 1：`Invitation.acceptedById` 外键改 `ON DELETE RESTRICT`。该列是接受行为的审计身份，与 `acceptedAt` 受成对 CHECK（`checked_accepted_at_and_by_id`）约束；原 CASCADE 置空既违反该 CHECK 也会抹掉审计记录。删除曾接受邀请的用户必须先显式处理邀请记录，与移除成员业务路径的显式清理一致。
+- 变更 2：删除 `Project_bytes_non_negative_check` 复合 CHECK。它已被 M5 迁移 `20260911033000_add_project_quota_checks` 的 `non_negative_reserved` / `non_negative_used` 两条独立约束完全覆盖；删除只为对齐 schema 与运行库约束清单，防护语义不变，不修改任何数据行。
+- 回滚口径：本项目迁移只向前。应用回滚=从备份恢复（docs/M6-OPERATIONS.md）；需修正时编写新的后续迁移，不得改写已应用文件（其字节与 `_prisma_migrations.checksum` 绑定）。
+
 
 ## 2026-09-11 · M5 协议冲突关闭
 
@@ -163,3 +169,7 @@ fixture 的 now 是可注入基准时间，日期相对基准生成，以便覆�
 锁定的 adapter-pg 7.10.0 时间解析器假定 PostgreSQL 返回 UTC 文本，应用连接必须固定 `timezone=UTC`；业务代码不得更改池连接时区。时区回归分别核对数据库 epoch 和恢复 UTC 会话后的 Prisma Date，用户时区仅用于展示及 date-only 筛选。认证 API 继续接收相同的 JavaScript Date。
 
 删除评论的事务同步将其创建幂等响应改为删除占位；旧数据迁移清除已删除评论残留的缓存正文。请求摘要和幂等标识继续保留，但不能再返回已删除正文。
+
+### 综合审查补充（2026-09-13）
+
+Invitation.acceptedBy 使用 RESTRICT，与 acceptedAt/acceptedById 成对 CHECK 一致；V1 不提供删用户功能，未来匿名化需保持审计身份。新增迁移移除 Project 冗余组合非负 CHECK，两个独立非负约束仍保留。维护对账用单一 SQL 快照比较所有 READY/UPLOADING 附件（含软删除任务）与项目 usedBytes/reservedBytes，仅报告偏差，不自动修正。

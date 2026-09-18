@@ -81,9 +81,11 @@ pnpm dev
    所有 public 表的内容指纹，残留、误删或其他内容变化均使命令失败。
 
 历史维护脚本：`cleanup-migration.ts` 已停用，不能重放删除迁移历史或 DROP 操作。
-`cleanup-invitation-tokens.ts` 默认仅输出候选数量；执行变更需同时传
-`--apply --database=<精确数据库名>`。更新在事务内完成，失败返回非零状态且不输出
+`cleanup-invitation-tokens.ts` 默认仅输出候选数量和目标指纹；执行变更需显式设置 APP_ENV，并传
+`--execute --target=<本次预览指纹>`。指纹绑定环境、数据库主机/端口/库名/参数和脚本范围；旧 `--apply --database` 参数会被拒绝。更新在事务内完成，失败返回非零状态且不输出
 驱动错误原文。它识别旧参数化路径及当前真实项目路径，不输出令牌值。
+
+`cleanup-invitation-constraints.ts` 只读检查邀请约束，同样校验环境/目标，只输出异常数量，不输出行 ID、令牌或令牌哈希；不接受执行模式。
 
 ## 3. 环境变量
 
@@ -116,7 +118,7 @@ pnpm dev
 
 构建：多阶段Dockerfile、锁定Node基础镜像主版本与可复现digest、安装冻结依赖、生成Prisma Client、Next standalone构建、最小运行层、非root用户。浏览器上传流经Node服务，入口限制约12MiB请求体并在应用层对实际文件限制10MiB。
 
-数据库与web尽量同区域，使用可信TLS，设置有限连接池（起点每实例5连接，结合实际数据库上限调整）。应用水平扩展时会话/幂等/限流来自数据库，不能依赖单机内存保存关键状态。
+数据库与web尽量同区域，使用可信TLS，设置有限连接池（起点每实例5连接（DATABASE_POOL_MAX 可配置为1–20），结合实际数据库上限调整）。应用水平扩展时会话/幂等/限流来自数据库，不能依赖单机内存保存关键状态。
 
 ## 5. 发布顺序
 
@@ -171,3 +173,11 @@ staging/production 的 SMTP 强制 TLS：465 使用 SMTP_SECURE=true；587 使�
 版本化 S3 使用 [生命周期配置](../infra/s3-lifecycle.json)：非当前版本保留 30 天、移除过期删除标记、终止超过一天的未完成分段上传。没有当前对象到期删除规则；历史版本在保留期间继续计费。更长数据库备份窗口需要同步延长对象保留时间。
 
 Nginx 在 http 上下文加载 [安全日志格式](../infra/nginx-http.conf)，server 使用 [代理配置](../infra/nginx.conf)。日志不记录路径、查询、Referer 等客户端字符串。Nginx 原始错误日志无法脱敏，应用虚拟主机将其定向 /dev/null，以安全访问日志状态/耗时和应用结构化错误诊断；禁止额外平台记录完整请求 URL。
+
+### 综合审查维护入口（2026-09-13，覆盖前述直接执行示例）
+
+三个入口 maintenance:cleanup / cleanup:attachments / cleanup:idempotency 默认只读预览；仅 --execute 才写入，且必须同时提供预览产生的 --target=<64位指纹>，或运行环境中的 ORBIT_MAINTENANCE_TARGET。指纹绑定范围、APP_ENV、数据库目标/schema、存储端点/区域/桶，任一变化需重新预览确认。缺失或错误目标在连接数据库前拒绝。开发/测试仅对应本机 orbit_dev/orbit_test 与 orbit-dev/orbit-test 桶；production/staging 允许经明确确认的目标，不使用测试库白名单阻断正常维护。
+
+预览含候选计数、目标指纹与只读存储配额对账；对账偏差返回非零并交给人工核查，绝不自动改账。执行仍只处理过期维护记录/失效上传/已标记附件，不清业务历史。清理超过每次批量预算或对象删除失败返回非零，由调度告警并按需重跑；一小时为失效上传候选阈值，不是恢复时间上限。
+
+DATABASE_POOL_MAX 默认5，合法范围1–20；总容量计算与测量要求见 [变更和升级清单](14-CHANGE-AND-UPGRADE-CHECKLIST.md)。当前新增邀请 RESTRICT 迁移后共16个迁移；禁止改写既有迁移。

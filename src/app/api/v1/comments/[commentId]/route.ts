@@ -1,5 +1,5 @@
 import { enforceWriteLimit } from "@/server/http/write-limit";
-import { parseRequestBody } from "@/contracts";
+import { parseRequestBody, parseQueryParams, VersionQuerySchema } from "@/contracts";
 import { UpdateCommentSchema } from "@/contracts";
 import { errorResponse, toErrorResponse } from "@/server/http/errors";
 import { jsonSuccess, readJsonBody, jsonEnvelope } from "@/server/http/json";
@@ -67,16 +67,10 @@ export async function DELETE(
 
     const { commentId } = await context.params;
 
-    // expectedVersion from query string
-    const url = new URL(request.url);
-    const expectedVersionStr = url.searchParams.get("expectedVersion");
-    if (!expectedVersionStr) {
-      return errorResponse("VALIDATION_ERROR", "expectedVersion query parameter is required", requestId);
-    }
-    const expectedVersion = Number(expectedVersionStr);
-    if (!Number.isInteger(expectedVersion) || expectedVersion < 1) {
-      return errorResponse("VALIDATION_ERROR", "expectedVersion must be a positive integer", requestId);
-    }
+    const values = new URL(request.url).searchParams.getAll("expectedVersion");
+    const parsed = parseQueryParams(VersionQuerySchema, { expectedVersion: values.length === 1 ? values[0] : undefined }, requestId);
+    if (!parsed.ok) return jsonEnvelope(parsed.response, 400, requestId);
+    const { expectedVersion } = parsed.data;
 
     // 契约（contracts/openapi.json DELETE /comments/{commentId}）定义 200 + 删除占位
     // Comment（body=null、isDeleted=true）；服务层返回的即该脱敏 DTO。

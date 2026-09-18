@@ -2,7 +2,7 @@
 
 import { Mail, RotateCcw, Save, ShieldCheck, ShieldQuestion } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { UnsavedChangesProvider, useUnsavedChanges } from "@/features/tasks/unsaved-changes";
 import {
   ApiClientError,
@@ -69,6 +69,7 @@ export function SettingsForm(props: { user: UserDTO }) {
 
 function SettingsFormContent({ user }: { user: UserDTO }) {
   const router = useRouter();
+  const composing = useRef(false);
   const { toast } = useToast();
   const nameId = useId();
   const timezoneId = useId();
@@ -109,6 +110,7 @@ function SettingsFormContent({ user }: { user: UserDTO }) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    if (composing.current) return;
     if (pending || !dirty) return;
 
     // 客户端预校验（服务端仍是权威）：即时反馈，省一次往返。
@@ -208,7 +210,7 @@ function SettingsFormContent({ user }: { user: UserDTO }) {
         </header>
 
         {/* 01 姓名 */}
-        <FieldRow index="01" title="姓名" caption="2–40 个字符，向队友展示">
+        <FieldRow index="01" title="姓名" caption="1—40 个字符，向队友展示">
           <div className="space-y-1.5">
             <Label htmlFor={nameId} className="sr-only">
               姓名
@@ -217,6 +219,11 @@ function SettingsFormContent({ user }: { user: UserDTO }) {
               <Input
                 id={nameId}
                 name="name"
+                onCompositionStart={() => { composing.current = true; }}
+                onCompositionEnd={() => { composing.current = false; }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && (composing.current || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229)) event.preventDefault();
+                }}
                 type="text"
                 autoComplete="name"
                 maxLength={NAME_MAX}

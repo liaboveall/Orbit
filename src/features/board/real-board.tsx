@@ -1,6 +1,6 @@
 "use client";
 import { loginPathWithReturnTo } from "@/lib/return-to";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useId, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
@@ -41,6 +41,14 @@ import { DueBadge, PriorityBadge } from "@/features/tasks/priority-badge";
 import { useAutoRefresh } from "@/features/tasks/real/use-auto-refresh";
 
 const api = createApiClient();
+const mobileQuery = "(max-width: 767px)";
+function subscribeMobile(callback: () => void) {
+  const media = window.matchMedia(mobileQuery);
+  media.addEventListener("change", callback);
+  return () => media.removeEventListener("change", callback);
+}
+const readMobile = () => window.matchMedia(mobileQuery).matches;
+const serverMobile = () => false;
 async function refillBoard(endpoint: string, query: BoardQueryDTO, first: BoardDTO, previous: BoardDTO, signal?: AbortSignal): Promise<BoardDTO> {
   let board = first;
   for (const old of previous.columns) {
@@ -70,6 +78,8 @@ export function RealBoard({
   today: string;
 }) {
   const router = useRouter();
+  const tabPrefix = useId();
+  const isMobile = useSyncExternalStore(subscribeMobile, readMobile, serverMobile);
   useAutoRefresh();
   const context = JSON.stringify([project.id, today, query]);
   const [state, setState] = useState({ source: initial, board: initial, context, previous: initial, refreshing: false });
@@ -96,6 +106,7 @@ export function RealBoard({
   const [creating, setCreating] = useState(false);
   // B8 修复：手机（<md）用状态 tab 单列查看，避免三列纵向长页堆叠；桌面保持三列。
   const [mobileStatus, setMobileStatus] = useState<TaskStatus>(query.status ?? "TODO");
+  const selectedStatus = board.columns.some(column => column.status === mobileStatus) ? mobileStatus : board.columns[0]?.status;
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true;
@@ -355,12 +366,26 @@ export function RealBoard({
         className="flex gap-2 md:hidden"
       >
         {board.columns.map((column) => {
-          const active = mobileStatus === column.status;
+          const active = column.status === selectedStatus;
           return (
             <button
               key={column.status}
               type="button"
               role="tab"
+              id={`${tabPrefix}-${column.status}-tab`}
+              aria-controls={`${tabPrefix}-${column.status}-panel`}
+              tabIndex={active ? 0 : -1}
+              onKeyDown={(event) => {
+                const index = board.columns.findIndex(item => item.status === column.status);
+                const count = board.columns.length;
+                const target = event.key === "ArrowRight" ? (index + 1) % count
+                  : event.key === "ArrowLeft" ? (index + count - 1) % count
+                  : event.key === "Home" ? 0 : event.key === "End" ? count - 1 : null;
+                if (target === null) return;
+                event.preventDefault();
+                setMobileStatus(board.columns[target]!.status);
+                event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[target]?.focus();
+              }}
               aria-selected={active}
               onClick={() => setMobileStatus(column.status)}
               className={
@@ -395,7 +420,9 @@ export function RealBoard({
               today={today}
               onMove={move}
               onLoad={() => void load(column.status)}
-              mobileVisible={column.status === mobileStatus}
+              mobileVisible={column.status === selectedStatus}
+              isMobile={isMobile}
+              tabPrefix={tabPrefix}
             />
           ))}
         </div>
@@ -413,7 +440,11 @@ function Column({
   onMove,
   onLoad,
   mobileVisible = true,
+  isMobile,
+  tabPrefix,
 }: {
+  isMobile: boolean;
+  tabPrefix: string;
   column: BoardColumnDTO;
   canDrag: boolean;
   writable: boolean;
@@ -435,7 +466,11 @@ function Column({
   return (
     <section
       ref={setNodeRef}
-      aria-label={STATUS_LABEL[column.status] + "列"}
+      id={`${tabPrefix}-${column.status}-panel`}
+      role={isMobile ? "tabpanel" : undefined}
+      aria-labelledby={isMobile ? `${tabPrefix}-${column.status}-tab` : undefined}
+      aria-label={isMobile ? undefined : STATUS_LABEL[column.status] + "列"}
+      tabIndex={isMobile ? 0 : undefined}
       className={`min-h-40 rounded-card border p-3 ${isOver ? "border-brand bg-brand-soft" : "border-line bg-surface-sunken"} ${mobileVisible ? "" : "hidden md:block"}`}
     >
       <h2 className="mb-3 flex justify-between text-label font-medium">

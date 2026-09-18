@@ -2,8 +2,8 @@
  "schemaVersion": 1,
  "project": "Orbit",
  "planVersion": "1.0.0",
- "updatedAt": "2026-09-13",
- "applicationStatus": "V1_LOCAL_REMEDIATION_VERIFIED_M6_PRODUCTION_AND_INCIDENT_EVIDENCE_PENDING",
+ "updatedAt": "2026-09-18",
+ "applicationStatus": "V1_RELEASE_ACCEPTANCE_PENDING",
  "stateRules": {
   "allowed": [
    "todo",
@@ -26,8 +26,8 @@
     "max": 14
    },
    "status": "done",
-   "latestReview": "docs/reviews/REMEDIATION-REWORK-CLOSURE-2026-09-13.md",
-   "notes": "2026-09-11 全项目审查 R01–R09 修复并通过本地验收；原有证据保留，M6 生产验收不在本轮范围。 2026-09-13：已有实现保持，因最终审查相关任务回到review；不重做里程碑脚手架。",
+   "latestReview": "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md",
+   "notes": "已完成的实现与历史证据保留；本轮综合审查相关本地缺陷已验证关闭。M6外部验收不计作已完成。",
    "evidence": [
     "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md",
     "docs/reviews/REVIEW-FIXES-2026-09-11.md",
@@ -44,8 +44,8 @@
     "max": 20
    },
    "status": "done",
-   "latestReview": "docs/reviews/REMEDIATION-REWORK-CLOSURE-2026-09-13.md",
-   "notes": "2026-09-12 R12-01–R12-07 已完成仓库修复与本地验收：267 unit、137 contract、312 integration、77 E2E、13 UI；M6 实际 AWS/micro/生产恢复与新远端 CI 待验收。 2026-09-13：已有实现保持，因最终审查相关任务回到review；不重做里程碑脚手架。",
+   "latestReview": "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md",
+   "notes": "已完成的实现与历史证据保留；本轮综合审查相关本地缺陷已验证关闭。M6外部验收不计作已完成。",
    "evidence": [
     "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md",
     "docs/reviews/PROJECT-DEEP-REVIEW-2026-09-11.md",
@@ -65,8 +65,8 @@
     "max": 24
    },
    "status": "done",
-   "latestReview": "docs/reviews/REMEDIATION-REWORK-CLOSURE-2026-09-13.md",
-   "notes": "2026-09-11 全项目审查 R01–R09 修复并通过本地验收；原有证据保留，M6 生产验收不在本轮范围。 2026-09-13：已有实现保持，因最终审查相关任务回到review；不重做里程碑脚手架。",
+   "latestReview": "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md",
+   "notes": "已完成的实现与历史证据保留；本轮综合审查相关本地缺陷已验证关闭。M6外部验收不计作已完成。",
    "evidence": [
     "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md",
     "docs/reviews/PROJECT-DEEP-REVIEW-2026-09-11.md",
@@ -84,8 +84,8 @@
     "max": 20
    },
    "status": "done",
-   "latestReview": "docs/reviews/REMEDIATION-REWORK-CLOSURE-2026-09-13.md",
-   "notes": "2026-09-11 全项目审查 R01–R09 修复并通过本地验收；原有证据保留，M6 生产验收不在本轮范围。 2026-09-13：已有实现保持，因最终审查相关任务回到review；不重做里程碑脚手架。",
+   "latestReview": "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md",
+   "notes": "已完成的实现与历史证据保留；本轮综合审查相关本地缺陷已验证关闭。M6外部验收不计作已完成。",
    "evidence": [
     "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md",
     "docs/reviews/PROJECT-DEEP-REVIEW-2026-09-11.md",
@@ -104,8 +104,8 @@
    },
    "status": "done",
    "completionDate": "2026-09-11",
-   "latestReview": "docs/reviews/REMEDIATION-REWORK-CLOSURE-2026-09-13.md",
-   "notes": "2026-09-11 全项目审查 R01–R09 修复并通过本地验收；原有证据保留，M6 生产验收不在本轮范围。 2026-09-13：已有实现保持，因最终审查相关任务回到review；不重做里程碑脚手架。",
+   "latestReview": "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md",
+   "notes": "已完成的实现与历史证据保留；本轮综合审查相关本地缺陷已验证关闭。M6外部验收不计作已完成。",
    "evidence": [
     "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md",
     "docs/reviews/REVIEW-FIXES-2026-09-11.md",
@@ -123,8 +123,8 @@
    },
    "status": "done",
    "completionDate": "2026-09-11",
-   "notes": "2026-09-12 R12-01–R12-07 已完成仓库修复与本地验收：267 unit、137 contract、312 integration、77 E2E、13 UI；M6 实际 AWS/micro/生产恢复与新远端 CI 待验收。 2026-09-13：已有实现保持，因最终审查相关任务回到review；不重做里程碑脚手架。",
-   "latestReview": "docs/reviews/REMEDIATION-REWORK-CLOSURE-2026-09-13.md",
+   "notes": "已完成的实现与历史证据保留；本轮综合审查相关本地缺陷已验证关闭。M6外部验收不计作已完成。",
+   "latestReview": "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md",
    "evidence": [
     "docs/reviews/M5-REMEDIATION-CLOSURE-2026-09-11.md",
     "docs/reviews/PROJECT-DEEP-REVIEW-2026-09-11.md",
@@ -144,7 +144,7 @@
     "max": 24
    },
    "status": "review",
-   "latestReview": "docs/reviews/PROJECT-FINAL-AUDIT-2026-09-13.md",
+   "latestReview": "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md",
    "evidence": [
     "docs/reviews/M6-ACCEPTANCE-2026-09-11.md",
     "docs/M6-OPERATIONS.md",
@@ -164,7 +164,8 @@
     "min": 16,
     "max": 24
    },
-   "status": "todo"
+   "status": "todo",
+   "latestReview": "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md"
   }
  ],
  "tasks": [
@@ -192,7 +193,8 @@
     "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
    ],
    "notes": "已实现并通过 M0–M4 最新验收；规格与验收要求见 specFiles / acceptanceChecks，实际命令见最新报告。",
-   "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+   "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md",
+   "openAuditGroups": []
   },
   {
    "id": "ORB-002",
@@ -642,7 +644,8 @@
     "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
    ],
    "notes": "已实现并通过 M0–M4 最新验收；规格与验收要求见 specFiles / acceptanceChecks，实际命令见最新报告。",
-   "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md"
+   "latestReview": "docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md",
+   "openAuditGroups": []
   },
   {
    "id": "ORB-015",
@@ -894,22 +897,29 @@
     "docs/reviews/REVIEW-FIXES-2026-09-12.md",
     "docs/reviews/PROJECT-FINAL-AUDIT-2026-09-13.md",
     "docs/reviews/REMEDIATION-CLOSURE-2026-09-13.md",
-    "docs/reviews/REMEDIATION-ACCEPTANCE-2026-09-13.md"
+    "docs/reviews/REMEDIATION-ACCEPTANCE-2026-09-13.md",
+    "docs/reviews/COMPREHENSIVE-REMEDIATION-2026-09-13.md",
+    "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
    ],
-   "notes": "2026-09-12 对应审查问题已修复，806 项正式测试通过；具体证据见修复报告。实际 AWS/HTTPS/micro 容量及生产恢复仍待验收。 2026-09-13：最终审查发现新的待闭环项，按openAuditGroups与审计台账执行；历史完成/修复证据保留。本轮仅审查及指导，不代表这些新项已修复。 2026-09-13：F40 备份远端 sha256 校验、D1/D4/D5 代理与安全头、依赖扫描等仓库侧工作完成（见修复关闭报告）；HTTPS 双账户、SES/S3、micro 容量、RPO/RTO 与远端 CI 仍待外部条件。 2026-09-13 独立交付验收：全量完成不通过；按 REMEDIATION-ACCEPTANCE 报告返工，保留既有实现与历史证据。",
-   "latestReview": "docs/reviews/REMEDIATION-ACCEPTANCE-2026-09-13.md",
+   "notes": "2026-09-12 对应审查问题已修复，806 项正式测试通过；具体证据见修复报告。实际 AWS/HTTPS/micro 容量及生产恢复仍待验收。 2026-09-13：最终审查发现新的待闭环项，按openAuditGroups与审计台账执行；历史完成/修复证据保留。本轮仅审查及指导，不代表这些新项已修复。 2026-09-13：F40 备份远端 sha256 校验、D1/D4/D5 代理与安全头、依赖扫描等仓库侧工作完成（见修复关闭报告）；HTTPS 双账户、SES/S3、micro 容量、RPO/RTO 与远端 CI 仍待外部条件。 2026-09-13 独立交付验收：全量完成不通过；按 REMEDIATION-ACCEPTANCE 报告返工，保留既有实现与历史证据。 2026-09-13 综合审查：30/32项已有处置证据，CR-2.2真云内存预算与CR-2.9镜像未修复系统漏洞保持开放；本地884测试通过，未推送或执行生产变更。",
+   "latestReview": "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md",
    "ciUrl": "https://github.com/liaboveall/Orbit/actions/runs/34604440601",
    "resolvedReviewIssues": [
     "R12-07"
    ],
    "openAuditGroups": [
-    "E1",
-    "E2",
-    "E3",
-    "E4",
-    "E5",
-    "E6",
-    "F33"
+    "CR-2.2",
+    "CR-2.9",
+    "F13",
+    "F20",
+    "OI-28",
+    "IA-01",
+    "IA-03",
+    "IA-04",
+    "IA-05",
+    "IA-06",
+    "IA-08",
+    "IA-09"
    ],
    "auditRegistry": "planning/final-audit-2026-09-13.json"
   },
@@ -942,10 +952,11 @@
     "docs/reviews/REVIEW-FIXES-2026-09-12.md",
     "docs/reviews/PROJECT-FINAL-AUDIT-2026-09-13.md",
     "docs/reviews/REMEDIATION-CLOSURE-2026-09-13.md",
-    "docs/reviews/REMEDIATION-ACCEPTANCE-2026-09-13.md"
+    "docs/reviews/REMEDIATION-ACCEPTANCE-2026-09-13.md",
+    "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
    ],
    "notes": "2026-09-12 对应审查问题已修复，806 项正式测试通过；具体证据见修复报告。实际 AWS/HTTPS/micro 容量及生产恢复仍待验收。 2026-09-13：最终审查发现新的待闭环项，按openAuditGroups与审计台账执行；历史完成/修复证据保留。本轮仅审查及指导，不代表这些新项已修复。 2026-09-13：F40 备份远端 sha256 校验、D1/D4/D5 代理与安全头、依赖扫描等仓库侧工作完成（见修复关闭报告）；HTTPS 双账户、SES/S3、micro 容量、RPO/RTO 与远端 CI 仍待外部条件。 2026-09-13 独立交付验收：全量完成不通过；按 REMEDIATION-ACCEPTANCE 报告返工，保留既有实现与历史证据。",
-   "latestReview": "docs/reviews/REMEDIATION-ACCEPTANCE-2026-09-13.md",
+   "latestReview": "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md",
    "ciUrl": "https://github.com/liaboveall/Orbit/actions/runs/34604440601",
    "resolvedReviewIssues": [
     "R12-01",
@@ -954,14 +965,15 @@
    ],
    "openAuditGroups": [
     "A1",
-    "D1",
-    "D2",
-    "D3",
-    "D4",
-    "D5",
-    "F38",
     "F40",
-    "F41"
+    "OI-02",
+    "OI-12",
+    "OI-30",
+    "IA-01",
+    "IA-02",
+    "IA-07",
+    "IA-08",
+    "IA-10"
    ],
    "auditRegistry": "planning/final-audit-2026-09-13.json"
   },
@@ -996,11 +1008,7 @@
    "notes": "本地及远端 CI 全部通过；真实 HTTPS 生产部署、每日维护/备份与生产恢复点待外部配置验收。 2026-09-13：最终审查发现新的待闭环项，按openAuditGroups与审计台账执行；历史完成/修复证据保留。本轮仅审查及指导，不代表这些新项已修复。 2026-09-13：F40 备份远端 sha256 校验、D1/D4/D5 代理与安全头、依赖扫描等仓库侧工作完成（见修复关闭报告）；HTTPS 双账户、SES/S3、micro 容量、RPO/RTO 与远端 CI 仍待外部条件。",
    "latestReview": "docs/reviews/REMEDIATION-CLOSURE-2026-09-13.md",
    "ciUrl": "https://github.com/liaboveall/Orbit/actions/runs/34604440601",
-   "openAuditGroups": [
-    "B3",
-    "B4",
-    "F34"
-   ],
+   "openAuditGroups": [],
    "auditRegistry": "planning/final-audit-2026-09-13.json"
   },
   {
@@ -1024,7 +1032,8 @@
     "20 个 fixture"
    ],
    "evidence": [],
-   "notes": ""
+   "notes": "",
+   "openAuditGroups": []
   },
   {
    "id": "ORB-024",
@@ -1047,7 +1056,8 @@
     "限次"
    ],
    "evidence": [],
-   "notes": ""
+   "notes": "",
+   "openAuditGroups": []
   },
   {
    "id": "ORB-025",
@@ -1070,19 +1080,20 @@
     "评测报告"
    ],
    "evidence": [],
-   "notes": ""
+   "notes": "",
+   "openAuditGroups": []
   }
  ],
  "latestReview": {
-  "date": "2026-09-13",
-  "period": "Independent remediation acceptance",
-  "reviewer": "Codex",
-  "report": "docs/reviews/REMEDIATION-REWORK-CLOSURE-2026-09-13.md",
-  "registry": "planning/final-audit-2026-09-13.json",
-  "agentGuide": "prompts/AGENT-REMEDIATION-2026-09-13.md",
-  "status": "local_fixes_verified_external_evidence_pending",
-  "summary": "本地功能返工已通过完整门禁；A1当前交付CI、F13上游、F20生产测量、F40真云恢复及历史误删原始证据仍未满足，M6保持review，M7未启动。",
-  "previousReviewReport": "docs/reviews/REVIEW-FIXES-2026-09-12.md",
+  "date": "2026-09-18",
+  "period": "Independent acceptance of improvement delivery",
+  "reviewer": "Codex independent review",
+  "report": "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md",
+  "registry": "planning/improvement-acceptance-2026-09-18.json",
+  "agentGuide": "prompts/AGENT-IMPROVEMENT-2026-09-18.md",
+  "status": "rework_required",
+  "summary": "2026-09-18 独立验收需返工：基础检查、270 unit 与173 contract 独立通过；发现10项开放问题，包括临时配置副本残留、V1完成绕过、Linux容器烟测兼容性及契约验证盲区。保留已完成改动，不接受仓库内全部修复完成的声明；M6 review，V1未发布。",
+  "previousReviewReport": "docs/reviews/IMPROVEMENT-EXECUTION-2026-09-18.md",
   "previousCiUrl": "https://github.com/liaboveall/Orbit/actions/runs/34604440601",
   "currentRevisionCiVerified": false,
   "historicalDataIncident": {
@@ -1090,7 +1101,7 @@
    "prevention": "verified",
    "historicalRecovery": "missing_original_records_and_backup"
   },
-  "additionalFixedFinding": "评论加载更多与后台刷新竞态：分页完成后再刷新扩展窗口；可控时序回归通过。",
+  "additionalFixedFinding": "真实任务详情三个相邻子列表的重复React key已修复，UI控制台回归通过。",
   "ciRemediation": {
    "failedRun": "https://github.com/liaboveall/Orbit/actions/runs/34731446195",
    "cause": "Docker Hub denied minio/minio:latest pull",
@@ -1108,6 +1119,24 @@
     "verification": "Old behavior failed bounded 15s reproduction; corrected success/failure teardown both passed in Linux container"
    }
   }
+ },
+ "agentImprovementHandoff": {
+  "date": "2026-09-18",
+  "status": "instructions_prepared_implementation_not_started",
+  "analysis": "docs/reviews/REVIEW-ANALYSIS-2026-09-18.md",
+  "instructions": "prompts/AGENT-IMPROVEMENT-2026-09-18.md",
+  "scope": "Existing V1 M0-M6 remediation and release readiness; M7 excluded",
+  "coverage": "OI-01 through OI-30, staged G0 through G6; execution agent must map these to validated audit registries and existing ORB tasks",
+  "evidenceCorrection": "The retained 2026-09-17 integration log has 360 passing cases but a development database fingerprint teardown failure and exit code 1. It does not substantiate an all-green command or unchanged integration fingerprints.",
+  "implementationState": "No application fixes, database operations, commits, pushes or deployments performed during preparation. Existing milestone states and historical review evidence are preserved; execution must reconcile current states with open findings.",
+  "validation": [
+   "Read-only planning validator logic: PASS, 59 Markdown files and 181 local links, no VALIDATION.md rewrite",
+   "OI-01 through OI-30 uniqueness/order and G0-G6 coverage: PASS; handoff paths exist",
+   "python planning/current_status.py --check: exit 0",
+   "git diff --check: exit 0",
+   "Application tests not run for this documentation handoff"
+  ],
+  "nextAction": "Execute G0, then G1-G6; preserve user changes and historical data, record real exit codes and explicit external blockers."
  },
  "documentationMaintenance": {
   "date": "2026-09-13",
@@ -1138,5 +1167,22 @@
    "baselineCommit": "6efa2c5e438fc8853674f304091011df6509c2b7"
   }
  },
- "auditRegistry": "planning/final-audit-2026-09-13.json"
+ "auditRegistry": "planning/final-audit-2026-09-13.json",
+ "auditRegistries": [
+  "planning/final-audit-2026-09-13.json",
+  "planning/comprehensive-audit-2026-09-13.json",
+  "planning/improvement-audit-2026-09-18.json",
+  "planning/improvement-acceptance-2026-09-18.json"
+ ],
+ "independentAcceptance": {
+  "date": "2026-09-18",
+  "status": "rework_required",
+  "report": "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md",
+  "registry": "planning/improvement-acceptance-2026-09-18.json",
+  "applicationCodeChanged": false,
+  "databaseOperationsPerformed": false,
+  "fullIntegrationAndBrowserSuitesRerun": false,
+  "evidence": "artifacts/independent-review-20260918",
+  "nextAction": "Resolve IA-01 through IA-10, preserve prior implementation and evidence, then verify the candidate revision with accurate complete command outcomes."
+ }
 }

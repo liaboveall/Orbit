@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   ERROR_CODES,
@@ -12,33 +14,29 @@ import {
 /**
  * 错误码契约测试（ORB-003）。
  * 权威来源：docs/05-API-CONTRACT.md §3 错误码全表。
+ * 该表在运行时从文档解析，不在此处手抄：文档或实现任一侧漂移都会失败。
  */
 
-/** docs/05 §3 表逐行抄录：HTTP → code[]。用于交叉校验实现无遗漏/无多余。 */
-const DOC_05_TABLE: Record<number, string[]> = {
-  400: ["VALIDATION_ERROR", "INVALID_CURSOR"],
-  401: ["UNAUTHENTICATED"],
-  403: ["FORBIDDEN", "EMAIL_UNVERIFIED", "ORIGIN_NOT_ALLOWED"],
-  404: ["NOT_FOUND"],
-  409: [
-    "VERSION_CONFLICT",
-    "BOARD_CONFLICT",
-    "PROJECT_KEY_TAKEN",
-    "PROJECT_ARCHIVED",
-    "INVITATION_USED",
-    "ALREADY_EXISTS",
-    "IDEMPOTENCY_CONFLICT",
-    "UPLOAD_IN_PROGRESS",
-    "LOCKED",
-  ],
-  410: ["INVITATION_EXPIRED", "INVITATION_REVOKED"],
-  413: ["PAYLOAD_TOO_LARGE"],
-  415: ["UNSUPPORTED_FILE_TYPE"],
-  422: ["LIMIT_EXCEEDED", "ASSIGNEE_NOT_MEMBER", "INVALID_BOARD_TARGET"],
-  429: ["RATE_LIMITED"],
-  500: ["INTERNAL_ERROR"],
-  503: ["STORAGE_UNAVAILABLE", "SERVICE_UNAVAILABLE"],
-};
+const DOC_PATH = resolve(process.cwd(), "docs/05-API-CONTRACT.md");
+
+/** 从 docs/05 §3 的 Markdown 表格解析 HTTP → code[] 映射。 */
+function parseDocTable(): Record<number, string[]> {
+  const content = readFileSync(DOC_PATH, "utf8");
+  const table: Record<number, string[]> = {};
+  const section = content.split(/##\s*3\.\s*错误码/)[1]?.split(/##\s*4\./)[0] ?? "";
+  for (const line of section.split("\n")) {
+    // 行形如：| 409 | VERSION_CONFLICT / BOARD_CONFLICT | 保留草稿/回滚，重新获取 |
+    const match = line.match(/^\|\s*(\d{3})\s*\|\s*([A-Z_/\s]+?)\s*\|/);
+    if (!match) continue;
+    const status = Number(match[1]);
+    const codes = match[2]!.split("/").map((code) => code.trim()).filter(Boolean);
+    (table[status] ??= []).push(...codes);
+  }
+  if (Object.keys(table).length === 0) throw new Error("未能从 docs/05 §3 解析出错误码表；检查文档格式");
+  return table;
+}
+
+const DOC_05_TABLE = parseDocTable();
 
 describe("错误码 ↔ docs/05 §3 全表", () => {
   const docCodes = Object.values(DOC_05_TABLE).flat();

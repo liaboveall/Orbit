@@ -57,7 +57,8 @@ for (const width of [768, 1024, 1440]) {
     await expect(nav.getByRole("link", { name: "我的工作台", exact: true })).toBeVisible();
     await expect(nav.getByRole("button", { name: "全部项目", exact: true })).toBeVisible();
     const projects = nav.locator("ul a");
-    await expect(projects).toHaveCount(6);
+    // 当前会话只创建一个真实项目；导航不能再展示六个样例项目。
+    await expect(projects).toHaveCount(1);
     for (const link of await projects.all()) {
       await expect(link).toHaveAccessibleName(/\S+/);
       // 实际绘制尺寸断言可捕获“空内联 span 有 width 类但没有宽度”的回归。
@@ -67,10 +68,10 @@ for (const width of [768, 1024, 1440]) {
       expect(bounds?.width).toBeGreaterThan(0);
       expect(bounds?.height).toBeGreaterThan(0);
     }
-    const destination = nav.getByRole("link", { name: "毕业设计进度追踪", exact: true });
+    const destination = nav.locator(`a[href="/app/projects/${realProjectId}/board"]`);
     await destination.focus();
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/samples\/board\/11111111-2222-4333-8444-555555555502/);
+    await expect(page).toHaveURL(new RegExp(`/app/projects/${realProjectId}/board$`));
   });
 }
 
@@ -176,6 +177,10 @@ test("面板打开期间跨断点，关闭后焦点不会丢失到隐藏卡片",
 });
 
 test("直接访问面板关闭后保留其他参数；独立详情页不锁焦点", async ({ page }) => {
+  const duplicateKeyErrors: string[] = [];
+  page.on("console", message => {
+    if (message.text().includes("same key")) duplicateKeyErrors.push(message.text());
+  });
   await page.goto(`${board}?state=data&task=${task}`);
   const dialog = page.getByRole("dialog", { name: dialogName, exact: true });
   await expect(dialog).toBeVisible();
@@ -193,4 +198,6 @@ test("直接访问面板关闭后保留其他参数；独立详情页不锁焦�
   await expect(page.getByRole("link", { name: "返回看板", exact: true })).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "关闭详情" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "编辑描述" })).toBeVisible();
+  expect(duplicateKeyErrors).toEqual([]);
 });

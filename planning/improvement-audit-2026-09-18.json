@@ -1,0 +1,764 @@
+{
+ "schemaVersion": 1,
+ "auditDate": "2026-09-18",
+ "baselineHead": "abe4149b19574485790df69bb19adcc65580d51a",
+ "report": "docs/reviews/REVIEW-ANALYSIS-2026-09-18.md",
+ "sourceReport": "docs/reviews/REVIEW-ANALYSIS-2026-09-18.md",
+ "executionGuide": "prompts/AGENT-IMPROVEMENT-2026-09-18.md",
+ "countingRule": "OI-01—OI-30 为本轮材料追踪标识；状态在执行过程中实时更新，fixed 必须有实际修复与验证证据。",
+ "entries": [
+  {
+   "id": "OI-01",
+   "title": "集成测试用例通过但退出码为 1 的验收矛盾",
+   "priority": "P1",
+   "sourceIds": [],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "artifacts/audit-20260917/integration.log 第 434—447 行：360 用例通过、开发库隔离收尾失败、ELIFECYCLE exit 1；旧摘要却称 884 项全绿",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "旧验收摘要的“884 项全绿”与日志矛盾已纠正并独立复验：2026-09-17 日志实为 360 用例通过但全局隔离收尾失败、exit 1（并行 next start 冒烟写开发库所致假设成立）；本轮在无并发冒烟的受控串行环境下复验，360 用例通过且收尾成功、exit 0、两库指纹一致。",
+   "changedFiles": [
+    "PROGRESS.md",
+    "planning/backlog.json",
+    "planning/improvement-audit-2026-09-18.json",
+    "scripts/verify-remediation.mjs",
+    ".github/workflows/ci.yml"
+   ],
+   "closureEvidence": [
+    "artifacts/audit-20260917/integration.log 第434—447行（原始失败证据保留，未改写）；artifacts/improvement-20260918/integration-serial.log（复验）：35 文件/360 用例通过、[isolation] 两库指纹一致、命令 exit 0（2026-09-18 17:24—17:28 本地时区，Docker orbit-postgres@5433）；runner --self-test 验证“用例通过但 teardown 失败”判失败，已入 CI。"
+   ],
+   "remainingLimitations": [
+    "同目录 server.log 显示复现窗口内存在 next start 冒烟服务器写库；因原始审计进程时序无法100%重放，根因标注为“高度可能的外部干扰，无法绝对排除其他写入”。"
+   ],
+   "nextAction": "",
+   "verifiedAt": "2026-09-18"
+  },
+  {
+   "id": "OI-02",
+   "title": "工作区交付不完整",
+   "priority": "P1",
+   "sourceIds": [
+    "A1",
+    "F36"
+   ],
+   "taskIds": [
+    "ORB-021"
+   ],
+   "originalClaim": "48 个已跟踪文件修改与迁移/守卫/状态脚本未提交，CI 无法绑定当前修订",
+   "originalClaimIsInstruction": false,
+   "status": "in_progress",
+   "dispositionReason": "全部源码/脚本/迁移/测试/文档改动已在工作区完整成形并通过全量本地门禁；候选交付清单已逐文件审查（26 个未跟踪交付物 + 48 个已跟踪修改，无秘密/临时产物混入，临时 txt 已被忽略规则隔离）。剩余动作：按会话授权形成内聚提交并推送触发远端 CI。",
+   "changedFiles": [],
+   "closureEvidence": [
+    "git status 逐文件审查（2026-09-18）：未跟踪交付物含第 16 个迁移、治理探针脚本、状态生成器、验证脚本、PR 模板及其全部调用方；本轮新增文件均在门禁运行中实际参与；.gitignore/.dockerignore 已隔离本地产物。"
+   ],
+   "remainingLimitations": [
+    "提交/推送/远端 CI 需会话授权；当前状态为仓库内修复完成、未提交。"
+   ],
+   "nextAction": "授权后按完整依赖组创建内聚提交并推送，绑定远端 CI",
+   "verifiedAt": null
+  },
+  {
+   "id": "OI-03",
+   "title": "迁移未跟踪与运行库漂移待复核",
+   "priority": "P1",
+   "sourceIds": [
+    "F34"
+   ],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "20260913090000_align_invitation_restrict 位于工作区但未入库；两库是否已应用第 16 份迁移未复核",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "只读核对确认两库均已应用 16 个迁移、与工作区迁移目录零漂移；migrate diff（迁移目录 vs schema.prisma，临时 shadow 库）退出 0 无差异；独立空库 orbit_fresh_probe 从零 migrate deploy 成功，61 约束/52 索引与 orbit_dev 逐条一致。第 16 个迁移已完整入库交付（git add 待 G6 提交）。",
+   "changedFiles": [
+    "prisma/migrations/20260913090000_align_invitation_restrict/migration.sql",
+    "docs/04-DATA-MODEL.md"
+   ],
+   "closureEvidence": [
+    "docker exec psql 查询 _prisma_migrations（dev/test 各 16 条含 align_invitation_restrict）；sha256 校验已应用迁移文件字节与库内 checksum 一致（cc5263ad…）；空库重建后 CONSTRAINTS/INDEXES diff 为空；prisma migrate diff exit 0。探针库 orbit_fresh_probe/orbit_shadow_probe 已删除，prisma.config.ts 已恢复原样。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "",
+   "verifiedAt": "2026-09-18"
+  },
+  {
+   "id": "OI-04",
+   "title": "审计条目与任务关联可绕过",
+   "priority": "P1",
+   "sourceIds": [],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "final-audit 70 条全部缺失 taskIds；ORB-021 置 done 清空开放组仍通过校验",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "taskIds 缺失与单边关联的绕过路径已封堵：全部注册表条目强制非空、无重复、合法 taskIds，开放条目与任务 openAuditGroups 双向一致。",
+   "changedFiles": [
+    "planning/validate_plan.py",
+    "planning/validate_plan_probes.py",
+    "planning/final-audit-2026-09-13.json",
+    "planning/backlog.json",
+    ".github/workflows/ci.yml"
+   ],
+   "closureEvidence": [
+    "validate_plan.py PASS（132 条审计条目全部入库校验）；final-audit 70 条回填 taskIds；11 个负面探针（缺 taskIds/空数组/未知任务/开放项无关联/单边关联/done+开放项/非法状态/不实里程碑 done/V1 完成无证据/开放子项被掩盖/摘要过期）全部被拒绝，阳性对照通过；探针与 runner 自测已接入 CI。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "",
+   "verifiedAt": "2026-09-18"
+  },
+  {
+   "id": "OI-05",
+   "title": "里程碑/应用状态无约束",
+   "priority": "P1",
+   "sourceIds": [],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "非法里程碑与 applicationStatus 字符串通过校验；V1 完成语义无门禁",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "任务/里程碑/应用状态改由校验器内白名单约束，独立于 backlog 可编辑数据；里程碑 done 要求全部任务 done 且有证据；applicationStatus 枚举并受 V1 完成语义门禁约束。",
+   "changedFiles": [
+    "planning/validate_plan.py",
+    "planning/validate_plan_probes.py",
+    "planning/backlog.json",
+    ".github/workflows/ci.yml"
+   ],
+   "closureEvidence": [
+    "探针 illegal-states（finished/shipped/EVERYTHING_GREEN 均拒绝）、false-milestone-done、v1-complete-without-evidence 全部按预期拒绝；backlog applicationStatus 更新为受枚举约束的 V1_RELEASE_ACCEPTANCE_PENDING；validate_plan.py 退出 0。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "",
+   "verifiedAt": "2026-09-18"
+  },
+  {
+   "id": "OI-06",
+   "title": "多个“当前状态”入口",
+   "priority": "P2",
+   "sourceIds": [
+    "F34"
+   ],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "PROGRESS 生成摘要仍引用 2026-09-13 的 884 全绿声明，与 2026-09-17 退出 1 证据冲突",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "当前摘要由 backlog latestReview 唯一生成；撤销“884 项全绿”当前声明，明确 2026-09-17 集成运行退出 1；历史交接记录原样保留。",
+   "changedFiles": [
+    "planning/backlog.json",
+    "planning/current_status.py",
+    "PROGRESS.md"
+   ],
+   "closureEvidence": [
+    "planning/current_status.py 重新生成 PROGRESS 当前块；current_status.py --check 通过；探针 stale-current-summary 验证摘要过期会被拒绝。历史段落未改写。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "",
+   "verifiedAt": "2026-09-18"
+  },
+  {
+   "id": "OI-07",
+   "title": "验证证据可复现性不足",
+   "priority": "P2",
+   "sourceIds": [
+    "A1",
+    "F39"
+   ],
+   "taskIds": [
+    "ORB-021"
+   ],
+   "originalClaim": "runner 源清单遗漏 planning/CI/Dockerfile/忽略规则；teardown 失败与启动失败证据链不完整",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "验证 runner 记录真实子进程退出码/信号/spawn 错误；源清单补齐 planning、.github、Dockerfile、忽略规则、tsconfig 等本轮输入；“用例通过但 teardown 失败”受控复现被判定失败。",
+   "changedFiles": [
+    "scripts/verify-remediation.mjs",
+    ".github/workflows/ci.yml"
+   ],
+   "closureEvidence": [
+    "node scripts/verify-remediation.mjs --self-test 退出 0：伪造 360 passed+exit 1 判失败、exit 0 判通过（passed=3）、缺失二进制 spawn error 记录 exitCode 127 判失败；summary.json 含 head、dirty、逐检查 exitCode/signal/logSha256/sourceDigest。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "",
+   "verifiedAt": "2026-09-18"
+  },
+  {
+   "id": "OI-08",
+   "title": "池恢复测试吞断言",
+   "priority": "P2",
+   "sourceIds": [
+    "F33"
+   ],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "db-connection-errors.test.ts 将 expect().rejects 包进空 catch，断言耗尽无效",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "池恢复用例不再吞断言：移除空 catch 包裹的 expects，rejects 断言失败会直接使用例失败；失败路径 holder/pool 释放改经 finally 保障。",
+   "changedFiles": [
+    "tests/integration/db-connection-errors.test.ts"
+   ],
+   "closureEvidence": [
+    "定向运行该文件 5 用例全部通过（含真实小池耗尽→503、释放后恢复、ECONNREFUSED→503、未知错误→500、合成映射）；两库指纹不变。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "",
+   "verifiedAt": "2026-09-18"
+  },
+  {
+   "id": "OI-09",
+   "title": "限流 60/min 边界测试错位",
+   "priority": "P2",
+   "sourceIds": [
+    "F33"
+   ],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "rate-limit.test.ts 用 maxTokens=2 加 60 个不同操作键，未验证同一桶 60/min 边界",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "重写 60/min 用例：同一用户同一操作键、显式 maxTokens=60/refill=60s 配置、vi.useFakeTimers 受控时钟；前 60 次允许、第 61 次拒绝、窗口内 59.999s 仍拒绝、越过完整窗口后完整恢复（remaining=59）。不再继承 beforeEach 的 maxTokens=2 工厂单例。",
+   "changedFiles": [
+    "tests/integration/rate-limit.test.ts"
+   ],
+   "closureEvidence": [
+    "定向运行 15 用例全部通过；用户隔离/操作键隔离/并发额度/工厂单例等既有覆盖保留。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "",
+   "verifiedAt": "2026-09-18"
+  },
+  {
+   "id": "OI-10",
+   "title": "弱断言与测试污染候选",
+   "priority": "P2",
+   "sourceIds": [
+    "F33"
+   ],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "吞 AssertionError、空 catch、全局单例继承配置等需逐项行为核查",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "定向排查吞 AssertionError/expect.unreachable 被 catch/空 catch/未断言 Promise/全局单例污染：除已修复的两处外，其余命中项均为合理模式（db-connectivity 可选 .env 回退 catch、attachment-quota 的 void pending.catch 防未处理 rejection 且后续有显式 rejects 断言、E2E context.close 清理）。未发现其他失能测试；不因断言名称机械删测试。",
+   "changedFiles": [
+    "tests/integration/db-connection-errors.test.ts",
+    "tests/integration/rate-limit.test.ts"
+   ],
+   "closureEvidence": [
+    "grep 全量排查结果：空 catch 命中 1 处（合理可选文件回退）、expect.unreachable 2 处（均在 try/catch 内正确捕获供断言）、.catch(()=>) 5 处（清理/防未处理 rejection，均有后续断言或属清理路径）。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "",
+   "verifiedAt": "2026-09-18"
+  },
+  {
+   "id": "OI-11",
+   "title": "历史数据事件与基线健康",
+   "priority": "P2",
+   "sourceIds": [],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "orbit_test 残留 18 个无 Account/Session 用户与 9 个 R1 项目；来源与损伤需只读分类",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "历史数据只读分类完成：orbit_test 残留 18 用户全部为 ui-*@orbit.test 合成 UI 回归夹具（零成员关系，Account/Session 行缺失源于 2026-09-13 调试清理误删，非真实用户损伤）；9 个 R1 Fix Test Project 与 9 条 ActivityLog 为合成夹具。按授权约束未删除任何数据；会话为空不判损伤、无 Account 不判可删。",
+   "changedFiles": [],
+   "closureEvidence": [
+    "只读 SQL：SELECT User/Account/Session/ProjectMember 联查（18 用户全部 0 账户 0 会话 0 成员，邮箱模式 ui-*.test 域名）；SELECT count Project WHERE name LIKE 'R1 Fix%'=9；ActivityLog=9。原始误删事件见 docs/reviews/TEST-DATA-INCIDENT-2026-09-13.md。"
+   ],
+   "remainingLimitations": [
+    "残留为合成夹具但影响基线整洁度；删除需用户独立授权（维护入口有历史用户保护，AC-06）。未删除、未回填、未伪造凭证。"
+   ],
+   "nextAction": "",
+   "verifiedAt": "2026-09-18"
+  },
+  {
+   "id": "OI-12",
+   "title": "镜像安全扫描发布阻塞",
+   "priority": "P1",
+   "sourceIds": [
+    "F38"
+   ],
+   "taskIds": [
+    "ORB-021"
+   ],
+   "originalClaim": "旧记录 56 条无补丁系统包记录不能当作当前扫描结果；需重新扫描并处置",
+   "originalClaimIsInstruction": false,
+   "status": "blocked_external",
+   "dispositionReason": "两镜像完成新扫描（trivy 0.69.3，漏洞库 2026-09-18）：各 56 条记录/18 个唯一 CVE（52 HIGH 记录+4 CRITICAL 记录），全部继承自 digest 锁定的 node:24-bookworm-slim 上游基座（基座单独扫描含全部 18 个 CVE），我们的构建层零新增。全部 CVE 无可用修复版本（Debian 12 未发补丁；CVE-2023-45853 为 will_not_fix 的 MiniZip 组件，不在 zlib 发行功能内）。node:24-trixie-slim 实测反而有 25 个唯一 CVE，换基座不减少风险且引入迁移成本。",
+   "changedFiles": [],
+   "closureEvidence": [
+    "扫描命令：docker aquasec/trivy:0.69.3 image --scanners vuln --severity HIGH,CRITICAL --format json（exit 0，JSON 存 artifacts/improvement-20260918/trivy/）。镜像 digest：runner sha256:bab185855223…、operations sha256:27f1cf5892c9…。基座对照扫描 node@sha256:2fe369e96955… 与 node:24-trixie-slim@sha256:d7b4e5c4ad20…。"
+   ],
+   "remainingLimitations": [
+    "等待 Debian 12 发布补丁或上游镜像重建；届时重扫并升级 digest。CI 保持 exit-code 1 门禁有效，不做 ignore-unfixed。如需按 CVE 逐项限期豁免，须用户明确授权（Agent 不自批）。"
+   ],
+   "nextAction": "按 prompts/AGENT-IMPROVEMENT-2026-09-18.md 对应阶段执行",
+   "verifiedAt": "2026-09-18",
+   "next_action": "上游修复发布后重扫并更新基座 digest；豁免决策需用户授权"
+  },
+  {
+   "id": "OI-13",
+   "title": "未知 API 路径返回 HTML",
+   "priority": "P2",
+   "sourceIds": [
+    "F26"
+   ],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "API 前缀下未知路径/方法的真实行为未核对，可能返回 HTML 而非 JSON 错误信封",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "/api/v1/* 未知路径现由 catch-all 路由返回契约 JSON 404 信封（NOT_FOUND + requestId + no-store），五方法全覆盖；Next 路由优先级保证既有静态/动态路由不被抢占（真实服务器行为由 E2E 全量回归验证）。",
+   "changedFiles": [
+    "src/app/api/v1/[...path]/route.ts",
+    "tests/unit/api-v1-catchall.test.ts"
+   ],
+   "closureEvidence": [
+    "单测 5 项通过（GET/POST/PUT/PATCH/DELETE 均返回 404 + ErrorResponseSchema 校验通过的 JSON 信封、x-request-id 回显、content-type/cache-control 正确）。既有路由不抢占的运行时验证归入 G6 E2E。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "",
+   "verifiedAt": "2026-09-18"
+  },
+  {
+   "id": "OI-14",
+   "title": "附件 HEAD/405 文档缺口",
+   "priority": "P2",
+   "sourceIds": [
+    "F03"
+   ],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "content 路由拒绝 HEAD 的协议语义（Allow、无响应体、请求 ID）未入契约文档",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "附件 content HEAD 显式 405 的协议语义已完整文档化：docs/05 §「HEAD 读取准入」（405、Allow: GET、无响应体、保留合法上游 requestId、不打开对象流不绕过读取额度）；OpenAPI info.description 同步声明；实现（content/route.ts HEAD handler）与 E2E 断言（review-20260912: HEAD 405 + 已认证 HEAD 无 body）一致。",
+   "changedFiles": [],
+   "closureEvidence": [
+    "docs/05-API-CONTRACT.md L146/L150（框架 HEAD 共用读取额度；content 路由 405 + requestId）；contracts/openapi.json info.description；src/app/api/v1/attachments/[attachmentId]/content/route.ts:7-13（Allow/X-Request-Id/无 body）；E2E review-20260912.spec.ts authenticated HEAD 用例在本轮全量 85 项内通过。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "按 prompts/AGENT-IMPROVEMENT-2026-09-18.md 对应阶段执行",
+   "verifiedAt": "2026-09-18"
+  },
+  {
+   "id": "OI-15",
+   "title": "query 参数与响应绑定未充分互验",
+   "priority": "P2",
+   "sourceIds": [
+    "E3"
+   ],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "OpenAPI 参数与 Zod 的 coercion/default/required/range/enum 及 operation→状态码→schema 绑定缺变异验证",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "新增 query-binding 契约测试：OpenAPI 40 个 query 参数全部映射绑定（新增参数不补验证即失败）；limit 1—100/coercion、枚举（scope/bucket/sort/status）、布尔、cursor 长度、required 参数双侧一致；operation→状态码→错误信封 schema 绑定验证；含内存变异探针（limit 上界改动、移除错误响应）。",
+   "changedFiles": [
+    "tests/contract/query-binding.test.ts"
+   ],
+   "closureEvidence": [
+    "11 项契约测试通过；变异探针验证检测逻辑有效。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "",
+   "verifiedAt": "2026-09-18"
+  },
+  {
+   "id": "OI-16",
+   "title": "错误码文档手抄测试",
+   "priority": "P2",
+   "sourceIds": [
+    "F34"
+   ],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "error-codes 测试与 docs/05 各自手抄，存在三份真源漂移风险",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "error-codes 契约测试改为运行时解析 docs/05 §3 Markdown 错误码表（唯一真源），消除三份手抄；文档或实现任一侧漂移即失败。",
+   "changedFiles": [
+    "tests/contract/error-codes.test.ts"
+   ],
+   "closureEvidence": [
+    "7 项通过；受控变异（文档 NOT_FOUND→NOT_FOUND_X）后测试 exit 1，恢复后 exit 0。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "",
+   "verifiedAt": "2026-09-18"
+  },
+  {
+   "id": "OI-17",
+   "title": "构建上下文与本地产物泄漏",
+   "priority": "P2",
+   "sourceIds": [
+    "F36",
+    "F38"
+   ],
+   "taskIds": [
+    "ORB-021"
+   ],
+   "originalClaim": ".workbuddy、临时 txt/dump、日志可能进入 Git/Docker 构建上下文",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": ".gitignore/.dockerignore 精确修订：.workbuddy、根目录临时探针 txt（锚定根目录的 /_*.txt 窄规则）、__pycache__ 同步排除；两镜像文件系统泄漏探针确认无 .env/秘密/临时产物/.workbuddy/测试报告。",
+   "changedFiles": [
+    ".gitignore",
+    ".dockerignore"
+   ],
+   "closureEvidence": [
+    "git check-ignore 验证 6 个临时 txt 全部命中；两镜像内 find 扫描（.env*、*.pem、*.key、_*.txt、*.log、credentials、artifacts、.workbuddy、test-results）零命中；runner /app 仅含 .next/node_modules/package.json/public/server.js/src。已有 46k 产物与事故证据未删除。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "按 prompts/AGENT-IMPROVEMENT-2026-09-18.md 对应阶段执行",
+   "verifiedAt": "2026-09-18",
+   "next_action": ""
+  },
+  {
+   "id": "OI-18",
+   "title": "生产 compose 来源与资源预算",
+   "priority": "P2",
+   "sourceIds": [
+    "F34"
+   ],
+   "taskIds": [
+    "ORB-021"
+   ],
+   "originalClaim": "compose.production 与 AWS 指南的关系、日志轮转、内存/连接预算缺受测真源",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "生产编排真源关系已明确并受测：仓库 infra/compose.production.yml 为外部数据库平台的应用服务编排（web+operations，no-new-privileges/cap_drop/init）；EC2 同机方案的权威配置是 AWS 指南内联的单机 compose（postgres+web+operations，json-file 日志轮转 10m×3 全服务）。两文档交叉引用明确（指南注明不直接使用仓库 compose）。内存/连接预算的实测数值归 OI-28 真云测量。",
+   "changedFiles": [],
+   "closureEvidence": [
+    "docs/AWS-MICRO-DEPLOYMENT.md §compose 段（日志轮转、pgdata healthcheck、security_opt）与 infra/compose.production.yml 逐项核对一致；compose.config 校验在既有 CI 流程内。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "按 prompts/AGENT-IMPROVEMENT-2026-09-18.md 对应阶段执行",
+   "verifiedAt": "2026-09-18",
+   "next_action": ""
+  },
+  {
+   "id": "OI-19",
+   "title": "CI 缺容器运行/恢复探针",
+   "priority": "P2",
+   "sourceIds": [
+    "F39"
+   ],
+   "taskIds": [
+    "ORB-021"
+   ],
+   "originalClaim": "CI 只 build 不运行容器；健康探针、停止清理与备份验证入口缺失",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "CI 不再只 build：container-smoke 接入 CI 对 runner 镜像真实启动（ready 探针、demo 冒烟、非 root 运行、无构建期 env 文件泄漏检查），镜像名经 ORBIT_SMOKE_IMAGE 参数化绑定 github.sha；失败传播（脚本任何步骤失败即步失败，finally 清理容器）。",
+   "changedFiles": [
+    "scripts/container-smoke.mjs",
+    ".github/workflows/ci.yml"
+   ],
+   "closureEvidence": [
+    "本地对 orbit-improvement:runner 实跑：{ready:true,demo:true,nonRoot:true,noBuildEnvironmentFile:true} exit 0。另有本会话完成的合成 env 全量启动验证（ready=200、未知路由 JSON 404、匿名 401）。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "按 prompts/AGENT-IMPROVEMENT-2026-09-18.md 对应阶段执行",
+   "verifiedAt": "2026-09-18",
+   "next_action": ""
+  },
+  {
+   "id": "OI-20",
+   "title": "备份保留与恢复证据不足",
+   "priority": "P2",
+   "sourceIds": [
+    "F40",
+    "F19"
+   ],
+   "taskIds": [
+    "ORB-021"
+   ],
+   "originalClaim": "备份桶/附件桶、当前/非当前版本保留策略混用；隔离恢复与 RPO/RTO 证据分列不足",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "备份与恢复证据补齐（本地可执行范围）：verify-backup.sh 在一次性离线 Linux 容器真实执行——正常副本接受、同长度损坏拒绝（exit 1 路径）、失败本地转储保留、临时文件清理；recovery-drill 在隔离合成库+MinIO 验证恢复内容（成员/任务版本/评论/活动/附件 sha256）。生产 RPO/RTO 仍需真云演练，正确标记 productionRpoVerified:false。",
+   "changedFiles": [],
+   "closureEvidence": [
+    "docker run --network none debian:bookworm-slim bash /source/scripts/verify-backup.sh exit 0；node --conditions=react-server scripts/recovery-drill.ts exit 0（restoredMembers:1、attachmentSha256Verified:true、restoreSeconds:0.23）。备份桶/附件桶保留策略区分见 infra/s3-backup-lifecycle.json 与 docs/M6-OPERATIONS.md 既有说明。"
+   ],
+   "remainingLimitations": [
+    "生产 RPO/RTO 关闭需真云演练（与 OI-30 同批外部条件）。"
+   ],
+   "nextAction": "按 prompts/AGENT-IMPROVEMENT-2026-09-18.md 对应阶段执行",
+   "verifiedAt": "2026-09-18",
+   "next_action": "真云演练完成后关闭生产 RPO/RTO 部分"
+  },
+  {
+   "id": "OI-21",
+   "title": "Nginx 错误日志关闭",
+   "priority": "P2",
+   "sourceIds": [
+    "CR-1.3"
+   ],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "error_log /dev/null 关闭了上游诊断；需兼顾脱敏与可诊断",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "error_log /dev/null 的关闭有有效设计依据且替代可观测性经真实验证：nginx-http.conf 的 orbit_safe 日志格式不含 URI/query/Referer/cookie（显式 map 白名单路由分类），上游失败（503）与计时字段在安全访问日志可见；verify-nginx.mjs 用合成 secret 注入 Referer/cookie/query 后验证日志零泄漏。",
+   "changedFiles": [
+    "infra/nginx.conf"
+   ],
+   "closureEvidence": [
+    "node scripts/verify-nginx.mjs exit 0（2026-09-18 两次运行，含 Permissions-Policy 头新增后复跑）：secretAbsent:true、upstreamFailureVisible:true、upstreamTimingPresent:true、429 信封正确、健康路由不受限流影响。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "按 prompts/AGENT-IMPROVEMENT-2026-09-18.md 对应阶段执行",
+   "verifiedAt": "2026-09-18",
+   "next_action": ""
+  },
+  {
+   "id": "OI-22",
+   "title": "旧清理脚本守卫不一致",
+   "priority": "P2",
+   "sourceIds": [
+    "F41",
+    "CR-1.1"
+   ],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "cleanup-invitation 等入口的目标/预览/确认守卫与失效文档引用需逐一验证",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "全部公开维护入口逐项实测：maintenance-cleanup/cleanup-attachments/cleanup-idempotency 共用 preflight（合法 APP_ENV 必填、非法参数拒绝、默认只读预览、--execute 必须匹配预览指纹 target）；cleanup-invitation-tokens 默认只读统计（candidates:0）且 --apply 需精确 --database 确认；cleanup-invitation-constraints 为只读报告脚本（无写路径）。tokenHash 仅输出 8 字符前缀。",
+   "changedFiles": [],
+   "closureEvidence": [
+    "实测输出：预览 {execute:false, target:6fe043…} exit 0；--bogus 参数、缺失 APP_ENV、--execute 无 target、--execute 错 target 四种越界均被 MaintenancePreflightError 拒绝（exit 1，不回显值）；cleanup-invitation-tokens dry-run candidates:0。单测 tests/unit/maintenance-target.test.ts 在全量 270 unit 内通过。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "按 prompts/AGENT-IMPROVEMENT-2026-09-18.md 对应阶段执行",
+   "verifiedAt": "2026-09-18"
+  },
+  {
+   "id": "OI-23",
+   "title": "迁移语义与回滚叙述",
+   "priority": "P3",
+   "sourceIds": [
+    "F34"
+   ],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "外键 RESTRICT 与冗余 CHECK 删除的原因未在文档解释",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "迁移 16 语义已入 docs/04 §7：RESTRICT 保护审计身份（与成对 CHECK 一致）、冗余复合 CHECK 被 M5 细分约束覆盖、只向前回滚口径（备份恢复/后续迁移）。已应用迁移文件字节未改（sha256 与库内 checksum 校验一致）。",
+   "changedFiles": [
+    "docs/04-DATA-MODEL.md"
+   ],
+   "closureEvidence": [
+    "docs/04-DATA-MODEL.md §7 新增「迁移 16 语义与回滚口径」；迁移文件 sha256 cc5263ad… 与 _prisma_migrations.checksum 一致。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "",
+   "verifiedAt": "2026-09-18"
+  },
+  {
+   "id": "OI-24",
+   "title": "recent projects 冗余请求",
+   "priority": "P3",
+   "sourceIds": [],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "路由切换/focus/visibility/30s 轮询下的重复请求未量化与合并",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "recent projects 路由切换不再触发重新请求（pathname 移出 effect 依赖；新鲜度由 30s 轮询 + focus/visibility 承担）；重叠刷新经 AbortController 合并取消，过期响应不落 state；换账号（userId 变化）立即重新加载，无跨用户缓存（状态实例局部）。",
+   "changedFiles": [
+    "src/features/shell/use-recent-projects.ts",
+    "src/features/shell/app-shell.tsx"
+   ],
+   "closureEvidence": [
+    "typecheck exit 0；请求取消与 userId 失效语义既有（abort + state.userId guard），本轮消除的是每次路由切换的冗余 GET /projects。既有 E2E comprehensive-review.spec.ts 覆盖项目列表失败恢复与重试路径，全量回归在 G6。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "按 prompts/AGENT-IMPROVEMENT-2026-09-18.md 对应阶段执行",
+   "verifiedAt": "2026-09-18",
+   "next_action": ""
+  },
+  {
+   "id": "OI-25",
+   "title": "IME Escape 潜在交互问题",
+   "priority": "P2",
+   "sourceIds": [
+    "F31-⑬"
+   ],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "Dialog 与表单在中文输入法组合期间的 Escape 行为需真实复现后处置",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "Dialog 组合期 Escape 防护已有实现（isComposing || keyCode 229 双检，窗口捕获层与 Radix 双处）；本轮补齐 E2E 回归：组合期 Escape（两种形态）不关闭未保存更改对话框、组合结束普通 Escape 正常关闭。",
+   "changedFiles": [
+    "tests/e2e/comprehensive-review.spec.ts"
+   ],
+   "closureEvidence": [
+    "用例经既有 E2E 套件执行（G6 全量）；既有覆盖包括 settings 表单组合 Enter 不提交、子任务/评论编辑组合键忽略（review-20260912.spec.ts）。"
+   ],
+   "remainingLimitations": [
+    "合成键盘事件不能替代真实中文输入法候选窗口验收（平台/引擎差异）；真实 IME 实机走查仍属既有记录的 iOS/实机限制。"
+   ],
+   "nextAction": "按 prompts/AGENT-IMPROVEMENT-2026-09-18.md 对应阶段执行",
+   "verifiedAt": "2026-09-18",
+   "next_action": ""
+  },
+  {
+   "id": "OI-26",
+   "title": "死代码候选",
+   "priority": "P3",
+   "sourceIds": [
+    "F35"
+   ],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "shell fixtures 等需核对静态/动态/测试消费者后精确移除",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "SIDEBAR_PROJECTS 与 CURRENT_USER 经静态+动态+测试全量消费者核对（grep src/ tests/ 零引用；相关注释均说明已由真实数据替代）后精确移除；其余 fixture（PROJECTS/PEOPLE/BOARD_PROJECT/SAMPLE_TODAY/findProjectById）均有真实消费者，保留。",
+   "changedFiles": [
+    "src/features/shell/fixtures.ts"
+   ],
+   "closureEvidence": [
+    "消费者核对：grep CURRENT_USER|SIDEBAR_PROJECTS 于 src/ tests/ 仅命中定义与历史注释；typecheck exit 0（UserDTO 导入同步清理）。"
+   ],
+   "remainingLimitations": [],
+   "nextAction": "按 prompts/AGENT-IMPROVEMENT-2026-09-18.md 对应阶段执行",
+   "verifiedAt": "2026-09-18",
+   "next_action": ""
+  },
+  {
+   "id": "OI-27",
+   "title": "安全头阶段决策",
+   "priority": "P2",
+   "sourceIds": [
+    "D5"
+   ],
+   "taskIds": [
+    "ORB-021"
+   ],
+   "originalClaim": "HSTS/Permissions-Policy/CSP 的适用环境与有效策略需受控验证",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "安全头阶段决策明确并落地一层：Referrer-Policy/X-Content-Type-Options/CSP frame-ancestors 全站生效（应用层+代理层+AWS 指南三处一致）；新增 Permissions-Policy 全拒绝默认（应用不使用任何浏览器权限特性）；HSTS 保持 HTTPS 验收后启用的既有分阶段决策（避免锁死明文调试）；完整脚本 CSP 维持 nonce 中间件分阶段推进（D5 既有决策）。",
+   "changedFiles": [
+    "next.config.ts",
+    "infra/nginx.conf",
+    "docs/AWS-MICRO-DEPLOYMENT.md"
+   ],
+   "closureEvidence": [
+    "verify-nginx.mjs exit 0（含新头配置加载验证）；容器探针响应头已验证 Referrer-Policy/nosniff/frame-ancestors。HSTS/CSP 完整版的剩余边界与替代措施已记录于 docs/07 §6 与 AWS 指南注释。"
+   ],
+   "remainingLimitations": [
+    "完整 CSP（nonce）仍分阶段；HSTS 待 HTTPS 环境验收。两者均为既有记录的受控决策，非未处理缺口。"
+   ],
+   "nextAction": "按 prompts/AGENT-IMPROVEMENT-2026-09-18.md 对应阶段执行",
+   "verifiedAt": "2026-09-18",
+   "next_action": ""
+  },
+  {
+   "id": "OI-28",
+   "title": "性能/容量证据不足",
+   "priority": "P2",
+   "sourceIds": [
+    "F20",
+    "CR-2.2"
+   ],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "docs/07/14 预算下缺数据集、环境、p95、内存与备份重叠的实测记录",
+   "originalClaimIsInstruction": false,
+   "status": "deferred",
+   "dispositionReason": "本地可执行测量已保留（千任务看板 E2E 2.8s 含分页/陈旧快照恢复/完整排序门禁；bundle 测量 14 路由零样例泄漏；既有 M6 千任务 p95 记录见 docs/07）。docs/07/14 预算下的正式数据集、p95/错误率、内存及备份重叠测量属真云 1GiB 环境，本地测量不能冒充。",
+   "changedFiles": [],
+   "closureEvidence": [
+    "本轮本地证据：E2E m3-workflows 千任务门禁 2.8s（gate-e2e.log 第57行）；scripts/measure-client-bundles.mjs exit 0（14 路由、realRouteSampleLeaks:0）；既有历史测量保留于 docs/07 与 M6-ACCEPTANCE-2026-09-11.md。"
+   ],
+   "remainingLimitations": [
+    "micro 1GiB 真云容量测量（CR-2.2/F20）需要 AWS 环境，与 OI-30 同批外部条件。"
+   ],
+   "nextAction": "按 prompts/AGENT-IMPROVEMENT-2026-09-18.md 对应阶段执行",
+   "verifiedAt": "2026-09-18",
+   "next_action": "真云部署后按 docs/07 预算执行容量测量"
+  },
+  {
+   "id": "OI-29",
+   "title": "页面状态与可访问性统一验收",
+   "priority": "P2",
+   "sourceIds": [
+    "B5",
+    "F25",
+    "F29"
+   ],
+   "taskIds": [
+    "ORB-020"
+   ],
+   "originalClaim": "390/768/1440、键盘、草稿、错误恢复、长内容、空态、权限态、200% 缩放按规范验证",
+   "originalClaimIsInstruction": false,
+   "status": "fixed",
+   "dispositionReason": "390/768/1440 视口、键盘无鼠标主流程、拖拽菜单替代、长内容、空/加载/错误/权限态、草稿保护、IME 组合的统一验收由全量 E2E（85 项）与 UI（含 390/768/1440 三视口循环）真实浏览器回归确认；prefers-reduced-motion 由 tokens.css 全局规则实现且样例页声明降级。本轮新增 IME 对话框用例并入其中。",
+   "changedFiles": [
+    "tests/e2e/comprehensive-review.spec.ts"
+   ],
+   "closureEvidence": [
+    "全量 E2E 85 passed exit 0（2026-09-18，零重试，含 390 看板 tab 键盘导航/1440 三列断言/IME 对话框/项目列表失败恢复）；UI 套件结果见 gate-ui.log；覆盖索引：B5/B7/B8/B9/F25/F28/F29/F31 各修复项对应回归用例均在全量运行内。"
+   ],
+   "remainingLimitations": [
+    "200% 缩放与真实 IME 实机走查维持既有记录的限制（自动化浏览器无法等效验证）。"
+   ],
+   "nextAction": "按 prompts/AGENT-IMPROVEMENT-2026-09-18.md 对应阶段执行",
+   "verifiedAt": "2026-09-18",
+   "next_action": ""
+  },
+  {
+   "id": "OI-30",
+   "title": "V1 外部发布验收未完成",
+   "priority": "P1",
+   "sourceIds": [
+    "A1",
+    "F40",
+    "CR-2.2",
+    "CR-2.9"
+   ],
+   "taskIds": [
+    "ORB-021"
+   ],
+   "originalClaim": "当前提交 CI、部署 URL、HTTPS 双账户、SES/S3、调度、真云容量与恢复证据齐全才允许 V1 完成",
+   "originalClaimIsInstruction": false,
+   "status": "blocked_external",
+   "dispositionReason": "",
+   "changedFiles": [],
+   "closureEvidence": [],
+   "remainingLimitations": [],
+   "nextAction": "按 prompts/AGENT-IMPROVEMENT-2026-09-18.md 对应阶段执行",
+   "verifiedAt": null
+  }
+ ]
+}

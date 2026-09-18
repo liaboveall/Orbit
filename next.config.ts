@@ -23,6 +23,9 @@ const nextConfig: NextConfig = {
           // 按 Next 本地指南分阶段推进（docs/07 §6、审查 D5 勘误）。
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          // OI-27：应用不使用任何浏览器权限特性（相机/麦克风/定位等），
+          // 全站默认拒绝；未来引入特性时按实际需求逐项放开。
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
         ],
       },
     ];

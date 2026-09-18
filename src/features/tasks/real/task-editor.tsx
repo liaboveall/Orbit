@@ -529,14 +529,14 @@ function TaskEditorContent({
 
       {/* M5 子任务 / 评论讨论 / 附件 */}
       <section className="space-y-6">
-        <SubtaskList key={task.id} taskId={task.id} revision={incoming.updatedAt} canEdit={!readOnly} />
-        <CommentList key={task.id} revision={incoming.updatedAt}
+        <SubtaskList key={`subtasks:${task.id}`} taskId={task.id} revision={incoming.updatedAt} canEdit={!readOnly} />
+        <CommentList key={`comments:${task.id}`} revision={incoming.updatedAt}
           taskId={task.id}
           currentUserId={currentUserId}
           isProjectOwner={isProjectOwner}
           canWrite={!readOnly}
         />
-        <AttachmentList key={task.id} revision={incoming.updatedAt}
+        <AttachmentList key={`attachments:${task.id}`} revision={incoming.updatedAt}
           taskId={task.id}
           currentUserId={currentUserId}
           isProjectOwner={isProjectOwner}

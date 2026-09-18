@@ -65,21 +65,18 @@ describe("数据库连接错误映射（D2）", () => {
       max: 1,
       connectionTimeoutMillis: PROBE_POOL_TIMEOUT_MS,
     });
-    const holder = await pool.connect();
-    let rejected: unknown;
     try {
-      await expect(pool.query("SELECT 1")).rejects.toBeInstanceOf(Error);
-    } catch {
-      /* 上面 expect 已断言 */
-    }
-    holder.release();
-    try {
+      const holder = await pool.connect();
+      try {
+        await expect(pool.query("SELECT 1")).rejects.toBeInstanceOf(Error);
+      } finally {
+        holder.release();
+      }
       const recovered = await pool.query("SELECT 1 AS ok");
       expect(recovered.rows[0]?.ok).toBe(1);
     } finally {
       await pool.end();
     }
-    void rejected;
   });
 
   it("连接拒绝（不存在的端口）→ ECONNREFUSED → 503", async () => {

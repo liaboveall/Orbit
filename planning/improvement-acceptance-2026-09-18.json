@@ -1,0 +1,169 @@
+{
+ "date": "2026-09-18",
+ "report": "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md",
+ "scope": "Independent acceptance of OI-01 through OI-30 delivery; findings remain open, no implementation fixes performed.",
+ "entries": [
+  {
+   "id": "IA-01",
+   "priority": "P1",
+   "title": "Governance probes copy local configuration into persistent temporary directories",
+   "taskIds": [
+    "ORB-020",
+    "ORB-021"
+   ],
+   "status": "pending",
+   "reviewEvidence": [
+    "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
+   ],
+   "changedFiles": [],
+   "closureEvidence": [],
+   "verifiedAt": null,
+   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+  },
+  {
+   "id": "IA-02",
+   "priority": "P1",
+   "title": "Container smoke assumes Docker Desktop host networking on Linux CI",
+   "taskIds": [
+    "ORB-021"
+   ],
+   "status": "pending",
+   "reviewEvidence": [
+    "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
+   ],
+   "changedFiles": [],
+   "closureEvidence": [],
+   "verifiedAt": null,
+   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+  },
+  {
+   "id": "IA-03",
+   "priority": "P1",
+   "title": "Relabelling M6 bypasses V1 completion governance",
+   "taskIds": [
+    "ORB-020"
+   ],
+   "status": "pending",
+   "reviewEvidence": [
+    "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
+   ],
+   "changedFiles": [],
+   "closureEvidence": [],
+   "verifiedAt": null,
+   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+  },
+  {
+   "id": "IA-04",
+   "priority": "P2",
+   "title": "Query and response contract mutations escape new binding checks",
+   "taskIds": [
+    "ORB-020"
+   ],
+   "status": "pending",
+   "reviewEvidence": [
+    "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
+   ],
+   "changedFiles": [],
+   "closureEvidence": [],
+   "verifiedAt": null,
+   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+  },
+  {
+   "id": "IA-05",
+   "priority": "P2",
+   "title": "Pool recovery assertion failure skips pool.end",
+   "taskIds": [
+    "ORB-020"
+   ],
+   "status": "pending",
+   "reviewEvidence": [
+    "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
+   ],
+   "changedFiles": [],
+   "closureEvidence": [],
+   "verifiedAt": null,
+   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+  },
+  {
+   "id": "IA-06",
+   "priority": "P2",
+   "title": "API v1 root still returns HTML 404",
+   "taskIds": [
+    "ORB-020"
+   ],
+   "status": "pending",
+   "reviewEvidence": [
+    "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
+   ],
+   "changedFiles": [],
+   "closureEvidence": [],
+   "verifiedAt": null,
+   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+  },
+  {
+   "id": "IA-07",
+   "priority": "P2",
+   "title": "Legacy invitation maintenance entry remains outside target fingerprint guard",
+   "taskIds": [
+    "ORB-021"
+   ],
+   "status": "pending",
+   "reviewEvidence": [
+    "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
+   ],
+   "changedFiles": [],
+   "closureEvidence": [],
+   "verifiedAt": null,
+   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+  },
+  {
+   "id": "IA-08",
+   "priority": "P2",
+   "title": "Closed items do not meet the requested acceptance conditions",
+   "taskIds": [
+    "ORB-020",
+    "ORB-021"
+   ],
+   "status": "pending",
+   "reviewEvidence": [
+    "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
+   ],
+   "changedFiles": [],
+   "closureEvidence": [],
+   "verifiedAt": null,
+   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+  },
+  {
+   "id": "IA-09",
+   "priority": "P2",
+   "title": "Full gate evidence lacks unified candidate source identity",
+   "taskIds": [
+    "ORB-020"
+   ],
+   "status": "pending",
+   "reviewEvidence": [
+    "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
+   ],
+   "changedFiles": [],
+   "closureEvidence": [],
+   "verifiedAt": null,
+   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+  },
+  {
+   "id": "IA-10",
+   "priority": "P2",
+   "title": "Alternative base comparison ignores available fixes",
+   "taskIds": [
+    "ORB-021"
+   ],
+   "status": "pending",
+   "reviewEvidence": [
+    "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
+   ],
+   "changedFiles": [],
+   "closureEvidence": [],
+   "verifiedAt": null,
+   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+  }
+ ]
+}

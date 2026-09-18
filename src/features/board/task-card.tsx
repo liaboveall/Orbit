@@ -18,14 +18,14 @@ import { getDueMeta, STATUS_LABEL } from "@/features/tasks/task-meta";
 import { SAMPLE_TODAY } from "@/features/shell/fixtures";
 
 /**
- * 任务卡 TaskCard（ORB-002）。
+ * 任务卡 SampleTaskCard（ORB-002）。
  *
  * docs/02 §5：内容不超过 5 行——编号/优先级、标题两行、子任务/评论/附件计数、
  * 截止日/负责人。hover 显示更多菜单，键盘焦点（focus-within）时同样可见；
  * 手机端菜单常显并用于改状态（无拖拽要求）。高优先级/逾期用图标+文案，不染红整卡。
  */
 
-export type TaskCardProps = {
+export type SampleTaskCardProps = {
   task: TaskSummaryDTO;
   onOpen: () => void;
   onChangeStatus: (status: TaskStatus) => void;
@@ -33,12 +33,12 @@ export type TaskCardProps = {
   selected?: boolean;
 };
 
-export function TaskCard({
+export function SampleTaskCard({
   task,
   onOpen,
   onChangeStatus,
   selected = false,
-}: TaskCardProps) {
+}: SampleTaskCardProps) {
   const due = getDueMeta(task.dueDate, SAMPLE_TODAY, task.status);
 
   return (

@@ -6,9 +6,7 @@ import { withTransaction, lockProjectRow } from "@/server/db/tx";
 import { DomainError } from "@/server/http/errors";
 import { requireWritableTaskProject, taskNotFoundError } from "./access";
 import { toTaskDTO, fetchTaskResourceCounts } from "./mappers";
-import { appendToColumnEnd } from "./position";
-// SafePosition type is used internally for position validation
-type _SafePosition = bigint;
+import { appendToColumnEnd, renumberColumn, type RawColRow } from "./position";
 import { formatIdentifier } from "./identifier";
 import { appendActivity } from "@/server/modules/activity/writer";
 import { createMoveRecord } from "./move-record";
@@ -33,8 +31,6 @@ function boardConflictError(currentBoardVersion: number): DomainError {
   });
 }
 
-/** RawColRow：从 raw query 获取的列中行（id + position）。 */
-type RawColRow = { id: string; position: bigint | string | number };
 
 /** Q10: 规范化 UUID 为小写以确保一致性 */
 function normalizeUuid(uuid: string): string {
@@ -42,7 +38,7 @@ function normalizeUuid(uuid: string): string {
 }
 
 /** BigInt 安全边界：当 lastPosition > MAX_SAFE - POSITION_GAP*2 时触发重编号 */
-const BIGINT_MAX_SAFE = 9223372036854775800n; // Number.MAX_SAFE_INTEGER for bigint
+const BIGINT_MAX_SAFE = 9223372036854775800n; // PostgreSQL signed bigint bound with a small safety margin
 
 /**
  * 计算 completedAt 变更策略。
@@ -65,44 +61,6 @@ function computeCompletedAt(
 }
 
 /**
- * 将目标列所有任务重新编号（跳过 movingTaskId），用于间隙耗尽时。
- * 返回 beforeTaskId 所在槽位的“新”位置与前一槽位的位置，供插入中点计算。
- * 使用 raw UPDATE 避免触发 Prisma 的 @updatedAt（spec：不递增其他任务 version，docs/04 §5）。
- */
-async function renumberColumn(
-  tx: Prisma.TransactionClient,
-  projectId: string,
-  toStatus: string,
-  excludeTaskId: string,
-  insertIndex: number, // beforeTaskId 在新列中的索引（插入前该位置的任务数）
-): Promise<{ newBeforePos: bigint; newPrevPos: bigint }> {
-  // 查询目标列非删除任务（排除 movingTaskId），按 position ASC、id ASC
-  const rows = await tx.$queryRaw<RawColRow[]>`
-    SELECT id, position FROM "Task"
-    WHERE "projectId" = ${projectId}::uuid
-      AND "deletedAt" IS NULL
-      AND status = ${toStatus}::"TaskStatus"
-      AND id != ${excludeTaskId}::uuid
-    ORDER BY position ASC, id ASC
-  `;
-
-  // 为新列分派 positions：1*GAP, 2*GAP, ...
-  // beforeTaskId 原在 insertIndex，重编号后其位置为 (insertIndex+1)*GAP，前驱为 insertIndex*GAP
-  // 批量 UPDATE（串行 await，确保事务内一致性；只改 position，不动 version/updatedAt）
-  for (const [idx, row] of rows.entries()) {
-    const pos = BigInt(idx + 1) * POSITION_GAP;
-    await tx.$executeRaw`
-      UPDATE "Task" SET position = ${pos} WHERE id = ${row.id}::uuid
-    `;
-  }
-
-  const newPrevPos = BigInt(insertIndex) * POSITION_GAP;
-  const newBeforePos = BigInt(insertIndex + 1) * POSITION_GAP;
-
-  return { newBeforePos, newPrevPos };
-}
-
-/**
  * 计算移动后的 position。
  * - beforeTaskId === null → appendToColumnEnd(tx, projectId, toStatus)
  * - beforeTaskId !== null → 定位目标列任务列表，find beforeTaskId，取 predecessor & beforeTaskId 的中点；
@@ -112,12 +70,12 @@ async function renumberColumn(
 export async function computeMovePosition(
   tx: Prisma.TransactionClient,
   projectId: string,
-  toStatus: string,
+  toStatus: TaskStatus,
   beforeTaskId: string | null,
   movingTaskId: string,
 ): Promise<bigint> {
   if (beforeTaskId === null) {
-    return appendToColumnEnd(tx, projectId, toStatus as TaskStatus);
+    return appendToColumnEnd(tx, projectId, toStatus);
   }
 
   // Q10: 规范化 beforeTaskId 和 movingTaskId 为小写以避免大小写不匹配
@@ -149,13 +107,9 @@ export async function computeMovePosition(
   // 间隙耗尽判定：无法在 (prevPos, beforePos) 之间插入一个新整数位置。
   const gapExhausted = prevPos === null ? beforePos < 2n : beforePos - prevPos < 2n;
   if (gapExhausted) {
-    const { newPrevPos, newBeforePos } = await renumberColumn(
-      tx,
-      projectId,
-      toStatus,
-      movingTaskId,
-      idx,
-    );
+    await renumberColumn(tx, projectId, toStatus, normalizedMovingTaskId);
+    const newPrevPos = BigInt(idx) * POSITION_GAP;
+    const newBeforePos = BigInt(idx + 1) * POSITION_GAP;
     return (newPrevPos + newBeforePos) / 2n;
   }
 
@@ -164,13 +118,9 @@ export async function computeMovePosition(
   
   // 检查中点是否接近 MAX_SAFE（理论上不可能，但防御性编程）
   if (midPos > BIGINT_MAX_SAFE - POSITION_GAP * 2n) {
-    const { newPrevPos, newBeforePos } = await renumberColumn(
-      tx,
-      projectId,
-      toStatus,
-      movingTaskId,
-      idx,
-    );
+    await renumberColumn(tx, projectId, toStatus, normalizedMovingTaskId);
+    const newPrevPos = BigInt(idx) * POSITION_GAP;
+    const newBeforePos = BigInt(idx + 1) * POSITION_GAP;
     return (newPrevPos + newBeforePos) / 2n;
   }
   
@@ -217,7 +167,7 @@ export async function moveTask(
 
     // 4. 重读任务（lock 内，fresh snapshot）
     const freshTask = await tx.task.findUnique({
-      where: { id: taskId },
+      where: { id: normalizedTaskId },
       include: { assignee: { select: { id: true, name: true } }, creator: { select: { id: true, name: true } } },
     });
     if (!freshTask || freshTask.deletedAt !== null) throw taskNotFoundError();
@@ -250,7 +200,7 @@ export async function moveTask(
     // 8. 更新任务：status + position + version++ + completedAt 规则
     const completedAtDelta = computeCompletedAt(freshTask.status, input.toStatus, freshTask.completedAt);
     const updated = await tx.task.update({
-      where: { id: taskId },
+      where: { id: normalizedTaskId },
       data: {
         status: input.toStatus,
         position: newPosition,
@@ -269,7 +219,7 @@ export async function moveTask(
       projectId,
       actorId: userId,
       entityType: "TASK",
-      entityId: taskId,
+      entityId: normalizedTaskId,
       action: "TASK_MOVED",
       metadata: {
         fromStatus: freshTask.status,
@@ -280,7 +230,7 @@ export async function moveTask(
 
     // 11. 写入 MoveRecord（审计历史，事务内同原子性）
     await createMoveRecord(tx, {
-      taskId,
+      taskId: normalizedTaskId,
       fromStatus: freshTask.status,
       toStatus: input.toStatus,
       fromPosition: freshTask.position,

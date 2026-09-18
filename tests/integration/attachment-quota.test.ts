@@ -24,7 +24,17 @@ import { uploadMultipart } from "@/server/modules/attachments/multipart";
 import { cleanupOrphanAttachmentsLocked } from "@/server/modules/attachments/cleanup";
 import { AttachmentSchema } from "@/contracts";
 import { m5Fixture } from "../support/m5-fixture";
+import { inspectStorageAccounting } from "@/server/modules/maintenance/inspect";
 let f: Awaited<ReturnType<typeof m5Fixture>>;
+
+it("read-only accounting includes soft-deleted tasks and reports drift without modifying balances", async () => {
+  await upload();
+  await prisma.task.update({ where: { id: f.taskId }, data: { deletedAt: new Date() } });
+  expect(await inspectStorageAccounting(prisma, f.projectId)).toEqual({ checked: 1, mismatches: 0 });
+  const before = await prisma.project.update({ where: { id: f.projectId }, data: { usedBytes: { increment: 1n } } });
+  expect(await inspectStorageAccounting(prisma, f.projectId)).toEqual({ checked: 1, mismatches: 1 });
+  expect((await prisma.project.findUniqueOrThrow({ where: { id: f.projectId } })).usedBytes).toBe(before.usedBytes);
+});
 const sha = (data: Buffer) => createHash("sha256").update(data).digest("hex");
 async function upload(
   data = Buffer.from("真实附件内容"),

@@ -47,7 +47,7 @@ export function proxy(request: NextRequest): NextResponse {
 
   // 1) /api/v1/*：需要认证。未登录返回 401 JSON（不重定向，API 语义）。
   //    排除匿名端点：邀请预览不要求认证（openapi security:[]）。
-  if (pathname.startsWith("/api/v1/")) {
+  if (pathname === "/api/v1" || pathname.startsWith("/api/v1/")) {
     if (pathname === "/api/v1/invitations/preview") {
       return NextResponse.next();
     }

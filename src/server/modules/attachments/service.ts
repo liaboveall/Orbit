@@ -9,6 +9,7 @@ import { lockProjectRow, withTransaction } from "@/server/db/tx";
 import { DomainError } from "@/server/http/errors";
 import {
   UploadAttachmentMetaSchema,
+  SignedDownloadQuerySchema,
   UuidSchema,
   DownloadSchema,
   type AttachmentDTO,
@@ -361,10 +362,9 @@ export async function downloadContent(
   signal?: AbortSignal,
 ) {
   if (
-    !/^\d{13}$/.test(expires) ||
+    !SignedDownloadQuerySchema.safeParse({ expires, signature: mac }).success ||
     Number(expires) <= Date.now() ||
     Number(expires) > Date.now() + 60000 ||
-    !/^[0-9a-f]{64}$/.test(mac) ||
     !timingSafeEqual(
       Buffer.from(signature(id, userId, expires), "hex"),
       Buffer.from(mac, "hex"),

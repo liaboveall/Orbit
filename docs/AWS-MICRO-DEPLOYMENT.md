@@ -191,56 +191,11 @@ POSTGRES_DB=postgres
 
 nano 保存用 Ctrl+O、Enter，退出用 Ctrl+X。再执行 `sudo nano /opt/orbit/compose.yml`，填写：
 
-```yaml
-name: orbit-showcase
-x-logging: &logging
-  driver: json-file
-  options:
-    max-size: "10m"
-    max-file: "3"
-services:
-  postgres:
-    image: postgres:17
-    restart: unless-stopped
-    env_file: [/opt/orbit/db.env]
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 12
-    logging: *logging
-  web:
-    image: orbit-web:showcase
-    restart: unless-stopped
-    init: true
-    env_file: [/opt/orbit/app.env]
-    ports:
-      - "127.0.0.1:3000:3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]
-    stop_grace_period: 150s
-    logging: *logging
-  operations:
-    image: orbit-operations:showcase
-    profiles: [tools]
-    init: true
-    env_file: [/opt/orbit/app.env]
-    depends_on:
-      postgres:
-        condition: service_healthy
-    security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]
-    logging: *logging
-volumes:
-  pgdata:
-```
+下载仓库中的 [单机生产编排](../infra/compose.micro.yml) 保存为 `/opt/orbit/compose.yml`。该文件是唯一配置源，不再维护一份内嵌副本；升级时同步版本并先运行 `docker compose -f /opt/orbit/compose.yml config --quiet`。
 
-这是本文独立的单机 Compose，不要直接使用仓库里只包含应用服务的 `infra/compose.production.yml`。
+
+
+`infra/compose.micro.yml` 是本指南的单机配置真源（含 PostgreSQL）；`infra/compose.production.yml` 用于已有外部 PostgreSQL 的部署。两者均限制容器日志大小，修改部署模板时直接修改对应文件。
 
 ```bash
 sudo docker compose -f /opt/orbit/compose.yml config --quiet
@@ -310,7 +265,7 @@ Compose 环境文件支持插值：若自选密码包含 `$`，用单引号包�
 
 ```bash
 sudo docker compose -f /opt/orbit/compose.yml config --quiet
-sudo docker compose -f /opt/orbit/compose.yml run --rm operations pnpm db:migrate:deploy
+sudo docker compose -f /opt/orbit/compose.yml run --rm operations node node_modules/prisma/build/index.js migrate deploy
 sudo docker compose -f /opt/orbit/compose.yml up -d web
 sudo docker compose -f /opt/orbit/compose.yml ps
 curl -i http://127.0.0.1:3000/health/ready
@@ -348,6 +303,7 @@ server {
     add_header Referrer-Policy no-referrer always;
     add_header X-Content-Type-Options nosniff always;
     add_header Content-Security-Policy "frame-ancestors 'none'" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()" always;
     # HTTPS 终结后按需追加 HSTS（先完成整站 HTTPS 验收，避免锁死明文调试）：
     # add_header Strict-Transport-Security "max-age=15552000" always;
     client_max_body_size 12m;
@@ -428,13 +384,13 @@ sudo journalctl -k --since "1 hour ago" | grep -Ei 'out of memory|oom|killed pro
 手动验证维护：
 
 ```bash
-sudo docker compose -f /opt/orbit/compose.yml run --rm operations pnpm maintenance:cleanup
+sudo docker compose -f /opt/orbit/compose.yml run --rm operations node --conditions=react-server --import tsx scripts/maintenance-cleanup.ts
 ```
 
 成功后运行 `sudo crontab -e`，添加一行（按服务器时区执行，可用 `timedatectl` 查看）：
 
 ```cron
-20 * * * * /usr/bin/flock -n /run/orbit-maintenance.lock /usr/bin/docker compose -f /opt/orbit/compose.yml run --rm operations pnpm maintenance:cleanup >> /var/log/orbit-maintenance.log 2>&1
+20 * * * * /usr/bin/flock -n /run/orbit-maintenance.lock /usr/bin/docker compose -f /opt/orbit/compose.yml run --rm operations node --conditions=react-server --import tsx scripts/maintenance-cleanup.ts --execute >> /var/log/orbit-maintenance.log 2>&1
 ```
 
 每小时运行，flock 防止重叠；每轮每表最多处理 10 批 × 1000 行，达到上限会返回非零并标记 saturated，需要检查积压并缩短调度间隔。附件清理失败同样返回非零。定期检查日志。给宿主日志配置轮换：`sudo nano /etc/logrotate.d/orbit`，填写：
@@ -553,3 +509,13 @@ curl -i http://127.0.0.1:3000/health/ready
 修改 app.env 后用 `sudo docker compose -f /opt/orbit/compose.yml up -d --force-recreate web` 应用新环境；单纯 restart 不会更新容器环境变量。
 
 简历优先放公开只读 `/demo`；面试时用你自己的账户演示真实协作。不要公开共享可写账号密码。
+
+### 综合审查维护与代理更新（2026-09-13）
+
+部署更新后先运行 `node --conditions=react-server --import tsx scripts/maintenance-cleanup.ts` 只读预览，核对部署环境和候选范围，将输出 target 指纹写入机器运行环境的 `ORBIT_MAINTENANCE_TARGET`，再使用 `node --conditions=react-server --import tsx scripts/maintenance-cleanup.ts --execute`。operations 容器默认命令也仅预览；定时任务必须带 --execute，缺少目标确认会非零退出。不要在 cron 中自动取得新指纹并立即执行，这会绕过目标确认。
+
+Nginx http/server 两份配置必须一起更新：认证5请求/秒、burst10，单IP在途40；拒绝429带1秒 Retry-After 和标准错误信封。校园共享IP需根据监测调整，不能用它替代应用按用户限流。安全日志增加上游状态/连接及响应耗时、限流结果；原始 error_log 继续关闭，不能用访问日志格式对它脱敏。排障使用请求ID和这些不含URL的字段。
+
+本机数据库测试不等于1GiB真机性能；按 [变更和升级清单](14-CHANGE-AND-UPGRADE-CHECKLIST.md) 记录10并发、维护/备份重叠时的内存/交换/OOM与p95，再设资源上限。真实HTTPS/SES/S3和RPO/RTO仍单独验收。
+
+运维镜像只保留已安装的工具，移除了 npm/Corepack/pnpm；容器内迁移使用 `node node_modules/prisma/build/index.js migrate deploy`，维护使用 `node --conditions=react-server --import tsx scripts/maintenance-cleanup.ts`（默认预览，执行加 `--execute`）。宿主开发命令仍使用 pnpm。

@@ -1,3 +1,9 @@
+# External PostgreSQL deployment. The single-host variant is compose.micro.yml.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
 name: orbit
 services:
   web:
@@ -5,6 +11,7 @@ services:
     env_file: ${ORBIT_ENV_FILE:?Set absolute runtime environment file}
     restart: unless-stopped
     init: true
+    logging: *logging
     ports:
       - "127.0.0.1:3000:3000"
     security_opt:
@@ -16,6 +23,7 @@ services:
     env_file: ${ORBIT_ENV_FILE:?Set absolute runtime environment file}
     profiles: [operations]
     init: true
+    logging: *logging
     security_opt:
       - no-new-privileges:true
     cap_drop: [ALL]

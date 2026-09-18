@@ -1,5 +1,5 @@
 import { enforceWriteLimit } from "@/server/http/write-limit";
-import { parseRequestBody } from "@/contracts";
+import { parseRequestBody, parseQueryParams, VersionQuerySchema } from "@/contracts";
 import { UpdateSubtaskSchema } from "@/contracts";
 import { errorResponse, toErrorResponse } from "@/server/http/errors";
 import { jsonSuccess, readJsonBody, jsonEnvelope, noContent } from "@/server/http/json";
@@ -67,16 +67,10 @@ export async function DELETE(
 
     const { subtaskId } = await context.params;
 
-    // expectedVersion from query string
-    const url = new URL(request.url);
-    const expectedVersionStr = url.searchParams.get("expectedVersion");
-    if (!expectedVersionStr) {
-      return errorResponse("VALIDATION_ERROR", "expectedVersion query parameter is required", requestId);
-    }
-    const expectedVersion = Number(expectedVersionStr);
-    if (!Number.isInteger(expectedVersion) || expectedVersion < 1) {
-      return errorResponse("VALIDATION_ERROR", "expectedVersion must be a positive integer", requestId);
-    }
+    const values = new URL(request.url).searchParams.getAll("expectedVersion");
+    const parsed = parseQueryParams(VersionQuerySchema, { expectedVersion: values.length === 1 ? values[0] : undefined }, requestId);
+    if (!parsed.ok) return jsonEnvelope(parsed.response, 400, requestId);
+    const { expectedVersion } = parsed.data;
 
     await deleteSubtask(subtaskId, sessionUser.id, expectedVersion);
     return noContent(requestId);

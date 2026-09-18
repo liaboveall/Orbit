@@ -163,20 +163,36 @@ describe("Rate Limiting Infrastructure", () => {
     _limiter = await rateLimitModule.getRateLimiter({ maxTokens: 2, refillIntervalMs: 60000 });
   });
 
-  it("should allow requests within limit (60/min) with real user", async () => {
+  it("同一用户同一操作键的真实 60/min 边界：前 60 次允许、第 61 次拒绝、完整窗口后恢复", async () => {
     expect(_limiter).toBeDefined();
-    const _testLimiter = _limiter!;
-    
-    const results = [];
-    for (let i = 0; i < 60; i++) {
-      const result = await _testLimiter.checkLimit(__testUserIdA, `user-integration-${i}`);
-      results.push(result.allowed);
+    // 不复用 beforeEach 的工厂单例（maxTokens=2）：本用例需要显式 60/min 配置，
+    // 并在受控时钟下验证同一桶的边界与时间恢复。
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+    try {
+      const limiter = new rateLimitModule.MemoryRateLimiter({ maxTokens: 60, refillIntervalMs: 60_000 });
+      limiter.stopCleanupInterval();
+      const OPERATION = "sixty-per-minute-boundary";
+      for (let i = 0; i < 60; i++) {
+        const result = await limiter.checkLimit(__testUserIdA, OPERATION);
+        expect(result.allowed, `第 ${i + 1} 次请求应被允许`).toBe(true);
+      }
+      const denied = await limiter.checkLimit(__testUserIdA, OPERATION);
+      expect(denied.allowed).toBe(false);
+      expect(denied.remaining).toBe(0);
+      expect(denied.retryAfter).toBeGreaterThan(0);
+      // 窗口内推进 59.999s：仍应拒绝。
+      vi.advanceTimersByTime(59_999);
+      expect((await limiter.checkLimit(__testUserIdA, OPERATION)).allowed).toBe(false);
+      // 越过完整窗口：完整恢复（Q07 语义）。
+      vi.advanceTimersByTime(1_000);
+      const recovered = await limiter.checkLimit(__testUserIdA, OPERATION);
+      expect(recovered.allowed).toBe(true);
+      expect(recovered.remaining).toBe(59);
+      limiter.stopCleanupInterval();
+    } finally {
+      vi.useRealTimers();
     }
-    
-    expect(results.filter((r) => r).length).toBe(60);
-    
-    const stats = _testLimiter.getStats();
-    expect(stats.maxTokens).toBe(2);
   });
 
   describe("User Isolation", () => {

@@ -24,4 +24,11 @@ coverage
 src/generated
 .qoder
 .kiro
+.workbuddy
+logs
+prompts
 next-env.d.ts
+# OI-17：根目录临时探针输出与 planning 运行缓存不进构建上下文。
+/_*.txt
+__pycache__
+*.pyc

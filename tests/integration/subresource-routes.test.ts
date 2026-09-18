@@ -63,6 +63,26 @@ const invitationRoute = await import(
 const { auth } = await import("@/server/auth");
 const { prisma: testPrisma } = await import("@/server/db/prisma");
 
+it("versioned DELETE handlers reject ambiguous query values with a Chinese error envelope", async () => {
+  for (const query of ["expectedVersion=1e2", "expectedVersion=0x10", "expectedVersion=1&expectedVersion=2", "expectedVersion=9007199254740992"]) {
+    for (const [route, resource, key] of [[commentRoute, "comments", "commentId"], [subtaskRoute, "subtasks", "subtaskId"]] as const) {
+      const response = await route.DELETE(buildRequest("DELETE", `${BASE}/${resource}/${randomUUID()}?${query}`, { cookie: cookieOwner }), ctx(key, randomUUID()));
+      expect(response.status).toBe(400);
+      const error = await readError(response);
+      expect(error.error.code).toBe("VALIDATION_ERROR");
+      expect(error.error.message).toContain("请求校验");
+    }
+  }
+});
+
+it("download HEAD preserves the supplied safe request ID without serving a body", async () => {
+  const route = await import("@/app/api/v1/attachments/[attachmentId]/content/route");
+  const response = await route.HEAD(new Request(`${BASE}/attachments/${randomUUID()}/content`, { method: "HEAD", headers: { "x-request-id": "head-trace-check" } }));
+  expect(response.status).toBe(405);
+  expect(response.headers.get("x-request-id")).toBe("head-trace-check");
+  expect(await response.text()).toBe("");
+});
+
 /* ── 夹具 ─────────────────────────────────────────────────────────────── */
 
 const RUN_TAG = `rt-${Date.now()}`;

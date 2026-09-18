@@ -144,3 +144,7 @@ PROJECT_CREATED、PROJECT_UPDATED、PROJECT_ARCHIVED、PROJECT_RESTORED、MEMBER
 ### HEAD 读取准入
 
 框架为 GET 路由提供的 HEAD 使用同一会话、授权与生产读取额度（300 次/用户/分钟）；不返回正文。私有文件 content 路由显式返回 405，避免 HEAD 打开对象流。该方法支持说明不新增 JSON 数据结构。
+
+### 综合审查传输补充（2026-09-13）
+
+评论/子任务 DELETE 的 expectedVersion 只允许单个正十进制安全整数；缺失、重复、指数/十六进制和越界输入返回400中文校验信封。附件 content HEAD 返回405并保留合法上游 requestId。通用客户端在 DELETE 显式传 z.void()/z.undefined() 时接受204；对象 Schema 仍拒绝意外204，200删除响应保持原契约。代理拒绝返回429 + RATE_LIMITED信封、Retry-After:1；应用限流仍使用自身精确恢复时间。

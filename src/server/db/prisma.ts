@@ -14,7 +14,7 @@ import { getEnv } from "@/server/env";
  * 开发环境用 globalThis 缓存，规避 HMR 重复创建实例。
  */
 function createPrismaClient(): PrismaClient {
-  const { DATABASE_URL } = getEnv();
+  const { DATABASE_URL, DATABASE_POOL_MAX } = getEnv();
   // 连接池与超时参数（docs/04 §4：事务超时目标——写事务应在秒级完成或快速失败，
   // 避免长事务持锁拖垮并发）。各参数用途：
   //   max: 池内最大连接数，限制单实例对数据库的连接占用（配合多实例部署留出余量）。
@@ -25,7 +25,7 @@ function createPrismaClient(): PrismaClient {
   //     lock_timeout=5000: 等锁最长 5s，超时即失败（配合 tx.ts 的死锁/序列化重试）。
   const adapter = new PrismaPg({
     connectionString: DATABASE_URL,
-    max: 5,
+    max: DATABASE_POOL_MAX,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
     options: "-c statement_timeout=10000 -c lock_timeout=5000 -c timezone=UTC",

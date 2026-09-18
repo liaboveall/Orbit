@@ -5,8 +5,8 @@ import { POSITION_GAP } from "@/server/modules/limits";
 /**
  * 看板 position 辅助（M2 / ORB-008，docs/04 §5）。
  *
- * 本 Phase 只实现「追加到列末尾」：创建任务、PATCH 改状态、恢复任务都把卡片放到目标列尾。
- * **不实现**中点插入、beforeTaskId 邻居计算与列重编号 —— 那些属于 M3 ORB-011（move 端点）。
+ * 创建、恢复与状态变更复用末尾追加；中点移动与末尾溢出共用列重编号。
+ * 重编号只改 position，保持其他任务的 version 与 updatedAt。
  *
  * position 是 bigint，仅在服务端流转，永不进入 DTO（TaskSummarySchema 无 position 字段）。
  * 查询走索引 (projectId, deletedAt, status, position, id)，只读该列未删除任务的末项。
@@ -28,7 +28,7 @@ type RawPositionRow = { position: bigint | string | number | null };
  * @param projectId 项目 UUID
  * @param status 目标列状态
  * @param lastPosition 当前最大 position（null 表示空列）
- * @returns 安全的新 position，如需要重编号则先执行 renumberColumnAll
+ * @returns 安全的新 position，如需要重编号则先执行 renumberColumn
  */
 async function ensureSafePosition(
   tx: Prisma.TransactionClient,
@@ -37,14 +37,14 @@ async function ensureSafePosition(
   lastPosition: bigint | null,
 ): Promise<bigint> {
   // 检查是否接近 MAX_SAFE_BIGINT
-  const exceeds = lastPosition !== null && lastPosition + 1024n > BIGINT_MAX_SAFE;
+  const exceeds = lastPosition !== null && lastPosition + POSITION_GAP > BIGINT_MAX_SAFE;
   
   if (!exceeds) {
     return lastPosition === null ? POSITION_GAP : lastPosition + POSITION_GAP;
   }
   
   // 触发全列重编号（不传入 excludeTaskId → null → 重编号全部任务）
-  await renumberColumnAll(tx, projectId, status);
+  await renumberColumn(tx, projectId, status);
   
   // 重编号后重新查询末项位置
   const freshRows = await tx.$queryRaw<RawPositionRow[]>`
@@ -68,16 +68,18 @@ async function ensureSafePosition(
  * 跳过 movingTaskId 参数：全列重编号不涉及移动任务，所以为 null。
  * 保持其他任务的 version/timestamps 不变（使用 raw UPDATE）。
  */
-async function renumberColumnAll(
+export async function renumberColumn(
   tx: Prisma.TransactionClient,
   projectId: string,
   status: TaskStatus,
+  excludeTaskId: string | null = null,
 ): Promise<void> {
   const rows = await tx.$queryRaw<RawColRow[]>`
     SELECT id, position FROM "Task"
     WHERE "projectId" = ${projectId}::uuid
       AND "deletedAt" IS NULL
       AND status = ${status}::"TaskStatus"
+      AND (${excludeTaskId}::uuid IS NULL OR id <> ${excludeTaskId}::uuid)
     ORDER BY position ASC, id ASC
   `;
 
@@ -90,8 +92,8 @@ async function renumberColumnAll(
   }
 }
 
-// Re-export RawColRow from move.ts logic
-interface RawColRow {
+// Raw database result shared by append and move paths.
+export interface RawColRow {
   id: string;
   position: bigint | string | number;
 }
@@ -126,11 +128,3 @@ export async function appendToColumnEnd(
   const lastBigInt = last === undefined || last === null ? null : BigInt(last);
   return ensureSafePosition(tx, projectId, status, lastBigInt);
 }
-
-/**
- * 在插入前检查位置安全性（用于 computeMovePosition 场景）。
- * 
- * @param tx 事务客户端
- * @param beforePos 前一个任务的位置（null 表示追加到列尾）
- * @returns 安全的新 position
- */

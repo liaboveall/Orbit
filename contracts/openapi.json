@@ -2662,7 +2662,7 @@
               "type": "integer",
               "minimum": 1
             },
-            "description": "当前子任务版本"
+            "description": "单个正十进制安全整数；不接受重复、指数或十六进制表示。"
           }
         ]
       }
@@ -3095,7 +3095,7 @@
               "type": "integer",
               "minimum": 1
             },
-            "description": "当前评论版本"
+            "description": "单个正十进制安全整数；不接受重复、指数或十六进制表示。"
           }
         ]
       }

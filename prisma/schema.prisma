@@ -226,7 +226,7 @@ model Invitation {
 
   project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   creator    User    @relation("InvitationCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  acceptedBy User?   @relation("InvitationAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
+  acceptedBy User?   @relation("InvitationAcceptedBy", fields: [acceptedById], references: [id], onDelete: Restrict)
 
   // Business rule for database integrity - enforced via trigger in migration
   // acceptedAt and acceptedById must be both NULL or both non-NULL
