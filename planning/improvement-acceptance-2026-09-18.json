@@ -1,7 +1,7 @@
 {
  "date": "2026-09-18",
  "report": "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md",
- "scope": "Independent acceptance of OI-01 through OI-30 delivery; findings remain open, no implementation fixes performed.",
+ "scope": "Implementation and actual verification of independent acceptance corrections; historical findings preserved below.",
  "entries": [
   {
    "id": "IA-01",
@@ -11,14 +11,19 @@
     "ORB-020",
     "ORB-021"
    ],
-   "status": "pending",
+   "status": "blocked_external",
    "reviewEvidence": [
     "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
    ],
    "changedFiles": [],
-   "closureEvidence": [],
-   "verifiedAt": null,
-   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+   "closureEvidence": [
+    "docs/reviews/REWORK-CLOSURE-2026-09-18.md",
+    "docs/reviews/evidence/REWORK-20260918.json"
+   ],
+   "verifiedAt": "2026-09-18",
+   "nextAction": "Resolve blocked legacy-copy cleanup without bypassing automatic approval.",
+   "previousStatus": "pending",
+   "dispositionReason": "Source-copy prevention verified; 66 legacy copies remain because automatic approval rejected deletion."
   },
   {
    "id": "IA-02",
@@ -27,14 +32,19 @@
    "taskIds": [
     "ORB-021"
    ],
-   "status": "pending",
+   "status": "fixed",
    "reviewEvidence": [
     "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
    ],
    "changedFiles": [],
-   "closureEvidence": [],
-   "verifiedAt": null,
-   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+   "closureEvidence": [
+    "docs/reviews/REWORK-CLOSURE-2026-09-18.md",
+    "docs/reviews/evidence/REWORK-20260918.json"
+   ],
+   "verifiedAt": "2026-09-18",
+   "nextAction": "",
+   "previousStatus": "pending",
+   "dispositionReason": "Private Docker network and disposable TCP proxy smoke passed including database outage and recovery; wired into Linux CI."
   },
   {
    "id": "IA-03",
@@ -43,14 +53,19 @@
    "taskIds": [
     "ORB-020"
    ],
-   "status": "pending",
+   "status": "fixed",
    "reviewEvidence": [
     "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
    ],
    "changedFiles": [],
-   "closureEvidence": [],
-   "verifiedAt": null,
-   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+   "closureEvidence": [
+    "docs/reviews/REWORK-CLOSURE-2026-09-18.md",
+    "docs/reviews/evidence/REWORK-20260918.json"
+   ],
+   "verifiedAt": "2026-09-18",
+   "nextAction": "",
+   "previousStatus": "pending",
+   "dispositionReason": "Fixed V1 milestone membership and release evidence invariants; 14 executable governance probes pass."
   },
   {
    "id": "IA-04",
@@ -59,14 +74,19 @@
    "taskIds": [
     "ORB-020"
    ],
-   "status": "pending",
+   "status": "fixed",
    "reviewEvidence": [
     "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
    ],
    "changedFiles": [],
-   "closureEvidence": [],
-   "verifiedAt": null,
-   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+   "closureEvidence": [
+    "docs/reviews/REWORK-CLOSURE-2026-09-18.md",
+    "docs/reviews/evidence/REWORK-20260918.json"
+   ],
+   "verifiedAt": "2026-09-18",
+   "nextAction": "",
+   "previousStatus": "pending",
+   "dispositionReason": "37 independent operation bindings plus runtime Zod query comparison; 9 mutations rejected through the same comparator."
   },
   {
    "id": "IA-05",
@@ -75,14 +95,19 @@
    "taskIds": [
     "ORB-020"
    ],
-   "status": "pending",
+   "status": "fixed",
    "reviewEvidence": [
     "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
    ],
    "changedFiles": [],
-   "closureEvidence": [],
-   "verifiedAt": null,
-   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+   "closureEvidence": [
+    "docs/reviews/REWORK-CLOSURE-2026-09-18.md",
+    "docs/reviews/evidence/REWORK-20260918.json"
+   ],
+   "verifiedAt": "2026-09-18",
+   "nextAction": "",
+   "previousStatus": "pending",
+   "dispositionReason": "Outer finally closes the pool even on failed expectation; controlled failure probe and full integration pass."
   },
   {
    "id": "IA-06",
@@ -91,14 +116,19 @@
    "taskIds": [
     "ORB-020"
    ],
-   "status": "pending",
+   "status": "fixed",
    "reviewEvidence": [
     "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
    ],
    "changedFiles": [],
-   "closureEvidence": [],
-   "verifiedAt": null,
-   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+   "closureEvidence": [
+    "docs/reviews/REWORK-CLOSURE-2026-09-18.md",
+    "docs/reviews/evidence/REWORK-20260918.json"
+   ],
+   "verifiedAt": "2026-09-18",
+   "nextAction": "",
+   "previousStatus": "pending",
+   "dispositionReason": "Root route, proxy boundary and real HTTP GET/HEAD regression pass."
   },
   {
    "id": "IA-07",
@@ -107,14 +137,19 @@
    "taskIds": [
     "ORB-021"
    ],
-   "status": "pending",
+   "status": "fixed",
    "reviewEvidence": [
     "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
    ],
    "changedFiles": [],
-   "closureEvidence": [],
-   "verifiedAt": null,
-   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+   "closureEvidence": [
+    "docs/reviews/REWORK-CLOSURE-2026-09-18.md",
+    "docs/reviews/evidence/REWORK-20260918.json"
+   ],
+   "verifiedAt": "2026-09-18",
+   "nextAction": "",
+   "previousStatus": "pending",
+   "dispositionReason": "Legacy maintenance entry points use scoped environment/target preflight; unit and real integration tests pass."
   },
   {
    "id": "IA-08",
@@ -124,14 +159,19 @@
     "ORB-020",
     "ORB-021"
    ],
-   "status": "pending",
+   "status": "fixed",
    "reviewEvidence": [
     "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
    ],
    "changedFiles": [],
-   "closureEvidence": [],
-   "verifiedAt": null,
-   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+   "closureEvidence": [
+    "docs/reviews/REWORK-CLOSURE-2026-09-18.md",
+    "docs/reviews/evidence/REWORK-20260918.json"
+   ],
+   "verifiedAt": "2026-09-18",
+   "nextAction": "",
+   "previousStatus": "pending",
+   "dispositionReason": "Reclassified partially completed OI items; authoritative Compose files, logging, backup gate and explicit native/cloud limitations."
   },
   {
    "id": "IA-09",
@@ -140,14 +180,19 @@
    "taskIds": [
     "ORB-020"
    ],
-   "status": "pending",
+   "status": "fixed",
    "reviewEvidence": [
     "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
    ],
    "changedFiles": [],
-   "closureEvidence": [],
-   "verifiedAt": null,
-   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+   "closureEvidence": [
+    "docs/reviews/REWORK-CLOSURE-2026-09-18.md",
+    "docs/reviews/evidence/REWORK-20260918.json"
+   ],
+   "verifiedAt": "2026-09-18",
+   "nextAction": "",
+   "previousStatus": "pending",
+   "dispositionReason": "14 full application checks have command, real exit code, timestamps, log hashes and stable before/after source identity."
   },
   {
    "id": "IA-10",
@@ -156,14 +201,38 @@
    "taskIds": [
     "ORB-021"
    ],
-   "status": "pending",
+   "status": "accepted_design",
    "reviewEvidence": [
     "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
    ],
    "changedFiles": [],
+   "closureEvidence": [
+    "docs/reviews/REWORK-CLOSURE-2026-09-18.md",
+    "docs/reviews/evidence/REWORK-20260918.json"
+   ],
+   "verifiedAt": "2026-09-18",
+   "nextAction": "",
+   "previousStatus": "pending",
+   "dispositionReason": "User narrowed scope for personal project: retain base, visible upstream risk, block fixable/confirmed-impact findings and scanner failure."
+  },
+  {
+   "id": "IA-11",
+   "priority": "P2",
+   "title": "Development database has two legacy migration checksum mismatches",
+   "taskIds": [
+    "ORB-021"
+   ],
+   "status": "blocked_external",
+   "reviewEvidence": [
+    "docs/reviews/REWORK-CLOSURE-2026-09-18.md"
+   ],
    "closureEvidence": [],
-   "verifiedAt": null,
-   "nextAction": "Implement and verify the correction and acceptance criteria specified for this ID in the independent acceptance report."
+   "verifiedAt": "2026-09-18",
+   "nextAction": "Recover original migration bytes or agree an evidence-backed historical reconciliation; do not overwrite applied checksums to make validation green.",
+   "changedFiles": [
+    "scripts/verify-migration-history.mjs"
+   ]
   }
- ]
+ ],
+ "closureReport": "docs/reviews/REWORK-CLOSURE-2026-09-18.md"
 }

@@ -4,12 +4,22 @@
 由 planning/current_status.py 从 backlog 生成；下方为历史交接记录。
 
 - 状态：V1_RELEASE_ACCEPTANCE_PENDING
-- 当前依据：[IMPROVEMENT-ACCEPTANCE-2026-09-18.md](docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md)
-- 说明：2026-09-18 独立验收需返工：基础检查、270 unit 与173 contract 独立通过；发现10项开放问题，包括临时配置副本残留、V1完成绕过、Linux容器烟测兼容性及契约验证盲区。保留已完成改动，不接受仓库内全部修复完成的声明；M6 review，V1未发布。
+- 当前依据：[REWORK-CLOSURE-2026-09-18.md](docs/reviews/REWORK-CLOSURE-2026-09-18.md)
+- 说明：2026-09-18 本地修复已提交：271 unit、172 contract、360 integration、87 E2E、13 UI 共903项通过，前后源码及数据库指纹一致。镜像按个人项目策略保留可见上游风险。旧临时副本、开发库历史校验和、历史数据及实机/云验收仍开放；M6 review，V1未发布。
 - 里程碑：M0 done；M1 done；M2 done；M3 done；M4 done；M5 done；M6 review；M7 todo
 - 历史数据恢复：missing_original_records_and_backup
 
 <!-- END CURRENT STATUS -->
+
+---
+
+# 2026-09-18 — 本地修复实现与完整验收
+
+- 实现已提交为 `9367d64`，包含此前未提交工作与本轮修正；495 个受测输入与提交内容一致。应用全量门禁 903 项通过、零重试，真实退出码和前后源码/数据库指纹均已核实。
+- 当前交付说明见 [本轮记录](docs/reviews/REWORK-CLOSURE-2026-09-18.md)，可入库证据见 [摘要](docs/reviews/evidence/REWORK-20260918.json)。镜像采用个人项目风险策略，保留未修复上游 CVE，不再要求换基座评比。
+- 已明确保留：66 份旧临时配置副本删除被自动审批拒绝；开发库两条旧迁移 checksum 不符；历史记录缺失；真实输入法/原生缩放及云验收。M6 review，V1 未发布。
+- 未清空数据库、未覆盖迁移历史、未删除历史用户。当前远端门禁以草稿 PR #1 对应提交的检查为准。
+
 
 ---
 

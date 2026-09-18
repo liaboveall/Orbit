@@ -24,8 +24,9 @@
 
 ## 后续开发与历史
 
+- [2026-09-18 本地修复与交付记录](reviews/REWORK-CLOSURE-2026-09-18.md) / [可复验的证据摘要](reviews/evidence/REWORK-20260918.json)（当前入口；历史及外部阻塞明确保留）
 - [2026-09-18 全面完善交付独立验收：需返工](reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md) / [开放验收问题](../planning/improvement-acceptance-2026-09-18.json)
-- [2026-09-18 审查复核与完善任务书](reviews/REVIEW-ANALYSIS-2026-09-18.md) / [配套 Agent 执行指令](../prompts/AGENT-IMPROVEMENT-2026-09-18.md)（材料已准备，优化尚未执行；记录历史集成验收证据矛盾）
+- [2026-09-18 审查复核与完善任务书](reviews/REVIEW-ANALYSIS-2026-09-18.md) / [配套 Agent 执行指令](../prompts/AGENT-IMPROVEMENT-2026-09-18.md)（历史任务资料，现以本轮交付记录为准）
 - [AI 助手规划（未实现）](09-AI-ASSISTANT-V1.1.md)
 - [Agent 工作约定](../AGENTS.md) / [交接流程](10-AGENT-HANDOFF.md)
 - [演示与作品集](13-DEMO-AND-PORTFOLIO.md)

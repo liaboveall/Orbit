@@ -4,6 +4,8 @@
 
 ## 镜像和发布
 
+本地开发/测试迁移历史可用 `node scripts/verify-migration-history.mjs` 只读核验；脚本同时比较迁移名称、校验和和两库的列/约束/索引/枚举摘要。当前开发库有两条旧历史记录不匹配，详见 [本轮交付](reviews/REWORK-CLOSURE-2026-09-18.md)；不要编辑已应用迁移或直接覆盖校验和。CI 使用独立空库，必须通过此检查。
+
 个人项目镜像策略以 [image-security-policy.json](../planning/image-security-policy.json) 为准：保留现有官方基础镜像，不要求零 CVE 或替代基座评比。runner/operations 均生成 Trivy JSON；扫描执行失败、无效报告、有修复版本的 HIGH/CRITICAL 和 `blockingIds` 中已确认应用影响的项会阻塞。其余上游无补丁项作为可见的接受风险保留，不能标为已修复。依赖/基础镜像更新及公网部署前重新评估。
 
 两种部署形态：`infra/compose.production.yml` 接外部 PostgreSQL；[compose.micro.yml](../infra/compose.micro.yml) 用于含 PostgreSQL 的单机部署。两者均有日志轮转；具体内存上限等待目标机器实测，避免无依据的配置。
