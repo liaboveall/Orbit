@@ -1,4 +1,4 @@
-"""Render only the current summary; retain the immutable human-written delivery history."""
+"""Render the concise current handoff from the backlog."""
 import argparse
 import json
 from pathlib import Path
@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 START, END = "<!-- BEGIN CURRENT STATUS -->", "<!-- END CURRENT STATUS -->"
 
 def render(backlog):
-    lines = [START, "# 当前交付状态", "", "由 planning/current_status.py 从 backlog 生成；下方为历史交接记录。", "",
+    lines = [START, "# 当前交付状态", "", "由 planning/current_status.py 从 backlog 生成；详细边界见当前状态文档。", "",
              f"- 状态：{backlog['applicationStatus']}",
              f"- 当前依据：[{Path(backlog['latestReview']['report']).name}]({backlog['latestReview']['report']})",
              f"- 说明：{backlog['latestReview']['summary']}",
@@ -35,7 +35,7 @@ def main():
         print("Current summary matches backlog.")
     else:
         path.write_text(updated, encoding="utf-8")
-        print("Current summary generated; historical entries preserved.")
+        print("Current summary generated.")
 
 if __name__ == "__main__":
     main()

@@ -65,25 +65,25 @@ def expect_rejection(root: Path, probe: str, expected_error: str) -> None:
 
 def probe_missing_taskids(base: Path) -> None:
     root = fresh_copy(base)
-    registry = load(root, "planning/comprehensive-audit-2026-09-13.json")
+    registry = load(root, "planning/open-items.json")
     registry["entries"][0].pop("taskIds", None)
-    save(root, "planning/comprehensive-audit-2026-09-13.json", registry)
+    save(root, "planning/open-items.json", registry)
     expect_rejection(root, "missing-taskIds", "lacks non-empty taskIds")
 
 
 def probe_empty_taskids(base: Path) -> None:
     root = fresh_copy(base)
-    registry = load(root, "planning/comprehensive-audit-2026-09-13.json")
+    registry = load(root, "planning/open-items.json")
     registry["entries"][0]["taskIds"] = []
-    save(root, "planning/comprehensive-audit-2026-09-13.json", registry)
+    save(root, "planning/open-items.json", registry)
     expect_rejection(root, "empty-taskIds", "lacks non-empty taskIds")
 
 
 def probe_unknown_task(base: Path) -> None:
     root = fresh_copy(base)
-    registry = load(root, "planning/comprehensive-audit-2026-09-13.json")
+    registry = load(root, "planning/open-items.json")
     registry["entries"][0]["taskIds"] = ["ORB-999"]
-    save(root, "planning/comprehensive-audit-2026-09-13.json", registry)
+    save(root, "planning/open-items.json", registry)
     expect_rejection(root, "unknown-task", "references unknown task")
 
 
@@ -91,17 +91,17 @@ def probe_open_entry_unreferenced(base: Path) -> None:
     root = fresh_copy(base)
     backlog = load(root, "planning/backlog.json")
     task = next(t for t in backlog["tasks"] if t["id"] == "ORB-020")
-    task["openAuditGroups"] = [group for group in task["openAuditGroups"] if group != "CR-2.2"]
+    task["openAuditGroups"] = [group for group in task["openAuditGroups"] if group != "CAPACITY"]
     save(root, "planning/backlog.json", backlog)
     expect_rejection(root, "open-entry-unreferenced", "Unresolved audit absent from task")
 
 
 def probe_one_sided_link(base: Path) -> None:
     root = fresh_copy(base)
-    registry = load(root, "planning/comprehensive-audit-2026-09-13.json")
-    entry = next(e for e in registry["entries"] if e["id"] == "CR-2.2")
+    registry = load(root, "planning/open-items.json")
+    entry = next(e for e in registry["entries"] if e["id"] == "CAPACITY")
     entry["taskIds"] = [task for task in entry["taskIds"] if task != "ORB-020"]
-    save(root, "planning/comprehensive-audit-2026-09-13.json", registry)
+    save(root, "planning/open-items.json", registry)
     expect_rejection(root, "one-sided-link", "does not reference back")
 
 
@@ -147,10 +147,13 @@ def probe_v1_complete_without_evidence(base: Path) -> None:
 
 def probe_open_subitem_masked(base: Path) -> None:
     root = fresh_copy(base)
-    registry = load(root, "planning/final-audit-2026-09-13.json")
-    entry = next(e for e in registry["entries"] if e["id"] == "F31")
-    entry["subitems"][0]["status"] = "deferred"
-    save(root, "planning/final-audit-2026-09-13.json", registry)
+    registry = load(root, "planning/open-items.json")
+    registry["entries"].append({
+        "id": "SYNTHETIC-CLOSED", "status": "fixed", "taskIds": ["ORB-020"],
+        "closureEvidence": ["Synthetic negative control"],
+        "subitems": [{"id": "SYNTHETIC-OPEN", "status": "deferred"}],
+    })
+    save(root, "planning/open-items.json", registry)
     expect_rejection(root, "open-subitem-masked", "Open subitem masked by closed parent")
 
 

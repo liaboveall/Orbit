@@ -69,7 +69,7 @@ test("SMTP 总预算关闭慢速连接，不影响同 env 并发发送和后续�
  *  - 修复后：greetingTimeout=10s（+ 总发送预算 20s 兜底）内 sendMail 失败返回，
  *    且失败日志（auth_email_failed）只含用途 kind，不含邮箱地址/token。
  *
- * 拒绝类故障（无 STARTTLS 拒绝 AUTH 等）由 review-20260912.test.ts 的生产配置用例覆盖；
+ * 拒绝类故障（无 STARTTLS 拒绝 AUTH 等）由 read-quota-and-smtp-security.test.ts 的生产配置用例覆盖；
  * 存在/不存在账户的中性反馈由 auth-flow.test.ts 的登录用例覆盖。
  */
 

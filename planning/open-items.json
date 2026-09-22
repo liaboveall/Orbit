@@ -1,0 +1,90 @@
+{
+ "scope": "Only currently open work; resolved historical entries live in Git history",
+ "entries": [
+  {
+   "id": "RELEASE-CI",
+   "title": "发布版本与镜像绑定",
+   "status": "blocked_external",
+   "taskIds": [
+    "ORB-021"
+   ],
+   "nextAction": "服务器配置完成后选定实际发布版本，核对该 SHA 的完整 CI 与 runner/operations 不可变镜像；日常分支检查以 PR 当前状态为准。",
+   "evidence": [
+    "docs/CURRENT-STATUS.md"
+   ]
+  },
+  {
+   "id": "UPSTREAM",
+   "title": "认证依赖的密码比较实现",
+   "status": "blocked_external",
+   "taskIds": [
+    "ORB-020"
+   ],
+   "nextAction": "锁定依赖内仍使用普通字符串比较；尚无远程可利用证据。跟踪上游修复并通过升级回归，不自行替换密码哈希。",
+   "evidence": [
+    "docs/CURRENT-STATUS.md"
+   ]
+  },
+  {
+   "id": "CAPACITY",
+   "title": "真实部署容量与数据库写入成本",
+   "status": "blocked_external",
+   "taskIds": [
+    "ORB-020"
+   ],
+   "nextAction": "服务器配置后，测量 1GiB 环境内存/OOM、连接池、认证与业务限流、混合附件流量和 p95，再确定资源预算。",
+   "evidence": [
+    "docs/CURRENT-STATUS.md"
+   ]
+  },
+  {
+   "id": "DEPLOYMENT",
+   "title": "服务器与备份恢复验收",
+   "status": "blocked_external",
+   "taskIds": [
+    "ORB-021"
+   ],
+   "nextAction": "用户暂缓：待服务器就绪验证 HTTPS 双账户、邮件/私有存储、告警、定时维护、异地备份恢复与 RPO/RTO。",
+   "evidence": [
+    "docs/CURRENT-STATUS.md"
+   ]
+  },
+  {
+   "id": "MIGRATION-HISTORY",
+   "title": "开发库历史迁移记录不一致",
+   "status": "blocked_external",
+   "taskIds": [
+    "ORB-020",
+    "ORB-021"
+   ],
+   "nextAction": "两条旧 checksum 不符，测试库正常且两库结构一致；需原始迁移字节或经证据支持的调和方案。不得覆盖历史校验和。",
+   "evidence": [
+    "docs/CURRENT-STATUS.md"
+   ]
+  },
+  {
+   "id": "DATA-RECOVERY",
+   "title": "历史数据恢复资料缺失",
+   "status": "blocked_external",
+   "taskIds": [
+    "ORB-020"
+   ],
+   "nextAction": "缺少原始记录和备份；当前测试隔离通过不代表过去的数据已恢复。",
+   "evidence": [
+    "docs/CURRENT-STATUS.md"
+   ]
+  },
+  {
+   "id": "NATIVE-DEVICE",
+   "title": "实机输入法与辅助技术验证",
+   "status": "blocked_external",
+   "taskIds": [
+    "ORB-020"
+   ],
+   "nextAction": "自动化浏览器已覆盖核心流程；仍需真实输入法、原生 200% 缩放及辅助技术走查。",
+   "evidence": [
+    "docs/CURRENT-STATUS.md"
+   ]
+  }
+ ]
+}

@@ -3,8 +3,6 @@ from __future__ import annotations
 
 import json
 import re
-import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -259,14 +257,6 @@ def run_validation(root: Path) -> dict:
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
     outcome = run_validation(root)
-    state = outcome["result"]
-    report = ["# 规划静态校验结果", "", f"- Result: {state}", f"- Run at: {datetime.now(timezone.utc).isoformat()}", "- Scope: planning files only. Application code, business behavior, deployment and runtime tests are NOT verified.", ""]
-    report += ["## Checks", ""] + [f"- {line}" for line in outcome["checks"]]
-    report += ["", "## Limits", "", "Checks cover local link targets, JSON syntax, selected OpenAPI structure, local refs, backlog consistency and audit registry linkage. They do not prove all OpenAPI semantic rules, external URLs, browser rendering or the feasibility of every implementation detail."]
-    if outcome["errors"]:
-        report += ["", "## Errors", ""] + [f"- {error}" for error in outcome["errors"]]
-    if "--check" not in sys.argv:
-        (root / "planning/VALIDATION.md").write_text("\n".join(report) + "\n", encoding="utf-8")
     print(json.dumps({key: outcome[key] for key in ("result", "markdownFiles", "localLinks", "operations", "tasks", "auditEntries", "errors")}, ensure_ascii=True, indent=2))
     raise SystemExit(1 if outcome["errors"] else 0)
 

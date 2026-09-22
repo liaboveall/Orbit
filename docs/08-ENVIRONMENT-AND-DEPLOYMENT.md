@@ -80,12 +80,11 @@ pnpm dev
    3100 端口的独立测试服务，构建模式不改变数据库隔离。两套测试结束后均核对开发库和测试库
    所有 public 表的内容指纹，残留、误删或其他内容变化均使命令失败。
 
-历史维护脚本：`cleanup-migration.ts` 已停用，不能重放删除迁移历史或 DROP 操作。
+迁移异常先只读核对状态，不删除迁移历史或重放一次性 DROP 操作。
 `cleanup-invitation-tokens.ts` 默认仅输出候选数量和目标指纹；执行变更需显式设置 APP_ENV，并传
 `--execute --target=<本次预览指纹>`。指纹绑定环境、数据库主机/端口/库名/参数和脚本范围；旧 `--apply --database` 参数会被拒绝。更新在事务内完成，失败返回非零状态且不输出
 驱动错误原文。它识别旧参数化路径及当前真实项目路径，不输出令牌值。
 
-`cleanup-invitation-constraints.ts` 只读检查邀请约束，同样校验环境/目标，只输出异常数量，不输出行 ID、令牌或令牌哈希；不接受执行模式。
 
 ## 3. 环境变量
 
@@ -152,15 +151,11 @@ pnpm dev
 
 报告位置 artifacts/release/：提交/镜像/迁移版本、CI链接、部署时间与环境、实际冒烟、性能测量、恢复演练、已知限制。不要填预期分数或虚构在线人数。
 
-### M5 附件与迁移运维验收（2026-09-11）
+### 附件维护与迁移运行约定
 
 `pnpm cleanup:attachments` 显式加载 .env.local/.env，通过 react-server 条件运行 server-only 业务模块；一次最多 100 条，打印 cleanedCount、failedCount、releasedBytes，不输出对象 key。错误返回非零退出码。UPLOADING 超过一小时释放预留；FAILED/DELETED 等待至少 3 分钟后物理删除，防止与取消中的 PUT 竞争。幂等重跑不会重复扣额度。真实定时调度仍属 M6，当前未配置。
 
-「11 个迁移」为 M5 时期的历史口径（见下条历史记录）；当前迁移数量以 prisma/migrations 目录为准（2026-09-13 审查修复时为 15 个），均可从空库部署；uploadId 是 UUID，Attachment 的 task 关系是复合外键。中断遗留迁移会话可能持有 advisory lock；先核验持锁连接是否空闲、无事务及其来源，再处理旧迁移等待者与持锁者，不关闭迁移锁机制、不删除迁移历史。Windows 的 EACCES 端口错误可通过设置已确认可绑定的 E2E_PORT 避开；本轮使用 43127。
-
-### 全项目审查修复后的运行约定（2026-09-11）
-
-上述「11 迁移」为 M5 历史验收；后续新增事件时间 timestamptz 转换、已删除评论缓存清理（共 13 个）与 2026-09-13 审查修复新增的 IdempotencyRecord.resourceId 索引（共 15 个）。历史数字不再随每次迁移更新，当前数量以目录为准。先核对旧 TIMESTAMP 的 UTC 语义，再执行增量部署；详情见 [本轮迁移与验收记录](reviews/REVIEW-FIXES-2026-09-11.md)。应用连接固定 UTC，以满足当前 adapter-pg 7.10.0 的时间解析约定，date-only 截止日不变。
+迁移链以 prisma/migrations 为准；已应用 SQL 保持不可变。遇迁移锁等待先核验持锁连接、事务和来源，不关闭锁或删除历史。应用连接固定 UTC，date-only 截止日不变。
 
 认证与业务端点统一按 `TRUSTED_PROXY_COUNT` 选择转发链中的来源；development/test 默认 0 忽略客户端提供的转发头并使用共享桶。staging/production 必须显式设置 ≥1，否则启动失败。大于 0 仅适用于受控代理正确追加/清洗头且源站禁止直接访问的部署。
 

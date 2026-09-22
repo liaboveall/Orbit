@@ -243,7 +243,7 @@ function SidebarNav({
         </ul>
 
         {/* 项目列表入口（M2 Phase 6：导航到真实数据页 /app/projects）。
-            门禁约束：必须保持 <button type="button"> + aria-label（tests/ui/m0-review.spec.ts
+            门禁约束：必须保持 <button type="button"> + aria-label（tests/ui/accessibility-and-layout.spec.ts
             用 getByRole("button") 断言），且绝不能移入上方 <ul>（ul 仅包含当前用户的最近项目）。 */}
         <Tooltip content="全部项目" side="right">
           <button

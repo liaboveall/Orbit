@@ -1,0 +1,99 @@
+{
+ "scope": "Complete local verification after repository cleanup; server acceptance deferred",
+ "completedAt": "2026-09-22T00:19:29.072Z",
+ "baselineCommit": "c20926b9b87d5b734c87f0fd297cd06e230f2398",
+ "workingTreeSourceDigest": "1db6f3111f8b9da69b91cab3125a1ba4b9aa32d1278a3c5f172a188563c6efd4",
+ "sourceUnchangedDuringRun": true,
+ "counts": {
+  "unit": 279,
+  "contract": 172,
+  "integration": 367,
+  "e2e": 94,
+  "ui": 13
+ },
+ "total": 925,
+ "zeroBrowserRetries": true,
+ "databaseFingerprintsUnchanged": true,
+ "checks": [
+  {
+   "name": "planning",
+   "exitCode": 0,
+   "logSha256": "e00ebad08b94aa5aeffc469cb6caac6b4863c3a689463fa772c7487d3eb0276d"
+  },
+  {
+   "name": "probes",
+   "exitCode": 0,
+   "logSha256": "ed6f72f3d8c16010f2f98a99a69cef8211ecbb507e6f2b7d9b25c4bb8b47dadd"
+  },
+  {
+   "name": "status",
+   "exitCode": 0,
+   "logSha256": "8ae12a49c13891923ab9f1959a5f9ea0f94f5a78a3dd02f5c9f347e67d9f01c7"
+  },
+  {
+   "name": "image-policy",
+   "exitCode": 0,
+   "logSha256": "8908b4c8f00a12789c35ada6957d0c7238b79095587b206404fe3baded7a724d"
+  },
+  {
+   "name": "lint",
+   "exitCode": 0,
+   "logSha256": "7806d2bb6445e87bbee850038349a66497dc9f76d097e3b3e750a1333bdc03f5"
+  },
+  {
+   "name": "typecheck",
+   "exitCode": 0,
+   "logSha256": "221cfae6457174923eaacde4d69c2aa461b50edae896bcfaa160ca2eb7376868"
+  },
+  {
+   "name": "scripts",
+   "exitCode": 0,
+   "logSha256": "bc7d9dc87d7dd29399bbde0d73d2c22503bc3e7493266af4a86eb5bd812c7a29"
+  },
+  {
+   "name": "unit",
+   "exitCode": 0,
+   "logSha256": "4973d67801dc70f8291167b9efee6577fcc37fd336681715385bbec26313b33b"
+  },
+  {
+   "name": "contract",
+   "exitCode": 0,
+   "logSha256": "ec58b76db0898edbabfbdade8929555de27d776f3185f450040374c407c7fb7b"
+  },
+  {
+   "name": "integration",
+   "exitCode": 0,
+   "logSha256": "beb884aaf20cf1ffe8f9fdb8ee8b9fdfe841db02a4f263d5b3bfff02b4660665"
+  },
+  {
+   "name": "e2e",
+   "exitCode": 0,
+   "logSha256": "a63cdc741bd3a8a57738657448d30f4b03ab278ec5e1ed9352db75865e3e4097"
+  },
+  {
+   "name": "bundles",
+   "exitCode": 0,
+   "logSha256": "2acd0ca629d921c34bb3c816b530ed932f204ca0033703c01c25c2faf0458d96"
+  },
+  {
+   "name": "ui",
+   "exitCode": 0,
+   "logSha256": "a3a0cff7a315a66900a6a02390fcf17be0e23d86e41581fc0f99db17fdd0ab72"
+  },
+  {
+   "name": "audit",
+   "exitCode": 0,
+   "logSha256": "843404eec3f1458beb6566e468ce321a9a44c3891b4e38ad43c6b3906de93428"
+  }
+ ],
+ "cleanup": {
+  "obsoleteFilesRemoved": 42,
+  "testFilesRenamed": 10,
+  "homepageSuiteMergedWithoutDroppingAssertions": true,
+  "appliedMigrationSqlFilesPreservedUnchanged": 16,
+  "localIgnoredOutputDeletion": "Blocked by automatic approval: blocked by policy; no deletion executed"
+ },
+ "postSnapshotChanges": "Current documentation/verification metadata, unused Python import and docstring cleanup only; governance checks rerun before commit",
+ "serverAcceptance": "deferred_by_user",
+ "remoteCi": "See the current commit checks on https://github.com/liaboveall/Orbit/pull/1"
+}
