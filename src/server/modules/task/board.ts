@@ -49,7 +49,7 @@ export async function getBoard(
         ? [query.status]
         : ["TODO", "IN_PROGRESS", "DONE"];
       const limit = Math.min(query.limit ?? 50, 100);
-      const columns = await Promise.all(
+      const pages = await Promise.all(
         statuses.map(async (status) => {
           const fingerprint = computeFilterFingerprint({
             projectId: project.id,
@@ -128,17 +128,11 @@ export async function getBoard(
             select: TASK_SUMMARY_SELECT_FOR_BOARD,
           });
           const page = rows.slice(0, limit);
-          const batchCounts=await fetchTaskResourceCountsBatch(tx,page.map(task=>task.id));
           const last = page.at(-1);
           return {
             status,
             total,
-            items: await Promise.all(
-              page.map(async (task) => {
-                const counts = batchCounts.get(task.id)!;
-                return toTaskSummaryDTO(task, { projectKey: project.key }, counts);
-              })
-            ),
+            page,
             nextCursor:
               rows.length > limit && last
                 ? encodeCursor(
@@ -150,6 +144,12 @@ export async function getBoard(
           };
         }),
       );
+      // All three columns share a snapshot and one batch of resource aggregates.
+      const counts = await fetchTaskResourceCountsBatch(tx, pages.flatMap(column => column.page.map(task => task.id)));
+      const columns = await Promise.all(pages.map(async ({ page, ...column }) => ({
+        ...column,
+        items: await Promise.all(page.map(task => toTaskSummaryDTO(task, { projectKey: project.key }, counts.get(task.id)!))),
+      })));
       return BoardSchema.parse({ boardVersion: project.boardVersion, columns });
     },
     { isolationLevel: "RepeatableRead", timeout: 10000, maxWait: 2000 },

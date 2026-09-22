@@ -74,10 +74,10 @@ describe("parseEnv · 合法输入", () => {
     expect(() => parseEnv(raw)).not.toThrow();
   });
 
-  it("D1：production 且 TRUSTED_PROXY_COUNT=0 被拒绝（限流塌缩为全局单桶的误配）", () => {
+  it.each(["staging", "production"])("%s 拒绝零受信任代理，防止认证限流共用桶", (appEnv) => {
     const raw = {
       ...validEnv(),
-      APP_ENV: "production",
+      APP_ENV: appEnv,
       APP_URL: "https://orbit.example",
       BETTER_AUTH_URL: "https://orbit.example",
       STORAGE_ENDPOINT: "https://storage.example",
@@ -89,12 +89,12 @@ describe("parseEnv · 合法输入", () => {
     expect(expected).toContain("production 环境必须 ≥ 1");
   });
 
-  it("D1：production 且 TRUSTED_PROXY_COUNT=1 通过；development 默认 0 仍通过", () => {
+  it.each(["staging", "production"])("%s 接受可信代理；development 仍可直连", (appEnv) => {
     expect(
       () =>
         parseEnv({
           ...validEnv(),
-          APP_ENV: "production",
+          APP_ENV: appEnv,
           APP_URL: "https://orbit.example",
           BETTER_AUTH_URL: "https://orbit.example",
           STORAGE_ENDPOINT: "https://storage.example",

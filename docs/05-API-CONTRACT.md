@@ -38,7 +38,9 @@
 | 500 | INTERNAL_ERROR | 服务器内部错误 |
 | 503 | STORAGE_UNAVAILABLE / SERVICE_UNAVAILABLE | 服务暂时不可用 |
 
-错误 message 给普通用户看；代码供程序分支判断。违反方法/内容类型等框架级错误可在入口转换。不能用 200 携带 error 假装成功。
+错误 message 给普通用户看；代码供程序分支判断。查询校验使用统一中文消息与字段错误。违反方法/内容类型等框架级错误可在入口转换。不能用 200 携带 error 假装成功。
+
+附件传输受进程容量保护：总上传 4 条、总下载 8 条、每用户下载 2 条，超限返回 429/Retry-After；上传临时空间不足返回 503/STORAGE_UNAVAILABLE。与既有每用户上传 2 条、10 次/分钟限制同时生效；详情见环境文档。
 
 ## 4. 权限入口与子资源
 
@@ -147,4 +149,4 @@ PROJECT_CREATED、PROJECT_UPDATED、PROJECT_ARCHIVED、PROJECT_RESTORED、MEMBER
 
 ### 综合审查传输补充（2026-09-13）
 
-评论/子任务 DELETE 的 expectedVersion 只允许单个正十进制安全整数；缺失、重复、指数/十六进制和越界输入返回400中文校验信封。附件 content HEAD 返回405并保留合法上游 requestId。通用客户端在 DELETE 显式传 z.void()/z.undefined() 时接受204；对象 Schema 仍拒绝意外204，200删除响应保持原契约。代理拒绝返回429 + RATE_LIMITED信封、Retry-After:1；应用限流仍使用自身精确恢复时间。
+任务/评论/子任务 DELETE 的 expectedVersion 只允许单个正十进制安全整数；缺失、重复、指数/十六进制和越界输入返回400中文校验信封。附件 content HEAD 返回405并保留合法上游 requestId。通用客户端在 DELETE 显式传 z.void()/z.undefined() 时接受204；对象 Schema 仍拒绝意外204，200删除响应保持原契约。代理拒绝返回429 + RATE_LIMITED信封、Retry-After:1；应用限流仍使用自身精确恢复时间。

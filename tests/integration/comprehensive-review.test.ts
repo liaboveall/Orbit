@@ -46,6 +46,7 @@ it("1000-task sorting under ten concurrent readers is measured against the uncha
       }));
     }
     samples.sort((a, b) => a - b);
+    expect(samples[28], `${sort} p95 must meet the 300ms read budget`).toBeLessThanOrEqual(300);
     measurements.push({ sort, count: samples.length, p50Ms: samples[14], p95Ms: samples[28], maxMs: samples.at(-1), errors: 0 });
   }
   const due = await prisma.$queryRaw`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) SELECT id, "dueDate" FROM "Task" WHERE "projectId" = ${f.projectId}::uuid AND "deletedAt" IS NULL ORDER BY "dueDate" ASC NULLS LAST, id ASC LIMIT 31`;

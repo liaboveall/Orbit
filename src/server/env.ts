@@ -62,7 +62,7 @@ const EXPECTED_FORMAT: Record<string, string> = {
   AI_MODEL: "AI_ENABLED=true 时必须提供 model",
   AI_API_KEY: "AI_ENABLED=true 时必须提供 API key（仅服务端）",
   AI_DAILY_REQUEST_LIMIT: "必须是 ≥ 1 的整数",
-  TRUSTED_PROXY_COUNT: "必须是 0–10 的整数（受信任反向代理跳数）；production 环境必须 ≥ 1",
+  TRUSTED_PROXY_COUNT: "必须是 0–10 的整数（受信任反向代理跳数）；staging/production 环境必须 ≥ 1",
 };
 
 /** 布尔型环境变量解析：显式接受 true/false/1/0，避免 Boolean("false") === true 陷阱。 */
@@ -182,7 +182,7 @@ export const envSchema = z
     // infra/nginx.conf），0 会使按 IP 限流塌缩为全局单桶（匿名登录/邀请接口全体共享，
     // 一个攻击者即可锁死所有人）。生产环境要求显式配置 ≥ 1，误配在启动期失败
     // （可观测警报），不允许默默退化。
-    if (value.APP_ENV === "production" && value.TRUSTED_PROXY_COUNT < 1) {
+    if (["staging", "production"].includes(value.APP_ENV) && value.TRUSTED_PROXY_COUNT < 1) {
       ctx.addIssue({ code: "custom", path: ["TRUSTED_PROXY_COUNT"] });
     }
 

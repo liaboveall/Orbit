@@ -11,19 +11,21 @@
     "ORB-020",
     "ORB-021"
    ],
-   "status": "blocked_external",
+   "status": "fixed",
    "reviewEvidence": [
     "docs/reviews/IMPROVEMENT-ACCEPTANCE-2026-09-18.md"
    ],
    "changedFiles": [],
    "closureEvidence": [
     "docs/reviews/REWORK-CLOSURE-2026-09-18.md",
-    "docs/reviews/evidence/REWORK-20260918.json"
+    "docs/reviews/evidence/REWORK-20260918.json",
+    "docs/reviews/REMEDIATION-CLOSURE-2026-09-22.md",
+    "docs/reviews/evidence/REMEDIATION-20260922.json"
    ],
-   "verifiedAt": "2026-09-18",
-   "nextAction": "Resolve blocked legacy-copy cleanup without bypassing automatic approval.",
-   "previousStatus": "pending",
-   "dispositionReason": "Source-copy prevention verified; 66 legacy copies remain because automatic approval rejected deletion."
+   "verifiedAt": "2026-09-22",
+   "nextAction": "",
+   "previousStatus": "blocked_external",
+   "dispositionReason": "Prevention regression passes; all 66 known files now explicitly absent while directories remain. Cleanup actor unknown. Our narrow deletion was rejected by automatic approval; no bypass or deletion performed."
   },
   {
    "id": "IA-02",

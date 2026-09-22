@@ -93,7 +93,7 @@ function TaskCreateFormContent({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<TaskStatus>("TODO");
-  const [priority, setPriority] = useState<TaskPriority>("NONE");
+  const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   /** date input 的值（YYYY-MM-DD 或空 = 无截止日）。 */
   const [dueDate, setDueDate] = useState("");
   const [pending, setPending] = useState(false);
@@ -114,7 +114,7 @@ function TaskCreateFormContent({
     trimmedTitle.length > 0 ||
       trimmedDescription.length > 0 ||
       status !== "TODO" ||
-      priority !== "NONE" ||
+      priority !== "MEDIUM" ||
       dueDate.length > 0,
     pending,
   );
@@ -175,7 +175,7 @@ function TaskCreateFormContent({
         return;
       }
       if (result.status === 422 && result.error.code === "LIMIT_EXCEEDED") {
-        setFormError(`未删除任务已达上限（${OPEN_TASK_LIMIT} 个），请先清理回收站。`);
+        setFormError(`未删除任务已达上限（${OPEN_TASK_LIMIT} 个），请删除不再需要的任务，或联系项目所有者处理。`);
         return;
       }
       // 其余业务错误：400 fieldErrors 映射到字段 + 信封 message 驻留展示。

@@ -39,6 +39,8 @@ import { TaskCreateForm } from "@/features/tasks/real/task-create-form";
 import { STATUS_LABEL, getDueMeta } from "@/features/tasks/task-meta";
 import { DueBadge, PriorityBadge } from "@/features/tasks/priority-badge";
 import { useAutoRefresh } from "@/features/tasks/real/use-auto-refresh";
+import { confirmLeave } from "@/features/tasks/unsaved-changes";
+import { TaskResourceCounts } from "./task-resource-counts";
 
 const api = createApiClient();
 const mobileQuery = "(max-width: 767px)";
@@ -307,7 +309,7 @@ export function RealBoard({
           </p>
         </div>
         {writable && (
-          <Button onClick={() => setCreating(!creating)}>新建任务</Button>
+          <Button onClick={() => { if (!creating || confirmLeave()) setCreating(!creating); }}>新建任务</Button>
         )}
       </header>
       {creating && writable && (
@@ -590,6 +592,7 @@ function Card({
           {task.assignee?.name ?? "未分配"}
         </span>
       </div>
+      <TaskResourceCounts task={task} />
       <select
         aria-label={`移动 ${task.identifier}`}
         className="w-full rounded-control border border-line bg-surface px-2 py-1.5 text-body md:text-caption"

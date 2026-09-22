@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, ListTodo, MessageSquare, MoreHorizontal, Paperclip } from "lucide-react";
+import { Check, MoreHorizontal } from "lucide-react";
+import { TaskResourceCounts } from "./task-resource-counts";
 import type { TaskStatus, TaskSummaryDTO } from "@/contracts";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
@@ -103,19 +104,7 @@ export function SampleTaskCard({
       </button>
 
       {/* 第三行：子任务 / 评论 / 附件计数（图标 + 数字） */}
-      {task.subtaskTotal > 0 || task.commentCount > 0 || task.attachmentCount > 0 ? (
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-caption text-foreground-muted">
-          {task.subtaskTotal > 0 ? (
-            <Count icon={<ListTodo className="h-3.5 w-3.5" />} text={`子任务 ${task.subtaskCompleted}/${task.subtaskTotal}`} />
-          ) : null}
-          {task.commentCount > 0 ? (
-            <Count icon={<MessageSquare className="h-3.5 w-3.5" />} text={`评论 ${task.commentCount}`} />
-          ) : null}
-          {task.attachmentCount > 0 ? (
-            <Count icon={<Paperclip className="h-3.5 w-3.5" />} text={`附件 ${task.attachmentCount}`} />
-          ) : null}
-        </div>
-      ) : null}
+      <TaskResourceCounts task={task} />
 
       {/* 第四行：截止日 + 负责人 */}
       <div className="mt-2.5 flex items-center justify-between gap-2">
@@ -132,14 +121,5 @@ export function SampleTaskCard({
         )}
       </div>
     </article>
-  );
-}
-
-function Count({ icon, text }: { icon: React.ReactNode; text: string }) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      <span aria-hidden="true">{icon}</span>
-      {text}
-    </span>
   );
 }

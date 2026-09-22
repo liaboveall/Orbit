@@ -473,7 +473,7 @@ describe("成员自我退出", () => {
     });
     expect(activity?.action).toBe("MEMBER_LEFT");
     expect(activity?.entityType).toBe("MEMBER");
-    expect(activity?.metadata as Record<string, unknown>).toMatchObject({}); // No count for self-exit
+    expect(activity?.metadata as Record<string, unknown>).toMatchObject({ targetUserId: userBId, count: 1 });
   });
 });
 

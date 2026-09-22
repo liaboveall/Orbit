@@ -1,0 +1,264 @@
+{
+ "date": "2026-09-21",
+ "report": "docs/reviews/COMPREHENSIVE-REVIEW-2026-09-21.md",
+ "scope": "Eight confirmed findings implemented and locally verified; server acceptance deferred by user",
+ "entries": [
+  {
+   "id": "AR-01",
+   "priority": "P2",
+   "title": "看板顶部收起绕过创建草稿确认",
+   "taskIds": [
+    "ORB-020"
+   ],
+   "status": "fixed",
+   "verifiedAt": "2026-09-22",
+   "evidenceLevel": "browser_component",
+   "code": {
+    "path": "src/features/board/real-board.tsx",
+    "line": 310
+   },
+   "reviewEvidence": [
+    "docs/reviews/COMPREHENSIVE-REVIEW-2026-09-21.md",
+    "docs/reviews/evidence/AUDIT-20260921.json"
+   ],
+   "changedFiles": [
+    "src/features/board/real-board.tsx",
+    "tests/e2e/audit-september.spec.ts"
+   ],
+   "closureEvidence": [
+    "docs/reviews/REMEDIATION-CLOSURE-2026-09-22.md",
+    "docs/reviews/evidence/REMEDIATION-20260922.json"
+   ],
+   "acceptance": "拒绝收起保留所有字段；确认丢弃只询问一次；成功保存不误弹窗。",
+   "nextAction": "",
+   "previousStatus": "pending",
+   "verificationRunFinishedAt": "2026-09-21T15:43:26.832Z"
+  },
+  {
+   "id": "AR-02",
+   "priority": "P2",
+   "title": "UI 创建任务默认 NONE 与产品 MEDIUM 不一致",
+   "taskIds": [
+    "ORB-020"
+   ],
+   "status": "fixed",
+   "verifiedAt": "2026-09-22",
+   "evidenceLevel": "browser_component",
+   "code": {
+    "path": "src/features/tasks/real/task-create-form.tsx",
+    "line": 96
+   },
+   "reviewEvidence": [
+    "docs/reviews/COMPREHENSIVE-REVIEW-2026-09-21.md",
+    "docs/reviews/evidence/AUDIT-20260921.json"
+   ],
+   "changedFiles": [
+    "src/features/tasks/real/task-create-form.tsx",
+    "tests/e2e/audit-september.spec.ts"
+   ],
+   "closureEvidence": [
+    "docs/reviews/REMEDIATION-CLOSURE-2026-09-22.md",
+    "docs/reviews/evidence/REMEDIATION-20260922.json"
+   ],
+   "acceptance": "仅填标题创建后为 MEDIUM；初始表单不 dirty；显式 NONE 可保存。",
+   "nextAction": "",
+   "previousStatus": "pending",
+   "verificationRunFinishedAt": "2026-09-21T15:43:26.832Z"
+  },
+  {
+   "id": "AR-03",
+   "priority": "P2",
+   "title": "非筛选 task URL 参数重置未应用的搜索输入",
+   "taskIds": [
+    "ORB-020"
+   ],
+   "status": "fixed",
+   "verifiedAt": "2026-09-22",
+   "evidenceLevel": "browser_component",
+   "code": {
+    "path": "src/features/tasks/real/task-filters.tsx",
+    "line": 44
+   },
+   "reviewEvidence": [
+    "docs/reviews/COMPREHENSIVE-REVIEW-2026-09-21.md",
+    "docs/reviews/evidence/AUDIT-20260921.json"
+   ],
+   "changedFiles": [
+    "src/features/tasks/real/task-filters.tsx",
+    "tests/e2e/audit-september.spec.ts"
+   ],
+   "closureEvidence": [
+    "docs/reviews/REMEDIATION-CLOSURE-2026-09-22.md",
+    "docs/reviews/evidence/REMEDIATION-20260922.json"
+   ],
+   "acceptance": "开关详情保留待应用输入；真实应用或重置筛选、切项目按规格更新。",
+   "nextAction": "",
+   "previousStatus": "pending",
+   "verificationRunFinishedAt": "2026-09-21T15:43:26.832Z"
+  },
+  {
+   "id": "AR-04",
+   "priority": "P3",
+   "title": "任务上限错误引导清理不影响额度的回收站",
+   "taskIds": [
+    "ORB-020"
+   ],
+   "status": "fixed",
+   "verifiedAt": "2026-09-22",
+   "evidenceLevel": "browser_component",
+   "code": {
+    "path": "src/features/tasks/real/task-create-form.tsx",
+    "line": 178
+   },
+   "reviewEvidence": [
+    "docs/reviews/COMPREHENSIVE-REVIEW-2026-09-21.md",
+    "docs/reviews/evidence/AUDIT-20260921.json"
+   ],
+   "changedFiles": [
+    "src/features/tasks/real/task-create-form.tsx",
+    "tests/e2e/audit-september.spec.ts"
+   ],
+   "closureEvidence": [
+    "docs/reviews/REMEDIATION-CLOSURE-2026-09-22.md",
+    "docs/reviews/evidence/REMEDIATION-20260922.json"
+   ],
+   "acceptance": "错误引导实际可执行的软删除或联系有权限者；不得声称完成任务释放额度。",
+   "nextAction": "",
+   "previousStatus": "pending",
+   "verificationRunFinishedAt": "2026-09-21T15:43:26.832Z"
+  },
+  {
+   "id": "AR-05",
+   "priority": "P2",
+   "title": "staging 接受零受信任代理并导致共享认证限流桶",
+   "taskIds": [
+    "ORB-020",
+    "ORB-021"
+   ],
+   "status": "fixed",
+   "verifiedAt": "2026-09-22",
+   "evidenceLevel": "synthetic_configuration",
+   "code": {
+    "path": "src/server/env.ts",
+    "line": 185
+   },
+   "reviewEvidence": [
+    "docs/reviews/COMPREHENSIVE-REVIEW-2026-09-21.md",
+    "docs/reviews/evidence/AUDIT-20260921.json"
+   ],
+   "changedFiles": [
+    "src/server/env.ts",
+    ".env.example",
+    "tests/unit/env.test.ts",
+    "docs/08-ENVIRONMENT-AND-DEPLOYMENT.md"
+   ],
+   "closureEvidence": [
+    "docs/reviews/REMEDIATION-CLOSURE-2026-09-22.md",
+    "docs/reviews/evidence/REMEDIATION-20260922.json"
+   ],
+   "acceptance": "公网 staging 错配启动失败；可信代理不同客户端分桶；伪造客户端头不能绕限流。",
+   "nextAction": "",
+   "previousStatus": "pending",
+   "verificationRunFinishedAt": "2026-09-21T15:43:26.832Z"
+  },
+  {
+   "id": "AR-06",
+   "priority": "P2",
+   "title": "退出登录请求先于未保存草稿确认",
+   "taskIds": [
+    "ORB-020"
+   ],
+   "status": "fixed",
+   "verifiedAt": "2026-09-22",
+   "evidenceLevel": "browser_component",
+   "code": {
+    "path": "src/features/shell/user-menu.tsx",
+    "line": 63
+   },
+   "reviewEvidence": [
+    "docs/reviews/COMPREHENSIVE-REVIEW-2026-09-21.md",
+    "docs/reviews/evidence/AUDIT-20260921.json"
+   ],
+   "changedFiles": [
+    "src/features/shell/user-menu.tsx",
+    "src/features/auth/use-auth.ts",
+    "src/features/tasks/unsaved-changes.tsx",
+    "tests/e2e/audit-september.spec.ts"
+   ],
+   "closureEvidence": [
+    "docs/reviews/REMEDIATION-CLOSURE-2026-09-22.md",
+    "docs/reviews/evidence/REMEDIATION-20260922.json"
+   ],
+   "acceptance": "取消离开时不发送 sign-out；确认后请求一次且只确认一次；失败保留草稿。",
+   "nextAction": "",
+   "previousStatus": "pending",
+   "verificationRunFinishedAt": "2026-09-21T15:43:26.832Z"
+  },
+  {
+   "id": "AR-07",
+   "priority": "P3",
+   "title": "成员主动退出事件省略批量解除分配 count",
+   "taskIds": [
+    "ORB-020"
+   ],
+   "status": "fixed",
+   "verifiedAt": "2026-09-22",
+   "evidenceLevel": "source_specification",
+   "code": {
+    "path": "src/server/services/member.service.ts",
+    "line": 194
+   },
+   "reviewEvidence": [
+    "docs/reviews/COMPREHENSIVE-REVIEW-2026-09-21.md",
+    "docs/reviews/evidence/AUDIT-20260921.json"
+   ],
+   "changedFiles": [
+    "src/server/services/member.service.ts",
+    "tests/integration/members.test.ts",
+    "tests/integration/audit-september.test.ts"
+   ],
+   "closureEvidence": [
+    "docs/reviews/REMEDIATION-CLOSURE-2026-09-22.md",
+    "docs/reviews/evidence/REMEDIATION-20260922.json"
+   ],
+   "acceptance": "主动退出与移除在零/多任务情况下均记录准确 count，版本与事件数量符合规格。",
+   "nextAction": "",
+   "previousStatus": "pending",
+   "verificationRunFinishedAt": "2026-09-21T15:43:26.832Z"
+  },
+  {
+   "id": "AR-08",
+   "priority": "P2",
+   "title": "真实看板卡片缺少子任务进度评论和附件计数",
+   "taskIds": [
+    "ORB-020"
+   ],
+   "status": "fixed",
+   "verifiedAt": "2026-09-22",
+   "evidenceLevel": "browser_component",
+   "code": {
+    "path": "src/features/board/real-board.tsx",
+    "line": 517
+   },
+   "reviewEvidence": [
+    "docs/reviews/COMPREHENSIVE-REVIEW-2026-09-21.md",
+    "docs/reviews/evidence/AUDIT-20260921.json"
+   ],
+   "changedFiles": [
+    "src/features/board/task-resource-counts.tsx",
+    "src/features/board/real-board.tsx",
+    "src/features/board/task-card.tsx",
+    "tests/e2e/audit-september.spec.ts"
+   ],
+   "closureEvidence": [
+    "docs/reviews/REMEDIATION-CLOSURE-2026-09-22.md",
+    "docs/reviews/evidence/REMEDIATION-20260922.json"
+   ],
+   "acceptance": "真实卡片显示非零计数，零值和窄屏符合设计；子资源变化刷新正确。",
+   "nextAction": "",
+   "previousStatus": "pending",
+   "verificationRunFinishedAt": "2026-09-21T15:43:26.832Z"
+  }
+ ],
+ "closureReport": "docs/reviews/REMEDIATION-CLOSURE-2026-09-22.md"
+}

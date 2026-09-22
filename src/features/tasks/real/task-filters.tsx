@@ -20,6 +20,7 @@ export function TaskFilters({
   const router = useRouter();
   const path = usePathname();
   const search = useSearchParams();
+  const filterKey = JSON.stringify([projectId, board, ...["q", "status", "priority", "assigneeId", "unassigned", "overdue", "sort"].map(key => search.get(key))]);
   const viewQuery = new URLSearchParams(search.toString());
   viewQuery.delete("task");
   viewQuery.delete("cursor");
@@ -41,7 +42,7 @@ export function TaskFilters({
         </Link>
       </nav>
       <form
-        key={search.toString()}
+        key={filterKey}
         className="flex flex-wrap gap-2"
         onSubmit={(e) => {
           e.preventDefault();

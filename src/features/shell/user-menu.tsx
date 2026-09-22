@@ -3,7 +3,7 @@
 import { LogOut, Settings } from "lucide-react";
 import type { UserDTO } from "@/contracts";
 import { useToast } from "@/components/ui/toast";
-import { useState } from "react";
+import { useRef } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui";
 import { Avatar } from "@/components/ui/avatar";
 import { useSignOut } from "@/features/auth/use-auth";
-import { useGuardedNavigate } from "@/features/tasks/unsaved-changes";
+import { confirmLeave, navigateAfterConfirmedLeave, useGuardedNavigate } from "@/features/tasks/unsaved-changes";
 
 /**
  * 个人菜单（M1 / ORB-006）：AppShell 侧栏底部与平板 rail 态的用户入口。
@@ -53,33 +53,29 @@ export function UserMenu({
 }: UserMenuProps) {
   // B6 修复：程序化导航同样受未保存草稿保护。
   const guardedNavigate = useGuardedNavigate();
-  const { signOut, pending, error: signOutError } = useSignOut();
+  const { signOut, pending } = useSignOut();
   const { toast } = useToast();
-  const [signOutPromise, setSignOutPromise] = useState<Promise<{ error?: string }> | null>(null);
+  const signingOut = useRef(false);
 
   async function handleSignOut(): Promise<void> {
-    if (signOutPromise) return; // Already in progress
-    
-    const promise = signOut();
-    setSignOutPromise(promise);
-    
+    if (signingOut.current || !confirmLeave()) return;
+    signingOut.current = true;
     try {
-      const result = await promise;
+      const result = await signOut();
       if (result?.error) {
         // Sign out failed - show error toast and don't navigate
         toast({
           title: "退出失败",
-          description: signOutError || "退出失败，请稍后再试",
+          description: result.error,
           variant: "danger",
           duration: 4000,
         });
         return;
       }
       // Successful sign out - redirect to login page
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-      window.location.assign("/auth/login");
+      navigateAfterConfirmedLeave("/auth/login");
     } finally {
-      setSignOutPromise(null);
+      signingOut.current = false;
     }
   }
 

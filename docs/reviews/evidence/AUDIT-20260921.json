@@ -1,0 +1,538 @@
+{
+ "recordType": "Current audit evidence; does not declare fixes or production release",
+ "checkedAt": "2026-09-21T09:15:35.409111+00:00",
+ "report": "docs/reviews/COMPREHENSIVE-REVIEW-2026-09-21.md",
+ "head": "db766cf9ec4876463ff5f0137d934aeb2f140ba6",
+ "applicationCodeChanged": false,
+ "migrationRun": false,
+ "historicalChecksumsRewritten": false,
+ "configurationValuesReadForLegacyCopyInspection": false,
+ "initialUntrackedReviewPreserved": "docs/reviews/INDEPENDENT-DEEP-REVIEW-2026-09-20.md",
+ "baselineInputFiles": 498,
+ "unchangedBaselineFilesExceptAuditHandoff": true,
+ "applicationChecks": [
+  {
+   "command": "pnpm check",
+   "exitCode": 0,
+   "unit": 271,
+   "contract": 172,
+   "lint": "PASS",
+   "typecheck": "PASS"
+  },
+  {
+   "command": "pnpm typecheck:scripts",
+   "exitCode": 0
+  },
+  {
+   "command": "pnpm build",
+   "exitCode": 0
+  }
+ ],
+ "formalApplicationTestCount": 903,
+ "serialFullGates": {
+  "startedAt": "2026-09-21T08:39:09.492Z",
+  "sourceDigest": "423d8208247cbb55e47d2457d8959f62c0ad98d2fdf3503bb4159856d5205675",
+  "head": "db766cf9ec4876463ff5f0137d934aeb2f140ba6",
+  "dirty": true,
+  "checks": [
+   {
+    "name": "integration",
+    "command": [
+     "pnpm",
+     "test:integration"
+    ],
+    "startedAt": "2026-09-21T08:39:09.547Z",
+    "finishedAt": "2026-09-21T08:43:01.664Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": 360,
+    "durationMs": 232117,
+    "logSha256": "ea24cc9b754abf580f1e5ca752baaacf3a7ef25759b0e05493859e8f8b4b0a6d",
+    "sourceDigest": "423d8208247cbb55e47d2457d8959f62c0ad98d2fdf3503bb4159856d5205675"
+   },
+   {
+    "name": "e2e",
+    "command": [
+     "pnpm",
+     "test:e2e",
+     "--retries=0"
+    ],
+    "startedAt": "2026-09-21T08:43:01.665Z",
+    "finishedAt": "2026-09-21T08:44:37.380Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": 87,
+    "durationMs": 95715,
+    "logSha256": "1e795b84f2e96f9ff9f2697a603143826556894ca8be6e2f5d37013e073e5ba0",
+    "sourceDigest": "423d8208247cbb55e47d2457d8959f62c0ad98d2fdf3503bb4159856d5205675"
+   },
+   {
+    "name": "ui",
+    "command": [
+     "pnpm",
+     "test:ui",
+     "--retries=0"
+    ],
+    "startedAt": "2026-09-21T08:44:37.381Z",
+    "finishedAt": "2026-09-21T08:45:06.419Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": 13,
+    "durationMs": 29038,
+    "logSha256": "baba4b2f5ed987dce4b899733724dbba0fb2455e893a44e3b4a7a98aa39c52a8",
+    "sourceDigest": "423d8208247cbb55e47d2457d8959f62c0ad98d2fdf3503bb4159856d5205675"
+   }
+  ],
+  "finishedAt": "2026-09-21T08:45:06.517Z",
+  "sourceUnchanged": true,
+  "result": "PASS"
+ },
+ "databaseIsolation": {
+  "integration": "PASS",
+  "e2e": "PASS",
+  "ui": "PASS",
+  "scope": "Both development and test database content fingerprints unchanged after each suite fixture cleanup"
+ },
+ "componentProbes": {
+  "checkedAt": "2026-09-21T09:08:01.748Z",
+  "scope": "Actual React components; synthetic router boundary and API failure; no database",
+  "findings": [
+   {
+    "id": "AR-01",
+    "guardedCancelCount": 1,
+    "headerToggleConfirmations": 0,
+    "draftAfterReopen": ""
+   },
+   {
+    "id": "AR-02",
+    "submittedPriority": "NONE",
+    "expectedByProductAndService": "MEDIUM"
+   },
+   {
+    "id": "AR-04",
+    "quotaGuidance": "请先清理回收站",
+    "activeTasksUnaffectedByTrashCleanup": true
+   },
+   {
+    "id": "AR-03",
+    "searchDraftAfterTaskQueryChange": ""
+   },
+   {
+    "id": "AR-06",
+    "signoutRequests": 1,
+    "promptsAfterSignout": 1,
+    "navigationCancelled": true,
+    "scope": "Real user menu and auth client; synthetic success response"
+   },
+   {
+    "id": "AR-08",
+    "inputCounts": {
+     "subtaskCompleted": 3,
+     "subtaskTotal": 8,
+     "commentCount": 7,
+     "attachmentCount": 2
+    },
+    "renderedCardText": "AUDIT-37\nCount visibility probe\n中优先级：中无截止未分配\n待办\n进行中\n已完成",
+    "renderedCountLabels": 0
+   },
+   {
+    "kind": "pageErrors",
+    "errors": []
+   }
+  ]
+ },
+ "configurationProbe": {
+  "stagingAccepted": true,
+  "trustedProxyCount": 0,
+  "differentClientIpsShareBucket": true,
+  "productionRejected": true,
+  "syntheticConfigurationOnly": true
+ },
+ "httpSmoke": {
+  "checkedAt": "2026-09-21T08:38:47.778Z",
+  "runtime": "Fresh local production build, loopback only, anonymous requests, no writes",
+  "results": [
+   {
+    "path": "/health/live",
+    "status": 200,
+    "contentType": "application/json",
+    "cacheControl": "no-store"
+   },
+   {
+    "path": "/health/ready",
+    "status": 200,
+    "contentType": "application/json",
+    "cacheControl": "no-store"
+   },
+   {
+    "path": "/api/v1/me",
+    "status": 401,
+    "contentType": "application/json; charset=utf-8",
+    "cacheControl": "private, no-store"
+   },
+   {
+    "path": "/demo",
+    "status": 200,
+    "contentType": "text/html; charset=utf-8",
+    "cacheControl": "s-maxage=31536000",
+    "demoContainsFixture": true
+   }
+  ],
+  "slowUpload": {
+   "status": 401,
+   "milliseconds": 103,
+   "bytesSent": 1024,
+   "declaredBytes": 10485760,
+   "requestNeverEnded": true
+  }
+ },
+ "migrationHistory": {
+  "exitCode": 1,
+  "checkedAt": "2026-09-21T08:39:07.428Z",
+  "historyMatches": false,
+  "developmentAndTestSchemaMatch": true,
+  "results": [
+   {
+    "database": "orbit_dev",
+    "applied": 16,
+    "expected": 16,
+    "unknown": [],
+    "missing": [],
+    "mismatches": [
+     {
+      "migration": "20260911031124_add_subtask_comment_attachment",
+      "appliedChecksum": "dac4c3eb6f04d9816c4e5be36699dd66da595266be054c383e7a97e5c1b9bbd7"
+     },
+     {
+      "migration": "20260911031200_add_m5_check_constraints",
+      "appliedChecksum": "manual_resolve"
+     }
+    ],
+    "schemaDigest": "31e121f035c28985d0f964a758be43642d1efa62b090890ec60806de8bf076f2"
+   },
+   {
+    "database": "orbit_test",
+    "applied": 16,
+    "expected": 16,
+    "unknown": [],
+    "missing": [],
+    "mismatches": [],
+    "schemaDigest": "31e121f035c28985d0f964a758be43642d1efa62b090890ec60806de8bf076f2"
+   }
+  ]
+ },
+ "legacyCopies": {
+  "checkedAt": "2026-09-21T08:40:25.6247651Z",
+  "historicalDirectories": 66,
+  "remainingDirectories": 66,
+  "remainingConfigurationFiles": 66,
+  "inspection": "existence only; no values read or deletion attempted"
+ },
+ "npmAudits": {
+  "production": {
+   "exitCode": 0,
+   "vulnerabilities": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0
+   },
+   "dependencies": 436,
+   "devDependencies": 0,
+   "optionalDependencies": 0,
+   "totalDependencies": 436
+  },
+  "all": {
+   "exitCode": 0,
+   "vulnerabilities": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0
+   },
+   "dependencies": 761,
+   "devDependencies": 0,
+   "optionalDependencies": 0,
+   "totalDependencies": 761
+  }
+ },
+ "performance": {
+  "environment": {
+   "platform": "win32",
+   "cpu": "13th Gen Intel(R) Core(TM) i9-13980HX",
+   "memoryGiB": 31.70691680908203,
+   "node": "v26.8.1",
+   "chrome": "153.0.8010.12",
+   "build": "production",
+   "database": "isolated orbit_test",
+   "concurrency": 10,
+   "tasks": 1000,
+   "subtasks": 1000,
+   "comments": 1000
+  },
+  "readMs": {
+   "samples": 100,
+   "p95": 99.13349999999627,
+   "median": 68.5650999999998,
+   "min": 42.9291000000012,
+   "max": 113.72709999999643
+  },
+  "writeMs": {
+   "samples": 40,
+   "p95": 130.64949999999953,
+   "median": 87.88040000000183,
+   "min": 30.233399999997346,
+   "max": 150.24550000000454
+  },
+  "errorRate": 0,
+  "boardBytes": 87111,
+  "workbenchReadyLabMs": {
+   "samples": 5,
+   "p95": 840.1100000000006,
+   "median": 676.5449000000008,
+   "min": 673.9077000000034,
+   "max": 840.1100000000006
+  },
+  "labConditions": "1440px, CPU 4x, 40ms latency, 10Mbps down/5Mbps up, cold HTTP cache; navigation to visible heading and focusable navigation, not INP or field CWV",
+  "axeSerious": []
+ },
+ "remoteCi": {
+  "checkedLiveOn": "2026-09-21",
+  "headSha": "db766cf9ec4876463ff5f0137d934aeb2f140ba6",
+  "conclusion": "success",
+  "status": "completed",
+  "updatedAt": "2026-09-18T12:01:04Z",
+  "url": "https://github.com/liaboveall/Orbit/actions/runs/35341292410",
+  "newRunDispatched": false,
+  "jobs": [
+   {
+    "name": "verify",
+    "conclusion": "success",
+    "completedAt": "2026-09-18T12:01:03Z"
+   }
+  ]
+ },
+ "newOpenFindings": [
+  "AR-01",
+  "AR-02",
+  "AR-03",
+  "AR-04",
+  "AR-05",
+  "AR-06",
+  "AR-07",
+  "AR-08"
+ ],
+ "severityCounts": {
+  "P2": 6,
+  "P3": 2
+ },
+ "priorOpenAuditGroups": 14,
+ "totalOpenAuditGroupsAfterRegistration": 22,
+ "limits": [
+  "Component probes use synthetic Next boundary and API responses; not authenticated production E2E",
+  "AR-07 is a direct source/spec discrepancy, without an added database mutation probe",
+  "Local 32GiB Windows performance is not 1GiB cloud capacity acceptance",
+  "Existing matching-head remote CI ran on September 18; queried live but not rerun",
+  "OS image vulnerability database, native IME/accessibility and production cloud acceptance not refreshed",
+  "Application tests completed before documentation handoff; business inputs unchanged"
+ ],
+ "documentationValidation": {
+  "status": "PASS",
+  "planning": {
+   "exitCode": 0,
+   "result": "PASS",
+   "markdownFiles": 64,
+   "localLinks": 206,
+   "operations": 37,
+   "tasks": 25,
+   "auditEntries": 151,
+   "errors": []
+  },
+  "governanceProbes": {
+   "exitCode": 0,
+   "negative": 14,
+   "positiveControl": "PASS"
+  },
+  "currentStatus": {
+   "exitCode": 0
+  },
+  "gitDiffCheck": {
+   "exitCode": 0,
+   "output": "empty"
+  },
+  "priorReportCoverage": 51,
+  "totalOpenAuditGroups": 22
+ },
+ "rawEvidence": [
+  {
+   "path": "artifacts/audit-20260921/check.log",
+   "sha256": "db5d4be51bd4a2711c4403ad77cf056da713b40fd3b5b233c093880350d31089"
+  },
+  {
+   "path": "artifacts/audit-20260921/scripts-typecheck.log",
+   "sha256": "6f137cb56599ae7ca5bfb1ffbf193762b26d5e8619e348c5b9109edefff1546c"
+  },
+  {
+   "path": "artifacts/audit-20260921/build.log",
+   "sha256": "2f36fb14a2583c81840b1077792afb9421374062a66dc8db28fa781dd5f3f565"
+  },
+  {
+   "path": "artifacts/audit-20260921/audit-prod.json",
+   "sha256": "843404eec3f1458beb6566e468ce321a9a44c3891b4e38ad43c6b3906de93428"
+  },
+  {
+   "path": "artifacts/audit-20260921/audit-all.json",
+   "sha256": "09b0605da3e688a7c502c47546f54f92c8d9fcc59dbebe0caf790d0fa43dfbdc"
+  },
+  {
+   "path": "artifacts/audit-20260921/browser-probes.json",
+   "sha256": "fdf84f1b1ef68d974958305a4c37dad59220d7c38ef6e66a7ad5eb2f809ca198"
+  },
+  {
+   "path": "artifacts/audit-20260921/browser-probes.mjs",
+   "sha256": "52026b8cb830d4baaffba729f7809bf2cbf5cf954ba9f954f6f536b523ce369c"
+  },
+  {
+   "path": "artifacts/audit-20260921/browser-entry.tsx",
+   "sha256": "c66a85e343b6ae1e794be6e5d2e782ff0c67e0a36917a54a9841c9deb7fd578d"
+  },
+  {
+   "path": "artifacts/audit-20260921/navigation-stub.tsx",
+   "sha256": "057131bc8f32825c07354b4bc4a63ec092219156e5d30a7fcd5cd02750fff4cb"
+  },
+  {
+   "path": "artifacts/audit-20260921/env-probe.ts",
+   "sha256": "c9a4ed7fbacf27a1716e690e91d38e1a64b72f85ea506962312252deb5b27e71"
+  },
+  {
+   "path": "artifacts/audit-20260921/env-probe.json",
+   "sha256": "738510333473b3150e934d0a10479074d97e129f7156c85a509f773c8c467723"
+  },
+  {
+   "path": "artifacts/audit-20260921/migrations-live.json",
+   "sha256": "47e16e21e6ddc71f508ff6018f32e5d55fc1325694dd0a590b4f2fcadb944a40"
+  },
+  {
+   "path": "artifacts/audit-20260921/legacy-copies.json",
+   "sha256": "a6ea5aa85554554fb9d76a9968dec73dd37c48dfd26125c70c5625bbb87b4b91"
+  },
+  {
+   "path": "artifacts/audit-20260921/http-smoke.json",
+   "sha256": "33ad97c577833c30de7c9f08f90350f62fad15a11720a8301a9f2e4ff92e4b38"
+  },
+  {
+   "path": "artifacts/audit-20260921/http-smoke.mjs",
+   "sha256": "e736d48703e6f0e06e2e984c2674074aa340f82760a31d66b6c277ae92664b5c"
+  },
+  {
+   "path": "artifacts/audit-20260921/ci-current-head.json",
+   "sha256": "a54af544716a619c063367feb75ec558f49e601c9d166962d20d2a8cd9cec5fb"
+  },
+  {
+   "path": "artifacts/audit-20260921/full-gates/summary.json",
+   "sha256": "a11b79dce0888bd69b0f439be51dc41edc1430523c125ca8e2b452275aab5b5b"
+  },
+  {
+   "path": "artifacts/audit-20260921/full-gates/source-hashes.json",
+   "sha256": "4dee05987d000be133bb5538dda7e770b400a3451ca49c8d6f2d3373b47609f3"
+  },
+  {
+   "path": "artifacts/audit-20260921/full-gates/source-hashes-after.json",
+   "sha256": "4dee05987d000be133bb5538dda7e770b400a3451ca49c8d6f2d3373b47609f3"
+  },
+  {
+   "path": "artifacts/audit-20260921/full-gates/integration.log",
+   "sha256": "ea24cc9b754abf580f1e5ca752baaacf3a7ef25759b0e05493859e8f8b4b0a6d"
+  },
+  {
+   "path": "artifacts/audit-20260921/full-gates/e2e.log",
+   "sha256": "1e795b84f2e96f9ff9f2697a603143826556894ca8be6e2f5d37013e073e5ba0"
+  },
+  {
+   "path": "artifacts/audit-20260921/full-gates/ui.log",
+   "sha256": "baba4b2f5ed987dce4b899733724dbba0fb2455e893a44e3b4a7a98aa39c52a8"
+  },
+  {
+   "path": "artifacts/audit-20260921/planning-check.log",
+   "sha256": "e1ca71720ccf4246374688b56689d57a14165e5ab1302329de3b592bca713c8a"
+  },
+  {
+   "path": "artifacts/audit-20260921/planning-probes.log",
+   "sha256": "ed6f72f3d8c16010f2f98a99a69cef8211ecbb507e6f2b7d9b25c4bb8b47dadd"
+  },
+  {
+   "path": "artifacts/audit-20260921/current-status-check.log",
+   "sha256": "8ae12a49c13891923ab9f1959a5f9ea0f94f5a78a3dd02f5c9f347e67d9f01c7"
+  },
+  {
+   "path": "artifacts/audit-20260921/performance.json",
+   "sha256": "3ba001b5794c731096298f2cc7104dcaa8b4b218c6bcf252def915c95ecc0d09"
+  }
+ ],
+ "commitsPushesOrDeploymentsPerformed": false,
+ "priorReportReconciliation": {
+  "idsReviewed": [
+   "BIZ-01",
+   "BIZ-02",
+   "BIZ-03",
+   "BIZ-04",
+   "BIZ-05",
+   "BIZ-06",
+   "BIZ-07",
+   "BIZ-08",
+   "FE-01",
+   "FE-02",
+   "FE-03",
+   "FE-04",
+   "LOW-01",
+   "LOW-02",
+   "LOW-03",
+   "LOW-04",
+   "LOW-05",
+   "LOW-06",
+   "LOW-07",
+   "LOW-08",
+   "LOW-09",
+   "LOW-10",
+   "LOW-11",
+   "LOW-12",
+   "OPS-01",
+   "OPS-02",
+   "OPS-03",
+   "OPS-04",
+   "P1-1",
+   "P1-2",
+   "P1-3",
+   "P1-4",
+   "P1-5",
+   "P1-6",
+   "PERF-01",
+   "PERF-02",
+   "PERF-03",
+   "PERF-04",
+   "PERF-05",
+   "SEC-01",
+   "SEC-02",
+   "SEC-03",
+   "SEC-04",
+   "SEC-05",
+   "SEC-06",
+   "SEC-07",
+   "TEST-01",
+   "TEST-02",
+   "TEST-03",
+   "TEST-04",
+   "TEST-05"
+  ],
+  "count": 51,
+  "allEnumeratedIdsCovered": true
+ }
+}

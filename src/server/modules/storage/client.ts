@@ -78,6 +78,7 @@ export interface DownloadResult {
 export async function streamDownload(
   key: string,
   signal?: AbortSignal,
+  onSettled?: () => void,
 ): Promise<DownloadResult> {
   const totalController = new AbortController();
   const connectController = new AbortController();
@@ -105,11 +106,12 @@ export async function streamDownload(
     if (!response.Body) throw new Error("Missing storage body");
     const contentLength = typeof response.ContentLength === "number" ? response.ContentLength : null;
     return {
-      stream: guardDownloadStream(response.Body.transformToWebStream(), contentLength, combined, () => clearTimeout(totalTimer)),
+      stream: guardDownloadStream(response.Body.transformToWebStream(), contentLength, combined, () => { clearTimeout(totalTimer); onSettled?.(); }),
       contentLength,
     };
   } catch (error) {
     clearTimeout(totalTimer);
+    onSettled?.();
     logEvent("error", { event: "storage_download_failed", stage: "headers" });
     throw error;
   } finally {

@@ -26,6 +26,18 @@ const LEAVE_CONFIRM_MESSAGE = "有未保存的更改或进行中的操作，确�
  * 「当前是否有未保存草稿且用户未确认放弃」，统一一条确认通路。
  */
 const confirmCheckers = new Set<() => boolean>();
+let confirmedUnload = false;
+
+/** Only after an already-confirmed operation succeeds (e.g. session revocation). */
+export function navigateAfterConfirmedLeave(href: string): void {
+  confirmedUnload = true;
+  try {
+    window.location.assign(href);
+  } catch (error) {
+    confirmedUnload = false;
+    throw error;
+  }
+}
 
 function hasUnsavedEdits(): boolean {
   for (const check of confirmCheckers) {
@@ -81,7 +93,11 @@ export function UnsavedChangesProvider({ children }: { children: ReactNode }) {
     const currentHistoryState: unknown = history.state;
     const navigation = "navigation" in window && window.navigation instanceof EventTarget ? window.navigation : null;
     const unload = (event: BeforeUnloadEvent) => {
-      if (hasUnsavedEdits()) event.preventDefault();
+      if (confirmedUnload) { confirmedUnload = false; return; }
+      if (hasUnsavedEdits()) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
     };
     const navigate = (event: MouseEvent) => {
       if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
