@@ -8,7 +8,7 @@
    "taskIds": [
     "ORB-021"
    ],
-   "nextAction": "本轮修复提交后先核对该提交的完整 CI；服务器配置完成后选定实际发布版本，核对该 SHA 的完整 CI 与 runner/operations 不可变镜像。",
+   "nextAction": "修复提交 5730d69 的完整 CI 已成功且受测树一致；服务器配置完成后选定实际发布版本，核对该 SHA 的完整 CI 与 runner/operations 不可变镜像。",
    "evidence": [
     "docs/CURRENT-STATUS.md"
    ]
