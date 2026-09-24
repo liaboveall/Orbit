@@ -31,8 +31,10 @@ services:
       retries: 12
 
   minio:
-    # 官方 Quay 镜像，与本地验收版本一致；固定多架构摘要，避免 Docker Hub 不可用和标签漂移。
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    # MinIO 社区版已归档，Docker Hub 与 Quay 均不再公开提供镜像（ADR-028）。此为私有 GHCR 镜像：
+    # 基于原锁定的 quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493…（amd64），
+    # 镜像层逐一相同，只加了 OCI 标签；拉取前需 docker login ghcr.io（CI 用 GITHUB_TOKEN）。
+    image: ghcr.io/liaboveall/orbit-minio:RELEASE.2025-09-07T16-13-09Z@sha256:c6d04fbcd947ed7b6c7c6940fe87f383c684d029b547e999f3bd9319188ee6b1
     container_name: orbit-minio
     restart: unless-stopped
     command: ["server", "/data", "--console-address", ":9001"]
