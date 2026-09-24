@@ -38,9 +38,10 @@ pnpm install --frozen-lockfile
    node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
    ```
 
-3. 启动本地 PostgreSQL、MinIO 和 Mailpit：
+3. 启动本地 PostgreSQL、MinIO 和 Mailpit。MinIO 使用私有 GHCR 镜像，首次需用有读取权限的 GitHub 账号登录（`gh` 令牌需含 `read:packages`）：
 
    ```sh
+   gh auth token | docker login ghcr.io -u <GitHub 用户名> --password-stdin
    docker compose -f infra/compose.dev.yml up -d
    ```
 

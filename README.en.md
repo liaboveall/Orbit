@@ -38,9 +38,10 @@ pnpm install --frozen-lockfile
    node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
    ```
 
-3. Start the local services:
+3. Start the local services. MinIO comes from a private GHCR image, so first sign in with a GitHub account that can read it (the `gh` token needs `read:packages`):
 
    ```sh
+   gh auth token | docker login ghcr.io -u <github-username> --password-stdin
    docker compose -f infra/compose.dev.yml up -d
    ```
 
