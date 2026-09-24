@@ -8,7 +8,7 @@
    "taskIds": [
     "ORB-021"
    ],
-   "nextAction": "服务器配置完成后选定实际发布版本，核对该 SHA 的完整 CI 与 runner/operations 不可变镜像；日常分支检查以 PR 当前状态为准。",
+   "nextAction": "本轮修复提交后先核对该提交的完整 CI；服务器配置完成后选定实际发布版本，核对该 SHA 的完整 CI 与 runner/operations 不可变镜像。",
    "evidence": [
     "docs/CURRENT-STATUS.md"
    ]
@@ -22,7 +22,7 @@
    ],
    "nextAction": "锁定依赖内仍使用普通字符串比较；尚无远程可利用证据。跟踪上游修复并通过升级回归，不自行替换密码哈希。",
    "evidence": [
-    "docs/CURRENT-STATUS.md"
+    "docs/CURRENT-REVIEW.md"
    ]
   },
   {

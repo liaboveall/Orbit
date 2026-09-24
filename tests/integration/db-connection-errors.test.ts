@@ -1,6 +1,8 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { Pool } from "pg";
 import dotenv from "dotenv";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@/generated/prisma/client";
 import { parseEnv } from "@/server/env";
 import { isDatabaseUnavailableError } from "@/server/db/connection-errors";
 import { toErrorResponse } from "@/server/http/errors";
@@ -107,9 +109,37 @@ describe("数据库连接错误映射（D2）", () => {
       status: 500,
       code: "INTERNAL_ERROR",
     });
-    // P2028 是事务回滚（通常是编程问题），明确不映射 503。
+    // 其它 P2028（事务已关闭/回滚，通常是编程问题）明确不映射 503。
     const p2028 = Object.assign(new Error("Transaction aborted"), { code: "P2028" });
     expect(await statusOf(p2028)).toEqual({ status: 500, code: "INTERNAL_ERROR" });
+  });
+
+  it("真实 Prisma 事务在 maxWait 内拿不到连接（池饱和 P2028）→ 503", async () => {
+    const client = new PrismaClient({
+      adapter: new PrismaPg({ connectionString: env.TEST_DATABASE_URL, max: 1, connectionTimeoutMillis: 5000 }),
+    });
+    try {
+      let entered!: () => void;
+      const inside = new Promise<void>((resolve) => { entered = resolve; });
+      const holder = client.$transaction(async (tx) => {
+        entered();
+        await tx.$queryRaw`SELECT 1 AS held FROM pg_sleep(1)`;
+      }, { timeout: 10000, maxWait: 2000 });
+      await inside;
+      let saturated: unknown;
+      try {
+        await client.$transaction(async (tx) => tx.$queryRaw`SELECT 1`, { timeout: 10000, maxWait: 200 });
+        expect.unreachable("唯一连接被占用时事务应在 maxWait 后失败");
+      } catch (error) {
+        saturated = error;
+      }
+      await holder;
+      expect((saturated as { code?: string }).code).toBe("P2028");
+      expect(isDatabaseUnavailableError(saturated)).toBe(true);
+      expect(await statusOf(saturated)).toEqual({ status: 503, code: "SERVICE_UNAVAILABLE" });
+    } finally {
+      await client.$disconnect();
+    }
   });
 
   it("合成 P2037 / P2024 / cause 链 ECONNRESET → 503（合成验证，注明非 PG 上限实测）", async () => {

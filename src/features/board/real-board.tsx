@@ -178,7 +178,9 @@ export function RealBoard({
             { query: { ...query, status: column.status, cursor, limit: 100 } },
           );
           if (!result.ok) {
-            if (result.error.code === "BOARD_CONFLICT") {
+            // 顺序集合或筛选集合在分页之间变化（BOARD_CONFLICT），或过滤指纹随日期失效
+            // （INVALID_CURSOR）：旧页不可拼接，整体重新读取。
+            if (result.error.code === "BOARD_CONFLICT" || result.error.code === "INVALID_CURSOR") {
               await fresh();
               throw new Error("看板已更新，已重新加载，请继续操作。");
             }

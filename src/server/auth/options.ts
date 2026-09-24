@@ -4,6 +4,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { OrbitEnv } from "@/server/env";
 import { createEmailSender } from "./email";
+import { dispatchAuthEmail } from "./email-dispatch";
 import { resolveClientIp } from "@/server/http/client-ip";
 import { consumeBucket } from "@/server/modules/rate-limit/postgres";
 import { logEvent } from "@/server/http/log";
@@ -70,14 +71,19 @@ export function createAuthOptions(prisma: PrismaClient, env: OrbitEnv) {
       requireEmailVerification: true,
       // 重设密码成功后撤销该用户所有既有会话（ORB-005 交付物 #8）。
       revokeSessionsOnPasswordReset: true,
-      sendResetPassword: email.sendResetPassword,
+      // 发信在响应之后执行（见 ./email-dispatch）：匿名响应的状态与耗时不随账号状态变化。
+      sendResetPassword: async (data, request) => {
+        dispatchAuthEmail("reset-password", () => email.sendResetPassword(data, request));
+      },
     },
     emailVerification: {
       sendOnSignUp: true,
       autoSignInAfterVerification: true,
       // 未验证用户尝试登录时重发验证邮件（requireEmailVerification 下登录被拒，引导其完成验证）。
       sendOnSignIn: true,
-      sendVerificationEmail: email.sendVerificationEmail,
+      sendVerificationEmail: async (data, request) => {
+        dispatchAuthEmail("verify-email", () => email.sendVerificationEmail(data, request));
+      },
     },
     user: {
       additionalFields: {

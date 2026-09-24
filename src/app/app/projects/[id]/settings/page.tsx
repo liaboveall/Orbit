@@ -1,13 +1,11 @@
 import { ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProjectSettingsForm } from "@/features/projects/project-settings-form";
-import { loginPathWithReturnTo } from "@/lib/return-to";
-import { getSessionUser } from "@/server/auth/session";
+import { requirePageUser } from "@/server/auth/page-session";
 import { DomainError } from "@/server/http/errors";
 import { getProject } from "@/server/modules/project";
 
@@ -15,7 +13,7 @@ import { getProject } from "@/server/modules/project";
  * /app/projects/[id]/settings —— 项目设置（M4 / ORB-007，owner-only）。
  *
  * Server Component 权威读取（与 members/activity 同范式）：
- *  1. getSessionUser → 未认证重定向登录页；
+ *  1. requirePageUser → 未认证重定向登录页、读取超额跳转限流说明页；
  *  2. getProject 判定成员关系（非成员/不存在 → notFound()）并取得 role；
  *  3. owner → 渲染 ProjectSettingsForm（资料编辑 + 归档/恢复交互在客户端组件内）；
  *     非 owner → 渲染权限拒绝视图（服务端权威，PATCH 仍会 403）。
@@ -32,10 +30,7 @@ type PageProps = {
 
 export default async function ProjectSettingsPage({ params }: PageProps) {
   const { id } = await params;
-  const sessionUser = await getSessionUser(await headers());
-  if (!sessionUser) {
-    redirect(loginPathWithReturnTo(`/app/projects/${id}/settings`));
-  }
+  const sessionUser = await requirePageUser();
 
   let project;
   try {

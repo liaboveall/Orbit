@@ -5,6 +5,7 @@ import { Transform, type Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { DomainError } from "@/server/http/errors";
 import { MAX_ATTACHMENT_BYTES } from "@/server/modules/limits";
+import { BIDI_CONTROL_CHARACTERS } from "@/server/modules/unsafe-characters";
 import type { UploadAttachmentMetaDTO } from "@/contracts";
 
 const types: Record<string, string[]> = {
@@ -24,7 +25,10 @@ export function validateFileNameType(fileName: string, mimeType: string) {
   if (
     !fileName.trim() ||
     fileName.length > 255 ||
-    /[\x00-\x1f\x7f/\\]/.test(fileName)
+    // 路径分隔符与 C0/DEL/C1 控制字符。
+    /[\u0000-\u001F\u007F-\u009F/\\]/.test(fileName) ||
+    // 方向控制字符可把「a‮gnp.txt」显示成 png 结尾，与姓名同一口径拒绝。
+    BIDI_CONTROL_CHARACTERS.test(fileName)
   )
     throw unsupported();
   if (

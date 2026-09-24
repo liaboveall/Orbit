@@ -108,7 +108,7 @@ id UUID PK；keyHash char(64)；startedAt timestamptz；expiresAt timestamptz；
 | 附件预留 | 任务/项目配额检查、UPLOADING 行、reservedBytes 增加 |
 | 附件完成 | 重新授权、READY、reservedBytes 减少、usedBytes 增加、活动 |
 
-项目资料修改递增 Project.version；boardVersion 专管看板成员/顺序集合。成员退出导致任务卡负责人变化，刷新查询即可，不需要递增 boardVersion；task.version 必须增加。任务删除、恢复也必须递增task.version。普通字段规范化后没有语义变化时不更新version和活动；一次PATCH即使修改多个字段也只增加一次version。
+项目资料修改递增 Project.version；boardVersion 专管看板成员/顺序集合。成员退出导致任务卡负责人变化，刷新查询即可，不需要递增 boardVersion（筛选集合的分页一致性由下文看板游标规则保证）；task.version 必须增加。任务删除、恢复也必须递增task.version。普通字段规范化后没有语义变化时不更新version和活动；一次PATCH即使修改多个字段也只增加一次version。
 
 ## 5. 看板排序算法
 
@@ -119,6 +119,8 @@ id UUID PK；keyHash char(64)；startedAt timestamptz；expiresAt timestamptz；
 move 带 expectedVersion 与 expectedBoardVersion。任一不匹配返回409，附 currentVersion/currentBoardVersion。无语义变化的 move 直接返回当前任务，不额外写活动和增加版本。PATCH 修改 status 统一复用移动服务，追加目标列末尾；PATCH 本身不接受 position。
 
 创建、跨/同列移动、删除、恢复都会改变 boardVersion。看板读取使用一致快照（REPEATABLE READ 短只读事务）获取列数据、总数与 boardVersion；不能三次独立读取拼接不同时刻的数据。
+
+看板分页游标绑定过滤指纹、boardVersion，以及本列已返回前缀（按 position,id）的数量与 SHA-256 摘要（BOARD-FILTER-CURSOR，2026-09-24）。优先级、标题、负责人、截止日变化与成员退出清空负责人不递增 boardVersion，却可能让任务进入或离开当前筛选集合；续页时在同一快照内重算前缀，数量或摘要不一致即返回 409 BOARD_CONFLICT，客户端整体重新读取。游标之后的集合变化由下一页查询自然反映，不视为冲突；描述等非筛选字段变化不影响续页。
 
 ## 6. 配额与文件一致性
 
@@ -131,6 +133,8 @@ move 带 expectedVersion 与 expectedBoardVersion。任一不匹配返回409，�
 - 软删除任务（回收站）：用户可自行恢复/彻底删除；系统不代为清空。
 - 已过期/已撤销/已使用的邀请：作为操作审计与防重放记录保留；撤销邀请是显式动作。
 - MoveRecord（移动历史）：看板顺序争议时的审计依据；不做自动裁剪。
+
+认证库记录不属于上述业务数据：已过期的 Session 与一次性 Verification 值已不可使用，维护任务与幂等/限流/租约记录一同按 expiresAt 分批（每批 1000、SKIP LOCKED）删除，避免长期保留会话元数据（2026-09-24）。未过期记录不受影响。
 
 容量风险按附录监测（必要时人工清理或由产品变更明确授权后新增迁移），不得由维护脚本自动删除。
 

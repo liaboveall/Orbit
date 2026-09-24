@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, LayoutGrid, Menu } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { UserDTO } from "@/contracts";
 import { cn } from "@/lib/cn";
 import { PROJECT_COLOR_DOT, projectColorAria } from "@/lib/project-color";
@@ -20,6 +20,7 @@ import { useRecentProjects } from "./use-recent-projects";
 import { OrbitWordmark } from "./orbit-logo";
 import { UserMenu } from "./user-menu";
 import { useGuardedNavigate } from "@/features/tasks/unsaved-changes";
+import { pruneDrafts } from "@/features/tasks/draft-storage";
 import { UserTimezoneProvider } from "@/lib/user-timezone";
 
 /**
@@ -325,6 +326,10 @@ export function AppShell({ user, children }: { user: UserDTO; children: ReactNod
   const pathname = usePathname();
   const recent = useRecentProjects(user.id);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // 共享浏览器换账号：删除其他账号留下的本机草稿与已过期草稿（生命周期见 draft-storage）。
+  useEffect(() => {
+    pruneDrafts(user.id);
+  }, [user.id]);
   // 编程式打开的手机抽屉导航：打开瞬间记录焦点，关闭后还给汉堡按钮（docs/02：关闭后恢复焦点）。
   const { captureFocus, handleCloseAutoFocus } =
     useFocusReturn<HTMLButtonElement>();

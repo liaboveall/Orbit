@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { ProjectListClient } from "@/features/projects/project-list-client";
-import { loginPathWithReturnTo } from "@/lib/return-to";
-import { getSessionUser } from "@/server/auth/session";
+import { requirePageUser } from "@/server/auth/page-session";
 import { listProjects } from "@/server/modules/project";
 
 /**
  * /app/projects —— 项目列表（M2 Phase 6：首个真实数据列表页）。
  *
  * 服务端组件负责**权威数据读取**（与 /app/settings 同范式）：
- *  1. `getSessionUser(await headers())` 取会话；未认证 → 带 returnTo 重定向登录页
+ *  1. `requirePageUser()` 取会话并消费一次读取额度；未认证 → 带 returnTo 重定向登录页，读取超额 → 限流说明页
  *     （proxy + app/layout 已双层保护，这里是防御性第三道）；
  *  2. 复用领域服务 `listProjects`（与 GET /api/v1/projects 同一实现）：成员关系过滤、
  *     `archived` 过滤由 URL `?archived=only` 驱动（A08 审查修复：归档项目离开页面后
@@ -30,7 +27,6 @@ import { listProjects } from "@/server/modules/project";
 export const metadata: Metadata = { title: "全部项目" };
 export const dynamic = "force-dynamic";
 
-const PROJECTS_PATH = "/app/projects";
 
 /** 首屏页大小（契约上限 100；活跃项目配额仅 10，超出主要是已归档项目）。 */
 const PAGE_SIZE = 30;
@@ -40,8 +36,7 @@ type PageProps = {
 };
 
 export default async function ProjectsPage({ searchParams }: PageProps) {
-  const sessionUser = await getSessionUser(await headers());
-  if (!sessionUser) redirect(loginPathWithReturnTo(PROJECTS_PATH));
+  const sessionUser = await requirePageUser();
 
   const params = await searchParams;
   const rawArchived = Array.isArray(params.archived) ? params.archived[0] : params.archived;

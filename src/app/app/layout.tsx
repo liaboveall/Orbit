@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import { AppProviders } from "@/features/shell/providers";
 import { AppShell } from "@/features/shell/app-shell";
 import { StateSwitcher } from "@/features/shell/state-switcher";
-import { DEFAULT_RETURN_TO, REQUEST_RETURN_TO_HEADER, loginPathWithReturnTo } from "@/lib/return-to";
-import { getSessionUser } from "@/server/auth/session";
+import { REQUEST_RETURN_TO_HEADER, loginPathWithReturnTo } from "@/lib/return-to";
+import { visiblePagePath } from "@/lib/rate-limited";
+import { getPageSessionUser } from "@/server/auth/page-session";
 
 /**
  * /app 布局（M1 / ORB-006：由「开发样例门禁」改为「真实会话外壳」）。
@@ -16,8 +17,10 @@ import { getSessionUser } from "@/server/auth/session";
  *
  * 现在的门禁模型（docs/03 §5：数据安全在服务端授权，组件重定向只是体验）：
  *  1. `src/proxy.ts` 按 session cookie 是否存在快速拦截 /app/*（未登录→登录页）；
- *  2. 本布局用 `getSessionUser(await headers())` 做**权威**会话校验（cookie 存在≠会话有效，
- *     伪造/过期/已撤销的 cookie 在这里被拒），失败即 redirect 到带 returnTo 的登录页；
+ *  2. 本布局用 `getPageSessionUser()`（请求级缓存，与页面共享同一次会话查询）做**权威**
+ *     会话校验（cookie 存在≠会话有效，伪造/过期/已撤销的 cookie 在这里被拒），失败即
+ *     redirect 到带 returnTo 的登录页。读取额度由各页面的 `requirePageUser()` 计一次，
+ *     链接预取只渲染到本布局、不执行页面，因此不计费；
  *  3. 校验通过后把真实 UserDTO 传给 AppShell，顶栏时区、侧栏姓名、个人菜单全部来自会话，
  *     不再引用 fixture 的 CURRENT_USER（该 fixture 仅留给 today/board/task 样例页，M2 替换）。
  *
@@ -34,9 +37,8 @@ export const dynamic = "force-dynamic";
 const isDev = process.env.NODE_ENV === "development";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const requestHeaders = await headers();
-  const user = await getSessionUser(requestHeaders);
-  if (!user) redirect(loginPathWithReturnTo(requestHeaders.get(REQUEST_RETURN_TO_HEADER) ?? DEFAULT_RETURN_TO));
+  const user = await getPageSessionUser();
+  if (!user) redirect(loginPathWithReturnTo(visiblePagePath((await headers()).get(REQUEST_RETURN_TO_HEADER))));
 
   return (
     <AppProviders>

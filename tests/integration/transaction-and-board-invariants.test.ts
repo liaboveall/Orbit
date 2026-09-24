@@ -1,7 +1,8 @@
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/server/db/prisma";
 import { createTask } from "@/server/modules/task/create";
+import { updateTask } from "@/server/modules/task/update";
 import { getBoard } from "@/server/modules/task/board";
 import { removeMember } from "@/server/services/member.service";
 import { m5Fixture } from "../support/m5-fixture";
@@ -89,4 +90,53 @@ it("batched board counts remain isolated by task and page across all three colum
   const filtered = await getBoard(f.projectId, f.member, { status: "DONE", limit: 1 });
   expect(filtered.columns).toHaveLength(1); expect(filtered.columns[0]?.items[0]?.commentCount).toBe(2);
   await expect(getBoard(f.projectId, f.outsider)).rejects.toMatchObject({ code: "NOT_FOUND" });
+});
+
+describe("filtered board pagination rejects a changed filter set between pages", () => {
+  async function highTasks() {
+    const a = (await createTask(f.projectId, f.owner, { title: "A", priority: "MEDIUM" }, randomUUID())).task;
+    const b = (await createTask(f.projectId, f.owner, { title: "B", priority: "HIGH" }, randomUUID())).task;
+    const c = (await createTask(f.projectId, f.owner, { title: "C", priority: "HIGH" }, randomUUID())).task;
+    const first = await getBoard(f.projectId, f.owner, { status: "TODO", priority: "HIGH", limit: 1 });
+    expect(first.columns[0]!.items.map((task) => task.title)).toEqual(["B"]);
+    expect(first.columns[0]!.total).toBe(2);
+    return { a, b, c, cursor: first.columns[0]!.nextCursor!, boardVersion: first.boardVersion };
+  }
+
+  it("a task entering the already-returned prefix is a BOARD_CONFLICT, not a silently skipped card", async () => {
+    const { a, cursor, boardVersion } = await highTasks();
+    await updateTask(a.id, f.member, { expectedVersion: a.version, priority: "HIGH" });
+    // Field edits keep the ordering version; the filter-set check must catch it on its own.
+    expect((await prisma.project.findUniqueOrThrow({ where: { id: f.projectId } })).boardVersion).toBe(boardVersion);
+    await expect(getBoard(f.projectId, f.owner, { status: "TODO", priority: "HIGH", limit: 1, cursor }))
+      .rejects.toMatchObject({ code: "BOARD_CONFLICT" });
+  });
+
+  it("the last returned task leaving the filter is a BOARD_CONFLICT", async () => {
+    const { b, cursor } = await highTasks();
+    await updateTask(b.id, f.owner, { expectedVersion: b.version, priority: "LOW" });
+    await expect(getBoard(f.projectId, f.owner, { status: "TODO", priority: "HIGH", limit: 1, cursor }))
+      .rejects.toMatchObject({ code: "BOARD_CONFLICT" });
+  });
+
+  it("member removal that clears assignees invalidates an assignee-filtered cursor", async () => {
+    await createTask(f.projectId, f.owner, { title: "成员的第二项", assigneeId: f.member }, randomUUID());
+    const first = await getBoard(f.projectId, f.owner, { status: "TODO", assigneeId: f.member, limit: 1 });
+    expect(first.columns[0]!.total).toBe(2);
+    await removeMember({ projectId: f.projectId, requesterId: f.owner, targetUserId: f.member });
+    await expect(getBoard(f.projectId, f.owner, { status: "TODO", assigneeId: f.member, limit: 1, cursor: first.columns[0]!.nextCursor! }))
+      .rejects.toMatchObject({ code: "BOARD_CONFLICT" });
+  });
+
+  it("unrelated edits and changes after the cursor keep continuation consistent without conflicts", async () => {
+    const { a, c, cursor } = await highTasks();
+    await updateTask(a.id, f.owner, { expectedVersion: a.version, description: "不影响筛选的描述" });
+    const next = await getBoard(f.projectId, f.owner, { status: "TODO", priority: "HIGH", limit: 1, cursor });
+    expect(next.columns[0]!.items.map((task) => task.title)).toEqual(["C"]);
+    await updateTask(c.id, f.owner, { expectedVersion: c.version, priority: "LOW" });
+    const after = await getBoard(f.projectId, f.owner, { status: "TODO", priority: "HIGH", limit: 1, cursor });
+    expect(after.columns[0]!.items).toEqual([]);
+    expect(after.columns[0]!.total).toBe(1);
+    expect(after.columns[0]!.nextCursor).toBeNull();
+  });
 });

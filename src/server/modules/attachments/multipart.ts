@@ -13,10 +13,17 @@ const invalid = () =>
     "VALIDATION_ERROR",
     "上传表单不合法，请按顺序提交元信息和单个文件。",
   );
+/** 单次上传总时限（docs/05 §8）。 */
+export const UPLOAD_DEADLINE_MS = 120_000;
+const uploadTimedOut = () =>
+  new DomainError("STORAGE_UNAVAILABLE", "上传超时，请检查网络后重新选择文件重试。");
+const uploadInterrupted = () =>
+  new DomainError("STORAGE_UNAVAILABLE", "上传已中断，请重新选择文件后重试。");
 export async function uploadMultipart(
   request: Request,
   taskId: string,
   userId: string,
+  options: { deadlineMs?: number } = {},
 ) {
   if (
     !request.body ||
@@ -27,11 +34,8 @@ export async function uploadMultipart(
   if (Number(request.headers.get("content-length")) > maxBody)
     throw new DomainError("PAYLOAD_TOO_LARGE", "上传请求过大。");
   const controller = new AbortController();
-  const signal = AbortSignal.any([
-    request.signal,
-    AbortSignal.timeout(120000),
-    controller.signal,
-  ]);
+  const deadline = AbortSignal.timeout(options.deadlineMs ?? UPLOAD_DEADLINE_MS);
+  const signal = AbortSignal.any([request.signal, deadline, controller.signal]);
   let parser: ReturnType<typeof busboy>;
   try {
     parser = busboy({
@@ -52,7 +56,9 @@ export async function uploadMultipart(
   }
   let bytes = 0,
     operation: Promise<UploadAttachmentResult> | undefined,
-    primary: unknown;
+    primary: unknown,
+    // 业务服务的非领域错误（数据库不可用、池饱和等），交由 HTTP 层映射而非冒充表单错误。
+    dependencyFailure: unknown;
   const fields: Record<string, string> = {};
   const order = ["uploadId", "declaredSizeBytes", "sha256"];
   const fail = (error: unknown) => {
@@ -101,7 +107,10 @@ export async function uploadMultipart(
       { fileName: info.filename, mimeType: info.mimeType, stream },
       { signal, complete: completion },
     );
-    void operation.catch(fail);
+    void operation.catch((error: unknown) => {
+      if (!(error instanceof DomainError)) dependencyFailure ??= error;
+      fail(error);
+    });
   });
   parser.on("fieldsLimit", () => fail(invalid()));
   parser.on("filesLimit", () => fail(invalid()));
@@ -129,6 +138,10 @@ export async function uploadMultipart(
     if (operation) await operation.catch(() => undefined);
     if (primary instanceof DomainError) throw primary;
     if (error instanceof DomainError) throw error;
+    if (dependencyFailure !== undefined) throw dependencyFailure;
+    // 超时/中断先于表单判定：停滞的慢网络不是「表单不合法」。
+    if (deadline.aborted) throw uploadTimedOut();
+    if (request.signal.aborted) throw uploadInterrupted();
     throw invalid();
   }
 }

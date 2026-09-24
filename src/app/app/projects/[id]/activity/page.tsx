@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { ActivityFeed } from "@/features/activity/ActivityFeed";
-import { loginPathWithReturnTo } from "@/lib/return-to";
-import { getSessionUser } from "@/server/auth/session";
+import { requirePageUser } from "@/server/auth/page-session";
 import { DomainError } from "@/server/http/errors";
 import { listActivities } from "@/server/modules/activity";
 import { getProject } from "@/server/modules/project";
@@ -12,7 +10,7 @@ import { getProject } from "@/server/modules/project";
  * /app/projects/[id]/activity —— 项目活动（M4 / ORB-011）。
  *
  * Server Component 权威读取（与 board/tasks 同范式）：
- *  1. getSessionUser → 未认证重定向登录页；
+ *  1. requirePageUser → 未认证重定向登录页、读取超额跳转限流说明页；
  *  2. getProject 判定成员关系（非成员/不存在 → notFound()）；
  *  3. listActivities 直调领域服务（与 GET /api/v1/projects/{id}/activity?limit=30 同一实现，
  *     成员授权 + keyset 游标分页 + createdAt DESC）；
@@ -33,10 +31,7 @@ type PageProps = {
 
 export default async function ProjectActivityPage({ params }: PageProps) {
   const { id } = await params;
-  const sessionUser = await getSessionUser(await headers());
-  if (!sessionUser) {
-    redirect(loginPathWithReturnTo(`/app/projects/${id}/activity`));
-  }
+  const sessionUser = await requirePageUser();
 
   let result;
   try {
