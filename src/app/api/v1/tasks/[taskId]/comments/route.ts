@@ -1,5 +1,5 @@
 import { enforceWriteLimit } from "@/server/http/write-limit";
-import { parseRequestBody } from "@/contracts";
+import { parseQueryParams, parseRequestBody } from "@/contracts";
 import { CreateCommentSchema } from "@/contracts";
 import { errorResponse, toErrorResponse } from "@/server/http/errors";
 import { jsonCreated, jsonSuccess, readJsonBody, jsonEnvelope, requireIdempotencyKey, jsonList } from "@/server/http/json";
@@ -35,10 +35,10 @@ export async function GET(
 
     // 解析查询参数
     const url = new URL(request.url);
-    const queryResult = ListCommentsQuerySchema.safeParse(Object.fromEntries(url.searchParams));
+    const queryResult = parseQueryParams(ListCommentsQuerySchema, Object.fromEntries(url.searchParams), requestId);
 
-    if (!queryResult.success) {
-      return errorResponse("VALIDATION_ERROR", "Invalid query parameters", requestId);
+    if (!queryResult.ok) {
+      return jsonEnvelope(queryResult.response, 400, requestId);
     }
 
     const result = await listComments(taskId, sessionUser.id, queryResult.data);

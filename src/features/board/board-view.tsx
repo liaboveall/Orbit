@@ -25,7 +25,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { AvatarStack } from "@/components/ui/avatar";
-import { TaskCard } from "./task-card";
+import { SampleTaskCard } from "./task-card";
 import {
   BOARD_ASSIGNEES,
   BOARD_MEMBERS,
@@ -469,7 +469,7 @@ function ColumnBody({
   return (
     <div className="space-y-2 overflow-y-auto pr-1">
       {tasks.map((task) => (
-        <TaskCard
+        <SampleTaskCard
           key={task.id}
           task={task}
           selected={task.id === openTaskId}

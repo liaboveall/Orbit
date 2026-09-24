@@ -1,2 +1,0 @@
--- Retired historical repair. Migration history must not be deleted.
--- See scripts/cleanup-migration.ts and docs/reviews/M0-M4-FIX-CLOSURE-2026-09-11.md.

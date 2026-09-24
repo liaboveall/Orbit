@@ -1,16 +1,12 @@
-# src/server · 业务层（服务端专用）
+# 服务端业务层
 
-本层由 `server-only` 保护，含数据库、认证、凭证与内部授权逻辑，**禁止进入客户端 bundle**。
-数据库、认证、存储 SDK 只允许在此层引用（见 AGENTS.md、docs/03 §3/§5）。
+本层处理凭证、认证、数据库、存储和授权，禁止进入客户端 bundle。
 
-规划子结构（按里程碑「按需」创建，不预建空服务）：
+- db：Prisma 与 PostgreSQL adapter、事务、连接错误。
+- auth：Better Auth、会话、验证邮件与 SMTP。
+- modules：项目、任务、成员、邀请、评论、附件、工作台及维护服务。
+- http：请求校验、Origin、错误映射、日志与限流入口。
+- me：个人资料与时区。
+- services：成员服务入口。
 
-| 子目录 | 职责 | 引入里程碑 |
-|---|---|---|
-| `db/` | Prisma 7 singleton（driver adapter）、事务帮助函数 | M0（已建 `db/prisma.ts`） |
-| `auth/` | Better Auth、会话、项目授权 | M1（ORB-004） |
-| `modules/` | project/task/invite/comment/file 等领域服务 | M2 起 |
-| `integrations/` | storage、mail、未来 AI provider | M5/M7 |
-| `http/` | 错误映射、Origin 验证、请求 ID、限流 | M1（ORB-004） |
-
-M0 已提供：`env.ts`（启动期 Zod 环境校验）、`db/prisma.ts`（Prisma 7 + PrismaPg adapter 单例）。
+env.ts 校验运行环境。项目资源在服务端校验会话、成员关系、资源归属与写权限。详见 [架构](../../docs/03-ARCHITECTURE.md)。

@@ -119,6 +119,13 @@ export async function createInvitation(
     });
 
     if (begin.kind === "replay") {
+      // F12 修复：重放前补一次当前可见性/授权复核（全项目统一「重放即重授权」）。
+      // 归档语义：重放是读取已存在的邀请（不创建新行），与归档项目仍可读一致，
+      // 因此只要求 OWNER 角色，不要求项目可写。
+      const { role: replayRole } = await resolveProjectAccess(tx, projectId, userId);
+      if (replayRole !== "OWNER") {
+        throw new DomainError("FORBIDDEN", "只有项目所有者可以创建邀请。");
+      }
       // 重放：token 已首次返回过，不再暴露明文（docs/05 §5）。
       const stored = begin.body as CreatedInvitationDTO;
       return {
@@ -220,6 +227,11 @@ export async function createInvitation(
   } catch (error) {
     if (error instanceof IdempotencyCommitConflictError) {
       const resolved = await resolveIdempotencyCommitConflict(prisma, error.opts);
+      // F12：与重放路径一致，返回已存响应前复核当前仍是 OWNER。
+      const { role: conflictRole } = await resolveProjectAccess(prisma, projectId, userId);
+      if (conflictRole !== "OWNER") {
+        throw new DomainError("FORBIDDEN", "只有项目所有者可以创建邀请。");
+      }
       const stored = resolved.body as CreatedInvitationDTO;
       return {
         data: { ...stored, token: null, invitePath: null },
@@ -351,7 +363,6 @@ export async function acceptInvitation(
           return {
             projectId: invitationRow.projectId,
             alreadyMember: true,
-            createdNewMembership: false,
           };
         }
         // 理论上不应该发生（DB 约束保护）
@@ -384,7 +395,6 @@ export async function acceptInvitation(
       return {
         projectId: invitationRow.projectId,
         alreadyMember: true,
-        createdNewMembership: false,
       };
     }
 
@@ -402,7 +412,6 @@ export async function acceptInvitation(
       return {
         projectId: invitationRow.projectId,
         alreadyMember: true,
-        createdNewMembership: false,
       };
     }
 
@@ -451,11 +460,11 @@ export async function acceptInvitation(
       metadata: {},
     });
 
-    // J. 返回结果（新成员加入）
+    // J. 返回结果（新成员加入）。公开响应按 openapi AcceptedInvitation 投影，
+    // 不暴露内部 createdNewMembership 判断。
     return {
       projectId: invitationRow.projectId,
       alreadyMember: false,
-      createdNewMembership: true,
     };
   });
 }
@@ -475,6 +484,12 @@ export async function revokeInvitation(
   projectId: string,
   userId: string,
 ): Promise<InvitationDTO> {
+  // 路径参数 UUID 前置校验（与其他子资源服务一致）：非法业务 ID 统一 404，
+  // 不让 Prisma P2010 逃逸成 500（docs/05 §4 错误语义）。
+  if (!UuidSchema.safeParse(invitationId).success || !UuidSchema.safeParse(projectId).success) {
+    throw new DomainError("NOT_FOUND", "邀请不存在。");
+  }
+
   return withTransaction(async (tx) => {
     // 锁 Project（与 create/accept 共用同一把锁，形成项目级串行化）。
     const locked = await lockProjectRow(tx, projectId);

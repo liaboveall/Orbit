@@ -34,7 +34,7 @@ export const ERROR_CODES = [
   "UNAUTHENTICATED",
   // 403
   "FORBIDDEN",
-  "EMAIL_UNVERIFIED",
+  "EMAIL_UNVERIFIED", // Reserved public contract value; no current business throw site.
   "ORIGIN_NOT_ALLOWED",
   // 404
   "NOT_FOUND",
@@ -44,7 +44,7 @@ export const ERROR_CODES = [
   "PROJECT_KEY_TAKEN",
   "PROJECT_ARCHIVED",
   "INVITATION_USED",
-  "ALREADY_EXISTS",
+  "ALREADY_EXISTS", // Reserved public contract value; retained for compatibility.
   "IDEMPOTENCY_CONFLICT",
   "UPLOAD_IN_PROGRESS",
   "LOCKED",

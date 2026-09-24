@@ -19,7 +19,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { InlineError } from "@/components/ui/inline-error";
 import { useToast } from "@/components/ui/toast";
 import { Spinner } from "@/features/auth/auth-form";
+import { formatEventDate, useUserTimezone } from "@/lib/user-timezone";
 import { loginPathWithReturnTo } from "@/lib/return-to";
+import { clearProjectDrafts } from "@/features/tasks/draft-storage";
 
 /**
  * 项目成员列表（M4 / ORB-014，`/app/projects/[id]/members`）。
@@ -37,16 +39,7 @@ import { loginPathWithReturnTo } from "@/lib/return-to";
  * api.delete 需解析 JSON 信封，不适用 204）。错误用 InlineError 驻留 + toast 瞬时提示。
  */
 
-/** ISO → 「2026年9月10日」（加入日期，只需日期精度）。 */
-function formatDate(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat("zh-CN", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  }).format(date);
-}
+// F23 修复：加入日期改用账户时区的统一格式化（原实现用设备时区）。
 
 type PendingAction =
   | { kind: "remove"; member: MemberDTO }
@@ -66,6 +59,8 @@ export function MembersList({
   isOwner,
   members,
 }: MembersListProps) {
+  // F23 修复：账户时区（事件时间统一展示来源）。
+  const tz = useUserTimezone();
   const router = useRouter();
   const { toast } = useToast();
   const [pending, setPending] = useState<PendingAction | null>(null);
@@ -100,6 +95,8 @@ export function MembersList({
       }
 
       if (action.kind === "exit") {
+        // 已非成员：该项目的本机任务草稿不再可保存，立即删除。
+        clearProjectDrafts(projectId);
         toast({ title: "你已退出该项目", variant: "success" });
         // 已非成员：硬跳转项目列表，离开本项目所有页面。
         void router.push("/app/projects");
@@ -120,7 +117,7 @@ export function MembersList({
     <div className="mx-auto w-full max-w-4xl">
       <header className="mb-6">
         <p className="font-mono text-caption uppercase tracking-[0.18em] text-foreground-muted">
-          members · /api/v1/projects/{projectId}/members
+          团队协作
         </p>
         <h1 className="mt-1 text-page font-semibold tracking-tight text-foreground">
           项目成员
@@ -133,10 +130,22 @@ export function MembersList({
       <InlineError className="mb-4">{error}</InlineError>
 
       {members.length === 0 ? (
+        // F30：空态按角色给出可用下一步（owner → 去邀请页；成员 → 说明等待状态）。
         <EmptyState
           icon={<Users className="h-6 w-6" />}
           title="暂无成员"
-          description="邀请链接被接受后，新成员会出现在这里。"
+          description={
+            isOwner
+              ? "项目目前只有你自己。创建邀请并把链接发给同学，对方接受后就会出现在这里。"
+              : "邀请链接被接受后，新成员会出现在这里。"
+          }
+          action={
+            isOwner ? (
+              <Button variant="secondary" onClick={() => router.push(`/app/projects/${projectId}/invitations`)}>
+                去邀请成员
+              </Button>
+            ) : undefined
+          }
         />
       ) : (
         <ul className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface shadow-popover">
@@ -160,7 +169,7 @@ export function MembersList({
                     ) : null}
                   </p>
                   <p className="text-caption text-foreground-muted">
-                    加入于 {formatDate(member.joinedAt)}
+                    加入于 {formatEventDate(member.joinedAt, tz)}
                   </p>
                 </div>
                 <Badge tone={isOwnerRow ? "brand" : "neutral"} className="shrink-0">

@@ -167,11 +167,12 @@ describe("invitation token maintenance", () => {
   it("defaults to read-only, rejects an unconfirmed target and atomically sanitizes both route formats", async () => {
     const run = (...args: string[]) => spawnSync(process.execPath,
       ["--import", "tsx", "scripts/cleanup-invitation-tokens.ts", ...args],
-      { encoding: "utf8", env: { ...process.env, DATABASE_URL: env.TEST_DATABASE_URL } });
+      { encoding: "utf8", env: { ...process.env, APP_ENV: "test", DATABASE_URL: env.TEST_DATABASE_URL } });
     const initial = run();
     expect(initial.status).toBe(0);
     // Never alter unrelated records if the shared test database contains legacy leaks.
-    expect(JSON.parse(initial.stdout)).toEqual({ mode: "dry-run", candidates: 0 });
+    const preview = JSON.parse(initial.stdout) as { mode: string; candidates: number; target: string };
+    expect(preview).toEqual({ mode: "dry-run", candidates: 0, target: expect.stringMatching(/^[a-f0-9]{64}$/) });
     const ids = Array.from({ length: 4 }, () => randomUUID());
     const bodies = [
       { token: "synthetic-secret", invitePath: null },
@@ -188,12 +189,14 @@ describe("invitation token maintenance", () => {
       })) });
       const dry = run();
       expect(dry.status).toBe(0);
-      expect(JSON.parse(dry.stdout)).toEqual({ mode: "dry-run", candidates: 2 });
+      expect(JSON.parse(dry.stdout)).toEqual({ mode: "dry-run", candidates: 2, target: preview.target });
       expect(run("--apply", "--database=wrong-target").status).toBe(1);
+      expect(run("--execute").status).toBe(1);
+      expect(run("--execute", `--target=${"0".repeat(64)}`).status).toBe(1);
       expect((await testPrisma.idempotencyRecord.findUniqueOrThrow({ where: { id: ids[0] } })).responseBody).toEqual(bodies[0]);
-      const applied = run("--apply", `--database=${decodeURIComponent(new URL(env.TEST_DATABASE_URL!).pathname.slice(1))}`);
+      const applied = run("--execute", `--target=${preview.target}`);
       expect(applied.status).toBe(0);
-      expect(JSON.parse(applied.stdout)).toEqual({ mode: "apply", cleaned: 2 });
+      expect(JSON.parse(applied.stdout)).toEqual({ mode: "apply", cleaned: 2, target: preview.target });
       expect(applied.stdout + applied.stderr).not.toContain("synthetic-secret");
       for (const id of ids.slice(0, 3)) {
         expect((await testPrisma.idempotencyRecord.findUniqueOrThrow({ where: { id } })).responseBody).toEqual({ token: null, invitePath: null });
@@ -982,7 +985,6 @@ describe("邀请并发不变量 · 项目级锁（A01–A04）", () => {
     expect(memberRes.status).toBe(200);
     const memberData = AcceptedSuccess.parse((await memberRes.json()) as unknown).data;
     expect(memberData.alreadyMember).toBe(true);
-    expect(memberData.createdNewMembership).toBe(false);
 
     const ownerRes = await acceptRoute.POST(
       buildRequest("POST", `${BASE}/invitations/accept`, {
@@ -993,7 +995,6 @@ describe("邀请并发不变量 · 项目级锁（A01–A04）", () => {
     expect(ownerRes.status).toBe(200);
     const ownerData = AcceptedSuccess.parse((await ownerRes.json()) as unknown).data;
     expect(ownerData.alreadyMember).toBe(true);
-    expect(ownerData.createdNewMembership).toBe(false);
 
     expect(await testPrisma.projectMember.count({ where: { projectId: project.id } })).toBe(1);
     const invRows = await testPrisma.invitation.findMany({

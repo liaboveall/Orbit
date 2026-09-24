@@ -1,5 +1,7 @@
 import "server-only";
-import { createTransport, type SendMailOptions, type Transporter } from "nodemailer";
+import { logEvent } from "@/server/http/log";
+import type { SendMailOptions } from "nodemailer";
+import { sendMailWithBudget } from "./smtp";
 import type { OrbitEnv } from "@/server/env";
 
 /**
@@ -10,7 +12,7 @@ import type { OrbitEnv } from "@/server/env";
  *
  * 设计要点：
  *  - transport 从 env 读取 host/port/secure；Mailpit 无需 auth/TLS（SMTP_USER/SMTP_PASSWORD 为空即不启用）。
- *  - 每个 (env) 复用同一个 transport（连接池），避免每封邮件重建 TCP；用 WeakMap 按 env 对象缓存，
+ *  - 每次投递使用独立 transport 和可取消 socket（未启用连接池）；总预算到期关闭本次连接，
  *    使集成测试用独立 env 时得到独立 transport，绝不跨实例串用。
  *  - 安全（docs/03 §8）：邮件正文**不含**密码明文、**不含**完整 session token。验证/重置链接携带的
  *    是可过期的 token（库生成；重设令牌单次使用），属正常流程；日志只记录脱敏信息（用途 + userId）。
@@ -33,35 +35,6 @@ export interface AuthMailPayload {
 export interface EmailSender {
   sendVerificationEmail: (data: AuthMailPayload, request?: Request) => Promise<void>;
   sendResetPassword: (data: AuthMailPayload, request?: Request) => Promise<void>;
-}
-
-/** 按 env 缓存 transport（WeakMap：env 被回收时 transport 也随之可回收；不同 env 得到不同实例）。 */
-const transportCache = new WeakMap<OrbitEnv, Transporter>();
-
-/**
- * 取得（或惰性创建）与给定 env 绑定的 nodemailer transport。
- * Mailpit/本地：secure=false、无 auth；生产：由 env 提供 host/port/secure/user/password。
- */
-function getTransport(env: OrbitEnv): Transporter {
-  const cached = transportCache.get(env);
-  if (cached) return cached;
-
-  const auth =
-    env.SMTP_USER.length > 0
-      ? { user: env.SMTP_USER, pass: env.SMTP_PASSWORD }
-      : undefined;
-
-  const transport = createTransport({
-    host: env.SMTP_HOST,
-    port: env.SMTP_PORT,
-    secure: env.SMTP_SECURE,
-    auth,
-    // 说明：本地 Mailpit 为明文 SMTP（secure=false，无 TLS 握手），无需任何 tls 配置；
-    // 生产 secure=true 时沿用 nodemailer 默认的证书校验（不禁用，避免 MITM 风险）。
-  });
-
-  transportCache.set(env, transport);
-  return transport;
 }
 
 /** 转义 HTML 文本，避免用户名等注入邮件模板（简单实体转义即可，正文不使用富文本编辑器内容）。 */
@@ -178,9 +151,14 @@ async function send(
     html: body.html,
   };
 
-  await getTransport(env).sendMail(message);
+  try {
+    await sendMailWithBudget(env, message);
+  } catch {
+    logEvent("error", { event: "auth_email_failed", kind });
+    throw new Error("Email delivery failed");
+  }
   // 脱敏日志（docs/03 §8）：只记录用途与内部 userId，绝不输出 token / 链接 / 明文邮箱。
-  console.info(`[auth] 已发送${kind === "verify-email" ? "验证" : "重置"}邮件：kind=${kind} userId=${payload.user.id}`);
+  logEvent("info", { event: "auth_email_sent", kind, userId: payload.user.id });
 }
 
 /**

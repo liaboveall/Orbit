@@ -174,6 +174,8 @@ export function TimezonePicker({
         break;
       case "Escape":
         if (!open) return;
+        // F31⑬：IME 组合输入期间 Escape 归输入法（取消候选词），不关闭列表。
+        if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
         event.preventDefault();
         closeList();
         break;

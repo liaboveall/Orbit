@@ -120,60 +120,14 @@ function uniqueWhere(opts: BeginIdempotencyOptions) {
 }
 
 /**
- * 根据 HTTP 方法和 routeKey 检查目标资源是否存在。
- * 
- * 主要解决 UUID Replay 场景下的 404 问题：当幂等记录存在但资源已被删除时，
- * 第二次请求会返回 404。此函数通过检查资源有效性，允许更新 hash 以支持新请求。
- */
-async function checkResourceExistence(
-  method: string,
-  routeKey: string,
-  tx: Prisma.TransactionClient
-): Promise<boolean> {
-  // POST /projects/:projectId/tasks - 检查父项目是否存在且未归档
-  const createTaskMatch = routeKey.match(/\/projects\/([^/]+)\/tasks$/);
-  if (method === 'POST' && createTaskMatch) {
-    const projectId = createTaskMatch[1];
-    const project = await tx.project.findUnique({
-      where: { id: projectId },
-      select: { archivedAt: true }
-    });
-    return !!project && project.archivedAt === null;
-  }
-  
-  // PATCH /tasks/:taskId - 检查任务是否存在且未被软删除
-  const updateTaskMatch = routeKey.match(/\/tasks\/([^/]+)$/);
-  if (method === 'PATCH' && updateTaskMatch) {
-    const taskId = updateTaskMatch[1];
-    const task = await tx.task.findUnique({
-      where: { id: taskId },
-      select: { deletedAt: true }
-    });
-    return !!task && task.deletedAt === null;
-  }
-  
-  // DELETE /tasks/:taskId - 类似 PATCH 检查
-  if (method === 'DELETE' && updateTaskMatch) {
-    const taskId = updateTaskMatch[1];
-    const task = await tx.task.findUnique({
-      where: { id: taskId }
-    });
-    return !!task; // 即使已软删除也算存在
-  }
-  
-  // 其他方法或无法解析的路由，默认认为安全
-  return true;
-}
-
-/**
  * 事务开始处：查既有幂等记录。
  *  - 命中且未过期且 hash 一致 → replay（携带原状态码与响应体）；
  *  - 命中且未过期但 hash 不同 → 抛 IDEMPOTENCY_CONFLICT；
  *  - 命中但已过期 → 删除旧记录后按 new 处理（过期后 key 不再保证去重，docs/05 §5）；
  *  - 未命中 → new。
- * 
- * 增强：对于已存在但未过期的记录，检查目标资源是否仍有效存在。
- * 如果资源已被删除（如任务被软删除），则更新 hash 允许新请求，避免 404 错误。
+ *
+ * F01：过期删除用条件 deleteMany——与维护清理（按 expiresAt 删除）并发时不抛
+ * P2025（记录已被清理方删除 → 0 行删除 → 视为 new），不产生双写。
  */
 export async function beginIdempotency(
   tx: Prisma.TransactionClient,
@@ -184,25 +138,26 @@ export async function beginIdempotency(
 
   if (existing.expiresAt.getTime() <= Date.now()) {
     // 过期记录不再代表有效去重；删除后允许重新执行并写入新记录。
-    await tx.idempotencyRecord.delete({ where: { id: existing.id } });
+    // F01：条件删除——若维护清理已并发删除本记录，这里 0 行删除也不报错（防 P2025→500）。
+    await tx.idempotencyRecord.deleteMany({
+      where: { id: existing.id, expiresAt: existing.expiresAt },
+    });
     return { kind: "new" };
   }
 
   if (existing.requestHash === opts.requestHash) {
-    return { kind: "replay", status: existing.responseStatus, body: existing.responseBody, resourceId: existing.resourceId };
+    // 命中且未过期且 hash 一致 → 重放原响应（docs/05 §5）。重放授权由调用方复核。
+    return {
+      kind: "replay",
+      status: existing.responseStatus,
+      body: existing.responseBody,
+      resourceId: existing.resourceId,
+    };
   }
-  
-  // 增强容错：hash 不同且资源不存在时，允许覆盖旧记录
-  const resourceExists = await checkResourceExistence(opts.method, opts.routeKey, tx);
-  if (!resourceExists) {
-    // 资源已删除，更新 hash 以允许新的执行（防止未来冲突）
-    await tx.idempotencyRecord.update({
-      where: { id: existing.id },
-      data: { requestHash: opts.requestHash }
-    });
-    return { kind: "new" };
-  }
-  
+
+  // F01 修复：同 key 异内容一律 409 IDEMPOTENCY_CONFLICT（docs/05 §5 契约语义）。
+  // 原先「资源不存在时覆盖旧 hash」的容错与规范相悖（等于允许不同 body 复用旧 key），
+  // 且其目标场景（PATCH/DELETE 幂等）在本项目契约中并不使用幂等键。
   throw idempotencyConflictError();
 }
 

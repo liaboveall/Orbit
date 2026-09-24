@@ -1,5 +1,7 @@
 import "server-only";
 import { buildErrorResponse } from "@/contracts";
+import { sharedLimitsEnabled } from "@/server/modules/rate-limit/postgres";
+import { acquireUploadCapacity } from "./transfer-capacity";
 
 /** Single-process M5 admission; PostgreSQL sharing remains part of M6. */
 export class UploadGate {
@@ -23,10 +25,21 @@ export class UploadGate {
 }
 
 const shared = globalThis as typeof globalThis & { orbitUploadGate?: UploadGate };
-export function acquireUploadSlot(userId: string, requestId: string) {
+export async function acquireUploadSlot(userId: string, requestId: string) {
   shared.orbitUploadGate ??= new UploadGate();
-  const slot = shared.orbitUploadGate.acquire(userId);
-  if (slot.allowed) return slot;
+  const releaseCapacity = await acquireUploadCapacity(userId);
+  const slot = await (async () => {
+    try {
+      return sharedLimitsEnabled()
+        ? await (await import("./postgres-gate")).acquirePostgresUpload((await import("@/server/db/prisma")).prisma, userId)
+        : shared.orbitUploadGate!.acquire(userId);
+    } catch (error) { releaseCapacity(); throw error; }
+  })();
+  if (slot.allowed) {
+    const admitted = slot;
+    return { allowed: true as const, release: async () => { try { await admitted.release(); } finally { releaseCapacity(); } } };
+  }
+  releaseCapacity();
   return { allowed: false as const, response: Response.json(buildErrorResponse("RATE_LIMITED", "上传过于频繁或已有两个文件正在上传，请稍后重试。", { requestId }), {
     status: 429,
     headers: { "Retry-After": String(slot.retryAfter), "Cache-Control": "private, no-store", "x-request-id": requestId },

@@ -194,6 +194,15 @@ export function createApiClient(config: ApiClientConfig = {}): ApiClient {
       };
     }
 
+    // Explicitly opt into an empty DELETE response with z.void()/z.undefined().
+    // Object-returning DELETE calls still reject an unexpected 204.
+    if (response.status === 204 && method === "DELETE" && !list) {
+      const parsed = schema.safeParse(undefined);
+      if (!parsed.success) throw new ApiClientError("此 DELETE 需要对象响应，实际返回了 204。", { status: 204 });
+      return { ok: true, status: 204, data: parsed.data,
+        meta: MetaSchema.parse({ requestId: response.headers.get("x-request-id") ?? "unassigned" }),
+      };
+    }
     const json = safeJsonParse(text, response.status);
     const envelope = readEnvelopeFields(json, response.status);
 

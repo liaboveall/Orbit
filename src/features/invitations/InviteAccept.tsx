@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { InlineError } from "@/components/ui/inline-error";
 import { Skeleton, SkeletonBlock } from "@/components/ui/skeleton";
 import { Spinner } from "@/features/auth/auth-form";
+import { formatEventDateTime, useUserTimezone } from "@/lib/user-timezone";
+import { forgetInviteToken, recallInviteToken, rememberInviteToken } from "./pending-invite";
 
 /**
  * 邀请预览与接受 (M4 / ORB-013，公开页 /invite#token=<hash>).
@@ -57,20 +59,7 @@ function describePreviewError(code: string, message: string): { title: string; d
   }
 }
 
-/** ISO → 「2026 年 9 月 17 日 14:03」（浏览器本地时区）。 */
-function formatDateTime(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat("zh-CN", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date);
-}
-
+// F23 修复：预览过期时间改用账户时区（登录前无会话 → useUserTimezone 兜底设备时区）。
 export type InviteAcceptProps = {
   /** Token from server-side (always null for fragment protocol), client extracts from hash. */
   token: string | null;
@@ -86,6 +75,7 @@ export type InviteAcceptProps = {
  */
 
 export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
+  const tz = useUserTimezone(); // F23：登录前无会话，兜底设备时区。
   const router = useRouter();
   const [status, setStatus] = useState<Status>({ kind: "loading" });
   const [accepting, setAccepting] = useState(false);
@@ -103,8 +93,8 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
       if (hash.startsWith("token=")) {
         try {
           const decoded = decodeURIComponent(hash.slice(6));
-          // Store in sessionStorage for logout/login flow
-          sessionStorage.setItem("inviteToken", decoded);
+          // 标签页内暂存（最多 30 分钟），支持登录/换账号后回到 /invite 接受
+          rememberInviteToken(decoded);
           // Clear hash from URL bar for privacy
           history.replaceState(null, "", window.location.pathname);
           return decoded;
@@ -122,7 +112,7 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
         // First check hash, then sessionStorage (for login redirect scenario)
         let tokenToUse = extractFromHash();
         if (!tokenToUse) {
-          tokenToUse = sessionStorage.getItem("inviteToken");
+          tokenToUse = recallInviteToken();
         }
 
         if (!tokenToUse || tokenToUse.trim().length === 0) {
@@ -145,7 +135,7 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
           // A13 修复：预览阶段已判定为终态失效（过期/撤销/已用/不存在），token 不再有
           // 任何用途，清除 sessionStorage 里的临时副本，不留下无限期滞留的令牌。
           if (["NOT_FOUND", "INVITATION_EXPIRED", "INVITATION_REVOKED", "INVITATION_USED"].includes(result.error.code)) {
-            sessionStorage.removeItem("inviteToken");
+            forgetInviteToken();
             setClientToken(null);
           }
           setStatus({ kind: "error", ...describePreviewError(result.error.code, result.error.message) });
@@ -174,10 +164,10 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
     setAccepting(true);
     setAcceptError(null);
     try {
-      const tokenToSubmit = clientToken || sessionStorage.getItem("inviteToken");
+      const tokenToSubmit = clientToken || recallInviteToken();
 
       if (!tokenToSubmit) {
-        setAcceptError("No token available");
+        setAcceptError("邀请链接无效或已过期，请向项目所有者重新获取。");
         setAccepting(false);
         return;
       }
@@ -185,7 +175,7 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
       const result = await api.post("/invitations/accept", AcceptedInvitationSchema, { token: tokenToSubmit });
       if (result.ok) {
         // SUCCESS: CLEAR TOKEN from memory immediately after acceptance!
-        sessionStorage.removeItem("inviteToken");
+        forgetInviteToken();
         setClientToken(null);
         
         // Hard redirect to project board
@@ -205,7 +195,7 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
         result.status === 410 ||
         (result.status === 409 && result.error.code === "INVITATION_USED")
       ) {
-        sessionStorage.removeItem("inviteToken");
+        forgetInviteToken();
         setClientToken(null);
       }
       setAcceptError(result.error.message);
@@ -277,7 +267,7 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
             <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
             过期时间
           </dt>
-          <dd className="font-medium text-foreground">{formatDateTime(preview.expiresAt)}</dd>
+          <dd className="font-medium text-foreground">{formatEventDateTime(preview.expiresAt, tz)}</dd>
         </div>
       </dl>
 

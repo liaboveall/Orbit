@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Home, LayoutGrid, Menu } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { UserDTO } from "@/contracts";
 import { cn } from "@/lib/cn";
 import { PROJECT_COLOR_DOT, projectColorAria } from "@/lib/project-color";
@@ -16,9 +16,12 @@ import {
   DrawerDescription,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { SIDEBAR_PROJECTS } from "./fixtures";
+import { useRecentProjects } from "./use-recent-projects";
 import { OrbitWordmark } from "./orbit-logo";
 import { UserMenu } from "./user-menu";
+import { useGuardedNavigate } from "@/features/tasks/unsaved-changes";
+import { pruneDrafts } from "@/features/tasks/draft-storage";
+import { UserTimezoneProvider } from "@/lib/user-timezone";
 
 /**
  * AppShell（ORB-002 布局，ORB-006 接入真实会话）：响应式应用外壳。
@@ -34,19 +37,20 @@ import { UserMenu } from "./user-menu";
  * 不再引用 fixture 的 CURRENT_USER；侧栏底部与个人菜单直达 `/app/settings`。
  *
  * M2 Phase 6 变更：「全部项目」按钮导航到真实项目列表 `/app/projects`；
- * 样例横幅改为白名单判定（isRealDataPage）：设置页与项目/任务/回收站真实数据页
- * 不挂横幅，today/board/task 详情/ui-samples 仍是 fixture 样例、继续显示。
- * 侧栏项目导航仍为 M0 fixture（保持 6 项，后续里程碑接真实项目列表）。
+ * 样例横幅改为白名单判定（isRealDataPage）：设置页/项目/任务/回收站/真实工作台
+ * today 不挂横幅；/app/samples/* 与 /app/ui-samples 仍是 fixture 样例、继续显示。
+ * 侧栏按当前会话读取最近六个未归档项目，路由切换/聚焦/定时重取，不共享用户缓存。
  */
 
 /** NODE_ENV 是构建期常量：生产构建把开发分支作为死代码消除。 */
 const isDev = process.env.NODE_ENV === "development";
 
 /**
- * 真实数据页判定（M2 Phase 6）：白名单内的路由展示真实私有数据，
- * 不挂「使用 fixture 合成数据」样例横幅；其余（samples/today/
- * samples/board/sample/tasks/task 详情/ui-samples）仍是 M0 样例，
- * 必须继续显示横幅（docs/13：样例内容必须明确标识）。
+ * 真实数据页判定（M2 Phase 6；B1 修复改为**正向样例路由判定**的反向描述——
+ * 真实数据路由显式枚举，避免每接一个真实页就漏改白名单）：白名单内的路由展示
+ * 真实私有数据，不挂「使用 fixture 合成数据」样例横幅。/app/today 自 M5（ORB-019）
+ * 起是真实工作台数据，与设置/项目/任务一样属于白名单；仅 /app/samples/*、
+ * /app/ui-samples 是 M0 样例，必须继续显示横幅（docs/13：样例内容必须明确标识）。
  * 项目 id 为 UUID（不含 `/`），[^/]+ 即精确匹配单层动态段。
  */
 const PROJECT_TASKS_PATH = /^\/app\/projects\/[^/]+\/tasks$/;
@@ -62,6 +66,8 @@ const PROJECT_SETTINGS_PATH = /^\/app\/projects\/[^/]+\/settings$/;
 function isRealDataPath(pathname: string): boolean {
   return (
     pathname.startsWith("/app/settings") ||
+    // B1 修复：/app/today 是真实工作台（ORB-019），不挂 fixture 横幅。
+    pathname.startsWith("/app/today") ||
     pathname === "/app/projects" ||
     PROJECT_TASKS_PATH.test(pathname) ||
     // 真实任务详情独立页（ORB-010，M3 已接真实数据）不挂 fixture 横幅。
@@ -72,8 +78,8 @@ function isRealDataPath(pathname: string): boolean {
     PROJECT_INVITATIONS_PATH.test(pathname) ||
     PROJECT_ACTIVITY_PATH.test(pathname) ||
     PROJECT_SETTINGS_PATH.test(pathname)
-    // 注意：/app/samples/*、/app/today、/app/ui-samples 及仍为 fixture 的
-    // 样例页必须继续显示横幅（docs/13）。
+    // 注意：/app/samples/* 与 /app/ui-samples 仍为 fixture 样例页，必须继续显示横幅
+    // （docs/13）。样例路由在生产由服务端门禁关闭（见 samples 页面的 dev gate）。
   );
 }
 
@@ -106,13 +112,16 @@ function SidebarNav({
   pathname,
   user,
   onNavigate,
+  recent,
 }: {
+  recent: ReturnType<typeof useRecentProjects>;
   mode: NavMode;
   pathname: string;
   user: UserDTO;
   onNavigate?: () => void;
 }) {
-  const router = useRouter();
+  // B6 修复：程序化导航同样受未保存草稿保护（脏表单未确认放弃时不离开）。
+  const guardedNavigate = useGuardedNavigate();
   const todayActive = pathname.startsWith("/app/today");
   const settingsActive = pathname.startsWith("/app/settings");
   // 项目列表页（/app/projects，不含 fixture 的 /app/projects/[id]/board 等）为激活态。
@@ -168,14 +177,16 @@ function SidebarNav({
             mode === "rail" ? "hidden xl:block" : "px-3",
           )}
         >
-          样例项目
+          最近项目
         </p>
 
+        {recent.loading && <p role="status" className={cn("px-3 text-caption text-foreground-muted", labelClass(mode))}>加载项目中…</p>}
+        {recent.error && <button type="button" onClick={recent.retry} aria-label="重新加载最近项目" className="min-h-11 w-full rounded-control px-2 text-caption text-danger focus-visible:outline-2">项目加载失败，重试</button>}
+        {!recent.loading && !recent.error && recent.projects.length === 0 && <p className={cn("px-3 text-caption text-foreground-muted", labelClass(mode))}>暂无项目，从全部项目开始。</p>}
         <ul className="space-y-1">
-          {SIDEBAR_PROJECTS.map((project) => {
-            // M3 样例路由（分叉 1）：把 M0 fixture 看板迁移到 /app/samples/board/[projectId]
-            const href = `/app/samples/board/${project.id}`;
-            const active = pathname.startsWith(href);
+          {recent.projects.map((project) => {
+            const href = `/app/projects/${project.id}/board`;
+            const active = pathname.startsWith(`/app/projects/${project.id}/`);
             const dot = (
               <span
                 className={cn(
@@ -233,15 +244,15 @@ function SidebarNav({
         </ul>
 
         {/* 项目列表入口（M2 Phase 6：导航到真实数据页 /app/projects）。
-            门禁约束：必须保持 <button type="button"> + aria-label（tests/ui/m0-review.spec.ts
-            用 getByRole("button") 断言），且绝不能移入上方 <ul>（ul a 数量锁定为 6）。 */}
+            门禁约束：必须保持 <button type="button"> + aria-label（tests/ui/accessibility-and-layout.spec.ts
+            用 getByRole("button") 断言），且绝不能移入上方 <ul>（ul 仅包含当前用户的最近项目）。 */}
         <Tooltip content="全部项目" side="right">
           <button
             type="button"
             aria-label="全部项目"
             aria-current={projectsActive ? "page" : undefined}
             onClick={() => {
-              router.push("/app/projects");
+              guardedNavigate.push("/app/projects");
               onNavigate?.();
             }}
             className={cn(
@@ -313,20 +324,34 @@ function SidebarNav({
 
 export function AppShell({ user, children }: { user: UserDTO; children: ReactNode }) {
   const pathname = usePathname();
+  const recent = useRecentProjects(user.id);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // 共享浏览器换账号：删除其他账号留下的本机草稿与已过期草稿（生命周期见 draft-storage）。
+  useEffect(() => {
+    pruneDrafts(user.id);
+  }, [user.id]);
   // 编程式打开的手机抽屉导航：打开瞬间记录焦点，关闭后还给汉堡按钮（docs/02：关闭后恢复焦点）。
   const { captureFocus, handleCloseAutoFocus } =
     useFocusReturn<HTMLButtonElement>();
 
-  // 真实数据页（设置 / 项目列表 / 任务列表 / 回收站）不挂样例横幅；
-  // fixture 页（today/board/task 详情/ui-samples）继续显示（白名单见 isRealDataPath）。
+  // 真实数据页（工作台 / 设置 / 项目 / 任务 / 回收站 / 成员 / 邀请 / 活动）不挂样例横幅；
+  // fixture 样例页（samples/ui-samples）继续显示（白名单见 isRealDataPath）。
   const isRealDataPage = isRealDataPath(pathname);
 
   return (
+    // F23 修复：会话用户的时区作为事件时间展示的统一来源（详情见 lib/user-timezone）。
+    <UserTimezoneProvider value={user.timezone}>
     <div className="min-h-dvh bg-background">
+      {/* F31⑥：键盘用户跳过导航直达主内容（docs/02 §6） */}
+      <a
+        href="#app-main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-control focus:bg-brand focus:px-4 focus:py-2 focus:text-label focus:font-medium focus:text-white"
+      >
+        跳到主内容
+      </a>
       {/* 固定侧栏：手机隐藏，平板 72px，桌面 224px */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[72px] border-r border-line bg-surface md:block xl:w-56">
-        <SidebarNav mode="rail" pathname={pathname} user={user} />
+        <SidebarNav mode="rail" pathname={pathname} user={user} recent={recent} />
       </aside>
 
       {/* 手机抽屉导航（Radix Dialog：焦点陷阱 / Escape / 焦点恢复） */}
@@ -342,6 +367,7 @@ export function AppShell({ user, children }: { user: UserDTO; children: ReactNod
           <div className="pt-10">
             <SidebarNav
               mode="drawer"
+              recent={recent}
               pathname={pathname}
               user={user}
               onNavigate={() => setDrawerOpen(false)}
@@ -378,12 +404,13 @@ export function AppShell({ user, children }: { user: UserDTO; children: ReactNod
           </span>
         </header>
 
-        <main className="flex-1 px-4 py-6 md:px-6 xl:px-8">
+        <main id="app-main" className="flex-1 px-4 py-6 md:px-6 xl:px-8">
           {isRealDataPage ? null : <SampleBanner showStateHint={isDev} />}
           {children}
         </main>
       </div>
     </div>
+    </UserTimezoneProvider>
   );
 }
 

@@ -1,0 +1,2 @@
+# Executed on Linux after checkout/upload; Windows CRLF breaks shebangs.
+*.sh text eol=lf

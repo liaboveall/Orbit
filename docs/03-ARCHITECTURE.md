@@ -10,7 +10,7 @@
 | Web | Next.js 16 App Router + 配套 React 稳定版 | public 页面/外壳服务端渲染，交互局部 client |
 | Language | TypeScript strict | DTO 显式定义，不泄露 ORM 对象 |
 | UI | Tailwind CSS、Radix primitives、Lucide | 以 tokens 为视觉源；只选一种组件原语体系 |
-| Client data | RSC + createApiClient / API 直调 | 服务器组件直查为数据真源；写操作后 router.refresh()；分页用请求代次绑定防旧响应污染；筛选在 URL，草稿在局部状态 |
+| Client data | RSC + createApiClient / API 直调 | 服务器组件直查为数据真源；写操作后 router.refresh()；分页用请求代次绑定防旧响应污染；筛选在 URL；草稿在局部状态，任务标题/描述另按用户在本机持久化以便恢复（生命周期见 §6） |
 | Forms | React Hook Form + Zod | 与 API 校验共享限制，服务端仍重新校验 |
 | Drag | @dnd-kit/core + sortable，选兼容版本 | 键盘/菜单替代、失败回滚 |
 | Persistence | PostgreSQL 17 + Prisma 7 + PostgreSQL adapter | SQL 迁移补充 ORM 不支持的约束 |
@@ -54,14 +54,15 @@ src/
     auth/                   # Better Auth、会话、项目授权
     db/                     # Prisma singleton、事务帮助函数
     modules/                # project/task/invite/comment/file 等服务
-    integrations/           # storage、mail、未来 AI provider
+    modules/                # 业务模块（attachments/storage、invitation、task 等）
     http/                   # 错误映射、origin 验证、请求 ID、限流
   lib/                      # 确实跨功能的纯工具，不能成为杂物目录
   styles/                   # tokens、globals
 prisma/                     # schema、迁移、seed
 tests/unit/ integration/ e2e/ contract/
 scripts/                    # seed、清理、导出测试报告
-infra/                      # compose、Dockerfile、部署说明
+Dockerfile / .dockerignore  # 仓库根目录（M6 容器构建）
+infra/                      # compose、nginx、备份脚本、生命周期 JSON
 artifacts/                  # 实际报告与截图（大文件按需忽略）
 docs/ planning/ prompts/ contracts/  # 本规划
 ~~~
@@ -88,13 +89,13 @@ V1 不引入数据库 RLS；所有查询必须经过项目授权服务，并用�
 
 ## 6. 客户端状态和数据流
 
-当前实现的数据真源是 **Server Component 直查**：页面在服务器组件里经领域服务读取权威数据，以 props 下发给客户端组件。客户端不维护第二套缓存真源；`@tanstack/react-query` 虽作为依赖存在，但当前 `src`/`tests` 全仓未导入 `useQuery`/`useMutation`/`QueryClient`（见 `src/features/shell/providers.tsx` 的数据真源说明）。V1 不为兑现历史规划强行引入 TanStack Query。
+当前实现的数据真源是 **Server Component 直查**：页面在服务器组件里经领域服务读取权威数据，以 props 下发给客户端组件。客户端不维护第二套缓存真源；项目不依赖 TanStack Query（package.json 未包含，见 `src/features/shell/providers.tsx` 的数据真源说明）。V1 不为兑现历史规划强行引入 TanStack Query。服务端页面经 `requirePageUser()`（React `cache`，同一请求内布局与页面共享一次会话查询）取得会话，并在读取项目数据前消费一次读取额度，见 §8。
 
 写操作通过 `createApiClient` 直调对应 `/api/v1` 端点；成功后调用 `router.refresh()` 让服务器组件重新读取权威数据，而非在客户端手动失效/合并缓存。因此不存在 query key、`invalidates`、`cancelQueries` 这类客户端缓存语义。
 
 分页/无限滚动使用**请求代次绑定**（`generationRef`，见 `src/features/activity/ActivityFeed.tsx`、`src/features/projects/project-list-client.tsx`）：每次首屏重置或卸载递增代次，仍在飞行的旧响应落地时发现代次不匹配即整体丢弃，防止旧上下文响应污染新数据。dedupe-by-id 不足以防护来自不同筛选上下文的旧响应，故以代次为准。
 
-草稿、弹窗、拖拽状态留在局部 React state；V1 不引入全局 Redux/Zustand。列表筛选、视图和打开任务 ID 在 URL 中；不把描述、评论、凭证写 URL。加载态用 skeleton，与过期（stale）内容区分。
+草稿、弹窗、拖拽状态留在局部 React state；V1 不引入全局 Redux/Zustand。例外是任务标题/描述草稿：按 `orbit:draft:<userId>:<projectId>:<taskId>` 存于 localStorage 7 天，仅用于刷新、崩溃或会话过期后的恢复；恢复时所有待提交字段以编辑态可见，确认放弃/离开、保存成功、成功退出登录、换账号或失去项目访问时删除（`src/features/tasks/draft-storage.ts`）。评论、子任务草稿只在内存。打开中的任务被他人删除后，面板与独立页保留最后一次内容和草稿并切换为只读提示，不因后台刷新卸载编辑器。列表筛选、视图和打开任务 ID 在 URL 中；不把描述、评论、凭证写 URL。加载态用 skeleton，与过期（stale）内容区分。
 
 ## 7. 附件流程
 
@@ -109,11 +110,23 @@ V1 不引入数据库 RLS；所有查询必须经过项目授权服务，并用�
 
 ## 8. 错误、可观测性和限流
 
-结构化日志目标字段：requestId、route、method、status、durationMs、userId（内部ID）、projectId（授权后）、errorCode。敏感字段统一 redact；不记录密码、cookie、token、请求正文或 signed URL。**当前实现差距**：仅 requestId 已落地；route/method/status/durationMs/projectId 等为目标、尚未实现。`LOG_LEVEL` 环境变量已在 `src/server/env.ts` 中校验（枚举 debug/info/warn/error，默认 info），但当前从不被消费。上述未实现字段与日志级别消费属待补工作。
+认证请求先按实际字节数执行 64KiB 有界读取，再交给 Better Auth 解析；无/偏小 Content-Length 不能绕过限制，超限统一返回 413。读取期间客户端 abort 取消源流；超限取消不等待不合作的源完成。
 
-**当前限流实现为单节点进程内存令牌桶**（`src/server/modules/rate-limit/memory.ts` 的 `MemoryRateLimiter`，基于内存 Map），没有 PostgreSQL 共享计数，也未启用分布式存储；多副本部署下会失效。已落地的业务参数：常规业务写 60 次/用户/分钟（所有业务写端点共享同一用户写桶）、邀请预览/接受合计 20 次/IP/分钟（匿名端点独立桶）；认证敏感端点按 Better Auth 库内置限流（test 环境关闭、其余环境启用）。M5 上传另有独立滑动窗口：10 次/用户/分钟、跨任务最多 2 个在途请求，在接收 multipart 前准入；成功、失败、取消、超时均在 finally 释放。已准入的重放及失败请求计频率，门禁拒绝不消耗上传频率。读取 300 次/用户/分钟待 M6 实现。只信任已配置代理提供的客户端 IP（`TRUSTED_PROXY_COUNT`，默认 0 不信任转发头）。阈值为产品默认，可由配置下调，不由客户端设置。**多副本共享限流遵循既定 PostgreSQL 架构方向（非 Redis，见 docs/11 ADR-014），属 M6 部署范围，当前未实现**；多副本部署前需迁移到 PostgreSQL 共享计数。
+SMTP 每次发送使用独立可取消连接，TCP/greeting/空闲预算分别 10/10/15 秒，发送总预算 20 秒。总预算到期关闭真实 socket，不能只让 Promise 超时；保留 implicit TLS、生产强制 STARTTLS 和证书校验。同 env 并发发送互不取消。实现对照 [Nodemailer socket 选项](https://nodemailer.com/extras/smtp-connection) 与已安装 10.0.1 源码。
 
-计划提供 /health/live（进程可服务）和 /health/ready（数据库连接与迁移兼容）；不暴露版本、凭证、连接字符串。**当前两个端点尚未实现，属 M6 部署范围**。邮件/存储暂时不可用只影响对应操作，有独立可观测错误，不让整个看板持续 500。
+附件下载获取响应头预算 10 秒，整个响应流预算 120 秒；成功、截断、客户端取消及超时均释放计时器/监听。按存储声明长度检查实际字节，流开始后只结束流并留脱敏事件，不伪造新的 JSON 错误响应。
+
+结构化日志分层：Nginx 安全访问日志记录 requestId、固定标签 route/method、status、bytes、durationSeconds，不记录路径、查询或 Referer，避免路径令牌泄露；代理覆盖 X-Request-Id 后传入应用用于关联。应用记录脱敏 errorClass/errorCode 和认证邮件事件，LOG_LEVEL 控制 debug/info/warn/error。业务 userId/projectId 仅在事件明确需要且完成授权后选取，禁止复制请求或错误原文。
+
+staging/production 使用 PostgreSQL 共享原子固定窗口限流：业务写 60 次/用户/分钟、GET 读取 300 次/用户/分钟、邀请预览/接受合计 20 次/IP/分钟；认证使用 Better Auth 1.7.3 customStorage.consume，并保持敏感端点原阈值。上传采用数据库滑动分钟 10 次和最多 2 个跨副本活跃租约（180 秒，覆盖 120 秒请求截止）；development/test 保留内存实现，真实双池并发测试直接验证共享实现。只信任 TRUSTED_PROXY_COUNT 指定代理链，默认 0 退化共享来源桶。细节与维护见 [M6 运行手册](M6-OPERATIONS.md)。
+
+服务端页面与 API 共用每用户读取额度：每个完整页面请求（首屏、客户端导航、刷新）在读取数据前计 1 次，同一请求的布局与页面只计一次；链接预取只渲染到布局、不执行页面，因此不计费（2026-09-24 实测预取载荷不含页面数据）。超额时跳转 /rate-limited 说明页，显示等待秒数并保留原地址。
+
+注册、重发验证邮件、找回密码等匿名认证入口不在请求内等待 SMTP：发信 hook 立即返回，投递经 Next `after()` 在响应结束后执行（有界并发，积压上限后丢弃并记录 auth_email_dropped），投递失败只写脱敏 auth_email_failed，不改变匿名响应的状态、正文与耗时。进程被强制终止时尚未发出的认证邮件可能丢失，用户可重新发送。
+
+连接池饱和时 Prisma 交互式事务在 maxWait（2 秒）内无法开始会抛出特定 P2028，与 pg-pool 等待超时一样映射为 503 SERVICE_UNAVAILABLE；其余 P2028 仍按 500 上报。
+
+已提供 /health/live（进程可服务）和 /health/ready（数据库连接与迁移兼容），实现与测试见 M6 运行手册；不暴露版本、凭证、连接字符串。邮件/存储暂时不可用只影响对应操作，有独立可观测错误，不让整个看板持续 500。
 
 ## 9. V1.1 的扩展位置
 

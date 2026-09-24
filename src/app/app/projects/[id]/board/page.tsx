@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { BoardQuerySchema } from "@/contracts";
 import { dateInTimezone } from "@/lib/calendar";
-import { getSessionUser } from "@/server/auth/session";
+import { requirePageUser } from "@/server/auth/page-session";
 import { DomainError } from "@/server/http/errors";
 import { getProject, listMembers } from "@/server/modules/project";
-import { getTask } from "@/server/modules/task";
+import { findProjectTask } from "@/server/modules/task";
 import { getBoard } from "@/server/modules/task/board";
 import { TaskFilters } from "@/features/tasks/real/task-filters";
 import { TaskPanel } from "@/features/tasks/real/task-panel";
@@ -23,12 +22,7 @@ export default async function Page({
 }) {
   const { id } = await params;
   const raw = await searchParams;
-  const user = await getSessionUser(await headers());
-  if (!user)
-    redirect(
-      "/auth/login?returnTo=" +
-        encodeURIComponent("/app/projects/" + id + "/board"),
-    );
+  const user = await requirePageUser();
   const data = await (async () => {
     try {
       const project = await getProject(id, user.id);
@@ -38,11 +32,10 @@ export default async function Page({
       const [board, members, task] = await Promise.all([
         getBoard(project.id, user.id, parsed.data),
         listMembers(project.id, user.id),
-        typeof selection === "string" ? getTask(selection, user.id) : null,
+        typeof selection === "string" ? findProjectTask(selection, project.id, user.id) : null,
       ]);
-      if (task && task.projectId !== project.id) notFound();
       const today = dateInTimezone(user.timezone);
-      return { project, members, task, today, parsed, board };
+      return { project, members, task, selection, today, parsed, board };
     } catch (error) {
       if (error instanceof DomainError && error.code === "NOT_FOUND")
         notFound();
@@ -53,7 +46,7 @@ export default async function Page({
     return (
       <InlineError>筛选参数无效，请清除地址栏查询参数后重试。</InlineError>
     );
-  const { project, members, task, today, parsed, board } = data;
+  const { project, members, task, selection, today, parsed, board } = data;
   return (
     <>
       <TaskFilters projectId={project.id} members={members} board />
@@ -64,10 +57,11 @@ export default async function Page({
         query={parsed.data}
         today={today}
       />
-      {task && (
+      {/* 所选任务被删除/不存在时仍渲染面板说明，页面其余部分保持可用（不整页 404）。 */}
+      {typeof selection === "string" && (
         <TaskPanel
           members={members}
-          key={task.id}
+          key={selection}
           task={task}
           project={project}
           userId={user.id}

@@ -10,14 +10,15 @@
  * 正文/图标要求 AA 4.5:1，大字号 3:1，控件边界与焦点环 3:1。逐一实测：
  *   foreground   #171A21 → 白 16.4:1   ✅
  *   fg-secondary #5B6472 → 白  5.98:1 / 背景 5.68:1  ✅（正文）
- *   fg-muted     #6B7280 → 白  4.83:1 / 背景 4.59:1  ✅（辅助文字，勉强过 4.5，
- *                仅用于 ≥12px 非关键说明；关键信息一律用 fg-secondary 及以上）
+ *   fg-muted     #5F6B7A → 白  5.43:1 / 背景 5.11:1 / sunken 4.88:1 /
+ *                brand-soft 4.81:1  ✅（F25 修复：原 #6B7280 在 sunken 4.35:1、
+ *                brand-soft 4.29:1 不达 4.5:1，调深后全部背景达标且留余量）
  *   brand        #355CFF → 白  5.09:1 ✅（白字压品牌底同为 5.09:1）
  *   danger       #B42318 → 白  6.57:1 ✅
  *   warning      #8A5700 → 白  6.10:1 ✅
  *   success      #18794E → 白  5.41:1 ✅
  *   line-strong  #7D8798 → 白  3.63:1 ✅（控件边界，满足 3:1）
- * 结论：docs/02 §2 的初始值全部通过对应门槛，无需调深，按原值落地。
+ * 结论：docs/02 §2 的初始值除 fg-muted 按 F25 裁定调深外，其余全部按原值落地。
  */
 
 @theme {
@@ -29,7 +30,7 @@
 
   --color-foreground: #171a21; /* text-primary：正文/标题 */
   --color-foreground-secondary: #5b6472; /* text-secondary：次要说明 */
-  --color-foreground-muted: #6b7280; /* text-muted：辅助文字（见上对比度） */
+  --color-foreground-muted: #5f6b7a; /* text-muted：辅助文字（F25 修复：调深以满足全部背景 ≥4.5:1） */
   --color-foreground-invert: #ffffff; /* 深底上的文字 */
 
   /* ── 颜色：边界 ───────────────────────────────────────────────────── */

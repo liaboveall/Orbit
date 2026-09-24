@@ -21,7 +21,7 @@ import {
 } from "@/server/modules/pagination/cursor";
 import { requireProjectMember } from "@/server/modules/authorization/project-access";
 import { fromDueDateString, isValidDueDate } from "./date-only";
-import { toTaskDTO, toTaskSummaryDTO, fetchTaskResourceCounts, fetchTaskResourceCountsBatch } from "./mappers";
+import { TASK_SUMMARY_SELECT, toTaskDTO, toTaskSummaryDTO, fetchTaskResourceCounts, fetchTaskResourceCountsBatch } from "./mappers";
 import { taskNotFoundError } from "./access";
 
 /**
@@ -205,14 +205,12 @@ export async function listProjectTasks(
     conditions.push(keysetCondition(sort, decoded));
   }
 
+  // F14：摘要列表使用显式投影，不拉取 description 等大字段。
   const rows = await prisma.task.findMany({
     where: { AND: conditions },
     orderBy: orderByFor(sort),
     take: limit + 1,
-    include: {
-      assignee: { select: { id: true, name: true } },
-      creator: { select: { id: true, name: true } },
-    },
+    select: TASK_SUMMARY_SELECT,
   });
 
   const hasMore = rows.length > limit;
@@ -238,6 +236,25 @@ export async function listProjectTasks(
   }
 
   return { tasks, nextCursor, hasMore };
+}
+
+/**
+ * 页面读取「项目内的指定任务」：不存在、已软删除、属于其他项目或不可见时返回 null。
+ * 调用方须已确认项目可访问；看板/列表据此在任务被他人删除后保留页面与草稿，
+ * 而不是把整页变成不可访问（项目本身不可见仍由 getProject 统一 404）。
+ */
+export async function findProjectTask(
+  taskId: string,
+  projectId: string,
+  userId: string,
+): Promise<TaskDTO | null> {
+  try {
+    const task = await getTask(taskId, userId);
+    return task.projectId === projectId ? task : null;
+  } catch (error) {
+    if (error instanceof DomainError && error.code === "NOT_FOUND") return null;
+    throw error;
+  }
 }
 
 /** 读取单个未删除任务详情（成员可见）；不存在/非成员/已软删除 → 404 NOT_FOUND。 */

@@ -4,7 +4,10 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { OrbitEnv } from "@/server/env";
 import { createEmailSender } from "./email";
+import { dispatchAuthEmail } from "./email-dispatch";
 import { resolveClientIp } from "@/server/http/client-ip";
+import { consumeBucket } from "@/server/modules/rate-limit/postgres";
+import { logEvent } from "@/server/http/log";
 
 const AUTH_IP_HEADER = "x-orbit-auth-client-ip";
 import { registrationTimezone, requireUserName, requireUserTimezone } from "./user-fields";
@@ -51,6 +54,11 @@ export function createAuthOptions(prisma: PrismaClient, env: OrbitEnv) {
 
   return {
     appName: "Orbit",
+    logger: {
+      level: env.LOG_LEVEL,
+      // Library messages/args can contain SMTP replies, URLs or submitted values.
+      log: (level) => logEvent(level, { event: "auth_library_event" }),
+    },
     baseURL: env.BETTER_AUTH_URL,
     basePath: "/api/auth",
     secret: env.BETTER_AUTH_SECRET,
@@ -63,14 +71,19 @@ export function createAuthOptions(prisma: PrismaClient, env: OrbitEnv) {
       requireEmailVerification: true,
       // 重设密码成功后撤销该用户所有既有会话（ORB-005 交付物 #8）。
       revokeSessionsOnPasswordReset: true,
-      sendResetPassword: email.sendResetPassword,
+      // 发信在响应之后执行（见 ./email-dispatch）：匿名响应的状态与耗时不随账号状态变化。
+      sendResetPassword: async (data, request) => {
+        dispatchAuthEmail("reset-password", () => email.sendResetPassword(data, request));
+      },
     },
     emailVerification: {
       sendOnSignUp: true,
       autoSignInAfterVerification: true,
       // 未验证用户尝试登录时重发验证邮件（requireEmailVerification 下登录被拒，引导其完成验证）。
       sendOnSignIn: true,
-      sendVerificationEmail: email.sendVerificationEmail,
+      sendVerificationEmail: async (data, request) => {
+        dispatchAuthEmail("verify-email", () => email.sendVerificationEmail(data, request));
+      },
     },
     user: {
       additionalFields: {
@@ -99,6 +112,9 @@ export function createAuthOptions(prisma: PrismaClient, env: OrbitEnv) {
           before: async (user) => ({
             data: {
               ...user,
+              // F06 修复：V1 无头像功能，库自带 update-user 通道的 image 字段写穿在此
+              // 置空（Prisma 语义 = 不写该列），防止绕过业务字段规则写入任意值。
+              image: undefined,
               ...(user.name !== undefined ? { name: requireUserName(user.name) } : {}),
               ...("timezone" in user && user.timezone !== undefined
                 ? { timezone: requireUserTimezone(user.timezone) } : {}),
@@ -112,6 +128,11 @@ export function createAuthOptions(prisma: PrismaClient, env: OrbitEnv) {
       expiresIn: 60 * 60 * 24 * 7,
       updateAge: 60 * 60 * 24,
     },
+    // F06 说明：/api/auth/* 实际开放的写端点 = sign-up / sign-in / sign-out /
+    // forgot-password / reset-password / verify-email / update-user（name、timezone；
+    // image 已在上面的数据库钩子剥离；changeEmail 与 deleteUser 默认关闭，未启用）。
+    // 该通道的限流使用 better-auth 内置限流（阈值独立于 /api/v1 的应用限流），两者
+    // 差异是已记录的取舍：认证端点在 Nginx 64k 预算内、由库按 IP+路径限流。
     rateLimit: {
       // 库默认仅生产启用；此处显式：test 关闭（集成测试需多次登录/注册，另有独立实例专门验证限流），
       // development/staging/production 启用以保护真实认证端点。超限返回 429 + X-Retry-After 头。
@@ -120,6 +141,14 @@ export function createAuthOptions(prisma: PrismaClient, env: OrbitEnv) {
       max: 100,
       // 单实例内存存储（无 secondary storage）；多实例部署应切换为 database/secondary-storage。
       storage: "memory",
+      ...(["staging", "production"].includes(env.APP_ENV) ? {
+        customStorage: {
+          consume: async (key: string, rule: { max: number; window: number }) => {
+            const result = await consumeBucket(prisma, "auth", key, rule.max, rule.window);
+            return { allowed: result.allowed, retryAfter: result.allowed ? null : result.resetAfter };
+          },
+        },
+      } : {}),
       // 覆盖库默认特殊规则，为敏感端点设定更明确、窗口更长的阈值（键为去除 basePath 后的路径）。
       customRules: {
         "/sign-in/email": { window: 60, max: 10 },

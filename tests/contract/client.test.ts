@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import {
   ApiClientError,
   DEFAULT_API_BASE_URL,
@@ -21,6 +22,12 @@ const VALID_USER = {
   emailVerified: true,
   timezone: "Asia/Shanghai",
 };
+
+it("explicit empty DELETE schema handles 204 but object schemas still reject drift", async () => {
+  const api = createApiClient({ fetchImpl: async () => new Response(null, { status: 204, headers: { "x-request-id": "empty-delete" } }) });
+  expect(await api.delete("/subtasks/id", z.void())).toEqual({ ok: true, status: 204, data: undefined, meta: { requestId: "empty-delete" } });
+  await expect(api.delete("/tasks/id", UserSchema)).rejects.toBeInstanceOf(ApiClientError);
+});
 
 interface Captured {
   input: RequestInfo | URL;

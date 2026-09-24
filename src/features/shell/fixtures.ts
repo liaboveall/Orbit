@@ -1,28 +1,18 @@
 // ⚠️ FIXTURE DATA — 非真实后端，仅供 M0 布局样例使用
-import type { ProjectDTO, UserDTO, UserSummaryDTO } from "@/contracts";
+import type { ProjectDTO, UserSummaryDTO } from "@/contracts";
 
 /**
  * AppShell 导航 fixture（ORB-002）。
  *
  * ⚠️ 本文件全部为合成数据，不来自数据库/后端，仅用于 M0 三页布局样例的渲染与六态演示。
- * 类型标注使用 src/contracts 的 DTO（UserDTO/ProjectDTO/UserSummaryDTO），
+ * 类型标注使用 src/contracts 的 DTO（ProjectDTO/UserSummaryDTO），
  * 字段严格对齐 schema（UUID、日期时间、name≤80、key ^[A-Z][A-Z0-9]{1,7}$ 等）。
  *
  * 这些「规范化实体」被 today/board/tasks 的 fixture 复用，避免同一份合成数据多处漂移。
  *
- * ORB-006 边界变更：AppShell / UserMenu **不再**引用 CURRENT_USER —— 外壳已接入真实
- * 会话用户（layout 用 getSessionUser 取得后经 props 下发）。CURRENT_USER 现仅供
- * today/board/task 样例页（工作台视角的「我」）使用，M2 接入真实业务数据后一并移除。
+ * ORB-006 后 AppShell / UserMenu 已接入真实会话用户；M2 起业务页面均为真实数据，
+ * CURRENT_USER 样例用户与 SIDEBAR_PROJECTS 导出已无消费者，按 OI-26 精确移除。
  */
-
-/** 样例「我」（工作台视角）：仅 fixture 页面使用，不代表当前登录账户。 */
-export const CURRENT_USER: UserDTO = {
-  id: "u_alice",
-  name: "林晓",
-  email: "linxiao@example.com",
-  emailVerified: true,
-  timezone: "Asia/Shanghai",
-};
 
 /** 协作成员（内嵌精简用户，不含 email，docs/05 §4）。 */
 export const PEOPLE: Record<string, UserSummaryDTO> = {
@@ -132,9 +122,6 @@ export const PROJECTS: ProjectDTO[] = [
     updatedAt: "2026-09-04T20:00:00Z",
   },
 ];
-
-/** 侧栏最近项目（最多 6 个，docs/02 §4）。 */
-export const SIDEBAR_PROJECTS: ProjectDTO[] = PROJECTS.slice(0, 6);
 
 /** 样例参照「今天」（date-only），用于稳定演示逾期/今天/未来 7 天。 */
 export const SAMPLE_TODAY = "2026-09-08";

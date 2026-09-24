@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef, type ComponentProps } from "react";
+import { useCallback, useState, useRef, useSyncExternalStore, type ComponentProps } from "react";
 import { useRouter } from "next/navigation";
 import { MoreHorizontal, X } from "lucide-react";
-import { z } from "zod";
 import { renderRestrictedMarkdown } from "@/lib/restricted-markdown";
+import { useUserTimezone } from "@/lib/user-timezone";
 import {
   createApiClient,
   TaskSchema,
@@ -38,16 +38,22 @@ import { loginPathWithReturnTo } from "@/lib/return-to";
 import { SubtaskList } from "../subtasks";
 import { CommentList } from "../comments";
 import { AttachmentList } from "../attachments";
+import { formatDateTimeCN } from "./datetime";
 
 import { UnsavedChangesProvider, useUnsavedChanges } from "../unsaved-changes";
+import {
+  parseTaskDraft,
+  readTaskDraftRaw,
+  removeTaskDraft,
+  subscribeTaskDrafts,
+  taskDraftKey,
+  writeTaskDraft,
+  type TaskDraft,
+} from "../draft-storage";
 
 const api = createApiClient();
-const DraftSchema = z.object({
-  expectedVersion: z.number().int().positive(),
-  title: z.string().optional(),
-  description: z.string().optional(),
-});
-type Draft = z.infer<typeof DraftSchema>;
+type TextField = "title" | "description";
+const FIELD_LABEL: Record<TextField, string> = { title: "标题", description: "描述" };
 const fieldClass =
   "w-full rounded-control border border-line bg-surface px-3 py-2 text-label outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50";
 
@@ -60,6 +66,8 @@ function TaskEditorContent({
   currentUserId,
   today,
   readOnly = false,
+  unavailable = false,
+  titleLevel = 2,
   canDelete = false,
   isProjectOwner = false,
   members = [],
@@ -70,6 +78,10 @@ function TaskEditorContent({
   currentUserId: string;
   today: string;
   readOnly?: boolean;
+  /** 任务已在别处删除或失去访问：保留最后内容与草稿供复制，禁止继续保存。 */
+  unavailable?: boolean;
+  /** 标题的标题层级：独立详情页为 1，侧面板为 2。 */
+  titleLevel?: 1 | 2;
   canDelete?: boolean;
   isProjectOwner?: boolean;
   members?: MemberDTO[];
@@ -78,6 +90,7 @@ function TaskEditorContent({
 }) {
   const router = useRouter();
   const { toast } = useToast();
+  const timeZone = useUserTimezone();
   const [snapshot, setSnapshot] = useState({
     source: incoming,
     value: incoming,
@@ -89,8 +102,9 @@ function TaskEditorContent({
         incoming.version >= snapshot.value.version ? incoming : snapshot.value,
     });
   const task = snapshot.value;
-  const [draft, setDraft] = useState<Draft | null>(null);
-  const [editing, setEditing] = useState<"title" | "description" | null>(null);
+  const [draft, setDraft] = useState<TaskDraft | null>(null);
+  const [editing, setEditing] = useState<TextField | null>(null);
+  const [restored, setRestored] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
   const [remoteConflict, setRemoteConflict] = useState<TaskDTO | null>(null);
@@ -99,37 +113,47 @@ function TaskEditorContent({
   const lock = useRef(false);
   const [deleting, setDeleting] = useState(false);
   const [closing, setClosing] = useState(false);
-  const draftKey = `orbit:draft:${currentUserId}:${task.projectId}:${task.id}`;
+  const locked = readOnly || unavailable;
+  const draftKey = taskDraftKey(currentUserId, task.projectId, task.id);
+  // 本机持久化草稿（刷新/崩溃/会话过期后恢复）；服务端渲染与首帧没有草稿，避免水合不一致。
+  const storedRaw = useSyncExternalStore(
+    subscribeTaskDrafts,
+    () => readTaskDraftRaw(draftKey),
+    () => null,
+  );
+  const stored = draft ? null : parseTaskDraft(storedRaw);
   const dirty = Boolean(
     draft && (draft.title !== undefined || draft.description !== undefined),
   );
-  const hasUnsavedChanges = useUnsavedChanges(dirty, busy);
-  function store(value: Draft | null) {
-    try {
-      if (value) localStorage.setItem(draftKey, JSON.stringify(value));
-      else localStorage.removeItem(draftKey);
-    } catch {
-      /* Unavailable storage must not prevent editing. */
-    }
+  // 用户确认离开页面即放弃：删除本机草稿，避免已放弃的内容在下次编辑时复活。
+  const discardStored = useCallback(() => removeTaskDraft(draftKey), [draftKey]);
+  const hasUnsavedChanges = useUnsavedChanges(dirty, busy, discardStored);
+  /** 字段处于编辑态：用户正在编辑它，或恢复的草稿包含它（草稿内容必须可见才会被提交）。 */
+  const isEditing = (field: TextField) => editing === field || draft?.[field] !== undefined;
+  function store(value: TaskDraft | null) {
+    if (value) writeTaskDraft(draftKey, value);
+    else removeTaskDraft(draftKey);
   }
-  function begin(field: "title" | "description") {
-    if (readOnly || busy) return;
+  function begin(field: TextField) {
+    if (locked || busy) return;
     if (!draft) {
-      let recovered: Draft | null = null;
-      try {
-        const parsed = DraftSchema.safeParse(
-          JSON.parse(localStorage.getItem(draftKey) ?? "null"),
-        );
-        if (parsed.success) recovered = parsed.data;
-      } catch {
-        /* Invalid local draft. */
+      const recovered = parseTaskDraft(readTaskDraftRaw(draftKey));
+      if (recovered) {
+        setDraft({
+          expectedVersion: recovered.expectedVersion,
+          ...(recovered.title !== undefined ? { title: recovered.title } : {}),
+          ...(recovered.description !== undefined ? { description: recovered.description } : {}),
+        });
+        setRestored(true);
+      } else {
+        removeTaskDraft(draftKey);
+        setDraft({ expectedVersion: task.version });
       }
-      setDraft(recovered ?? { expectedVersion: task.version });
     }
     setEditing(field);
     setError(null);
   }
-  function edit(field: "title" | "description", value: string) {
+  function edit(field: TextField, value: string) {
     const next = {
       ...(draft ?? { expectedVersion: task.version }),
       [field]: value,
@@ -141,12 +165,13 @@ function TaskEditorContent({
     setDraft(null);
     store(null);
     setEditing(null);
+    setRestored(false);
     setConflict(false);
     setRemoteConflict(null);
     setError(null);
   }
   async function mutate(body: Record<string, unknown>, isText = false) {
-    if (lock.current || readOnly || (isText && conflict)) return;
+    if (lock.current || locked || (isText && conflict)) return;
     lock.current = true;
     setBusy(true);
     setError(null);
@@ -198,10 +223,11 @@ function TaskEditorContent({
         setConflict(false);
       }
       setError(null);
-      toast({
-        title: "已载入最新版本",
-        description: "你的草稿仍保留，请核对后再保存。",
-      });
+      toast(
+        keepDraft
+          ? { title: "已载入最新版本", description: "你的草稿仍保留，请核对后再保存。" }
+          : { title: "已载入最新版本" },
+      );
     } catch {
       setError("无法获取最新版本，请重试。");
     } finally {
@@ -224,7 +250,7 @@ function TaskEditorContent({
     setError(null);
   }
   async function remove() {
-    if (lock.current || readOnly || !canDelete) return;
+    if (lock.current || locked || !canDelete) return;
     lock.current = true;
     setBusy(true);
     setError(null);
@@ -256,20 +282,33 @@ function TaskEditorContent({
   }
   const inputTitle = draft?.title ?? task.title;
   const inputDescription = draft?.description ?? task.description;
+  const TitleHeading = titleLevel === 1 ? "h1" : "h2";
+  // 同时编辑两个字段（恢复的草稿）时只显示一组保存/取消，放在最后一个编辑器下方。
+  const controlsAt: TextField = isEditing("description") ? "description" : "title";
   const controls = (
-    <div className="flex flex-wrap gap-2">
-      <Button
-        size="sm"
-        disabled={busy || !dirty || conflict}
-        onClick={() => void mutate(draft ?? {}, true)}
-      >
-        {busy ? "保存中..." : "保存"}
-      </Button>
-      <Button size="sm" variant="ghost" disabled={busy} onClick={discard}>
-        取消
-      </Button>
+    <div className="space-y-2">
+      {restored && dirty && (
+        <p className="text-caption text-foreground-secondary">
+          已恢复本机保存的草稿，保存前请核对所有正在编辑的字段。
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          disabled={busy || !dirty || conflict || locked}
+          onClick={() => void mutate(draft ?? {}, true)}
+        >
+          {busy ? "保存中…" : "保存"}
+        </Button>
+        <Button size="sm" variant="ghost" disabled={busy} onClick={discard}>
+          取消
+        </Button>
+      </div>
     </div>
   );
+  const storedFields = stored
+    ? (["title", "description"] as const).filter((field) => stored[field] !== undefined)
+    : [];
   return (
     <section
       className="space-y-5 p-4 sm:p-6"
@@ -289,7 +328,7 @@ function TaskEditorContent({
                 await navigator.clipboard.writeText(
                   `${location.origin}/app/projects/${task.projectId}/tasks/${task.id}`,
                 );
-                toast({ title: "链接已复制" });
+                toast({ title: "链接已复制到剪贴板" });
               } catch {
                 setError("无法复制，请从地址栏复制链接。");
               }
@@ -297,7 +336,7 @@ function TaskEditorContent({
           >
             复制链接
           </Button>
-          {!readOnly && (
+          {!locked && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <IconButton label="更多操作" disabled={busy}>
@@ -334,8 +373,29 @@ function TaskEditorContent({
           )}
         </div>
       </header>
-      {readOnly && (
+      {unavailable && (
+        <div role="alert" className="rounded-card border border-danger bg-danger-soft p-3 text-label text-danger">
+          该任务已被删除或你已失去访问权限，无法继续保存。未保存的内容仍显示在下方，可复制后关闭。
+        </div>
+      )}
+      {readOnly && !unavailable && (
         <p className="text-caption text-foreground-muted">项目已归档 · 只读</p>
+      )}
+      {stored && !locked && storedFields.length > 0 && (
+        <div role="status" className="space-y-2 rounded-card border border-line bg-surface-sunken p-3 text-caption text-foreground-secondary">
+          <p>
+            本机保存了未提交的{storedFields.map((field) => FIELD_LABEL[field]).join("、")}草稿（
+            {formatDateTimeCN(new Date(stored.savedAt).toISOString(), timeZone)}）。继续编辑会恢复这些内容；不再需要时可删除。
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" onClick={() => begin(storedFields[0]!)}>
+              继续编辑草稿
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => removeTaskDraft(draftKey)}>
+              删除本机草稿
+            </Button>
+          </div>
+        </div>
       )}
       <InlineError>{error}</InlineError>
       {conflict && (
@@ -379,26 +439,30 @@ function TaskEditorContent({
           )}
         </div>
       )}
-      {editing === "title" ? (
+      {isEditing("title") ? (
         <div className="space-y-2">
+          <TitleHeading className="sr-only">{task.title}</TitleHeading>
           <Textarea
             aria-label="编辑标题"
             value={inputTitle}
             maxLength={120}
             disabled={busy}
+            readOnly={unavailable}
             onChange={(e) => edit("title", e.target.value)}
-            autoFocus
+            autoFocus={editing === "title"}
           />
-          {controls}
+          {controlsAt === "title" && controls}
         </div>
       ) : (
-        <button
-          className="block w-full text-left text-section font-semibold [overflow-wrap:anywhere]"
-          disabled={readOnly || busy}
-          onClick={() => begin("title")}
-        >
-          {task.title}
-        </button>
+        <TitleHeading className="text-section font-semibold">
+          <button
+            className="block w-full text-left [overflow-wrap:anywhere]"
+            disabled={locked || busy}
+            onClick={() => begin("title")}
+          >
+            {task.title}
+          </button>
+        </TitleHeading>
       )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="space-y-1 text-caption">
@@ -407,7 +471,7 @@ function TaskEditorContent({
             aria-label="状态"
             className={fieldClass}
             value={task.status}
-            disabled={readOnly || busy || dirty}
+            disabled={locked || busy || dirty}
             onChange={(e) =>
               void mutate({
                 expectedVersion: task.version,
@@ -428,7 +492,7 @@ function TaskEditorContent({
             aria-label="优先级"
             className={fieldClass}
             value={task.priority}
-            disabled={readOnly || busy || dirty}
+            disabled={locked || busy || dirty}
             onChange={(e) =>
               void mutate({
                 expectedVersion: task.version,
@@ -449,7 +513,7 @@ function TaskEditorContent({
             aria-label="负责人"
             className={fieldClass}
             value={task.assignee?.id ?? ""}
-            disabled={readOnly || busy || dirty}
+            disabled={locked || busy || dirty}
             onChange={(e) =>
               void mutate({
                 expectedVersion: task.version,
@@ -472,7 +536,7 @@ function TaskEditorContent({
             type="date"
             className={fieldClass}
             value={task.dueDate ?? ""}
-            disabled={readOnly || busy || dirty}
+            disabled={locked || busy || dirty}
             onChange={(e) =>
               void mutate({
                 expectedVersion: task.version,
@@ -485,7 +549,7 @@ function TaskEditorContent({
       </div>
       <div className="space-y-2">
         <h2 className="text-label font-medium">描述</h2>
-        {editing === "description" ? (
+        {isEditing("description") ? (
           <>
             <Textarea
               aria-label="编辑描述"
@@ -493,10 +557,11 @@ function TaskEditorContent({
               rows={8}
               value={inputDescription}
               disabled={busy}
+              readOnly={unavailable}
               onChange={(e) => edit("description", e.target.value)}
-              autoFocus
+              autoFocus={editing === "description"}
             />
-            {controls}
+            {controlsAt === "description" && controls}
           </>
         ) : (
           <div className="group relative">
@@ -509,7 +574,8 @@ function TaskEditorContent({
               }}
             >
               {task.description ? (
-                renderRestrictedMarkdown(task.description)
+                // 描述位于「描述」h2 之下：源文本 `#` 从 h3 起，不与页面标题层级冲突。
+                renderRestrictedMarkdown(task.description, { headingOffset: 2 })
               ) : (
                 <span className="text-foreground-muted">添加描述</span>
               )}
@@ -518,7 +584,7 @@ function TaskEditorContent({
               type="button"
               aria-label="编辑描述"
               className="absolute right-2 top-2 rounded-control p-1 text-foreground-muted opacity-0 outline-none transition-opacity focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
-              disabled={readOnly || busy}
+              disabled={locked || busy}
               onClick={() => begin("description")}
             >
               <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
@@ -527,16 +593,16 @@ function TaskEditorContent({
         )}
       </div>
 
-      {/* M5 子任务 / 评论讨论 / 附件 */}
+      {/* M5 子任务 / 评论讨论 / 附件：任务不可用时保持挂载，已输入的草稿不被卸载。 */}
       <section className="space-y-6">
-        <SubtaskList key={task.id} taskId={task.id} revision={incoming.updatedAt} canEdit={!readOnly} />
-        <CommentList key={task.id} revision={incoming.updatedAt}
+        <SubtaskList key={`subtasks:${task.id}`} taskId={task.id} revision={incoming.updatedAt} canEdit={!readOnly} />
+        <CommentList key={`comments:${task.id}`} revision={incoming.updatedAt}
           taskId={task.id}
           currentUserId={currentUserId}
           isProjectOwner={isProjectOwner}
           canWrite={!readOnly}
         />
-        <AttachmentList key={task.id} revision={incoming.updatedAt}
+        <AttachmentList key={`attachments:${task.id}`} revision={incoming.updatedAt}
           taskId={task.id}
           currentUserId={currentUserId}
           isProjectOwner={isProjectOwner}

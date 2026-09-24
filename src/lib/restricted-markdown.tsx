@@ -197,8 +197,15 @@ const HEADING_SIZE_CLASS: Record<HeadingBlock["level"], string> = {
 /**
  * 把受限 Markdown 源文本渲染为纯 React 元素树（无 dangerouslySetInnerHTML）。
  * 空输入返回 null，调用方决定占位文案（如任务详情的「添加描述」）。
+ *
+ * headingOffset：嵌入页面时把源文本标题整体下移若干级（最多到 h6），使描述中的 `#`
+ * 不与页面自身的 h1/h2 冲突；视觉字号仍按源文本层级。默认 0（原样输出 h1—h6）。
  */
-export function renderRestrictedMarkdown(source: string): ReactNode {
+export function renderRestrictedMarkdown(
+  source: string,
+  options: { headingOffset?: number } = {},
+): ReactNode {
+  const offset = Math.max(0, Math.trunc(options.headingOffset ?? 0));
   const trimmed = source.trim();
   if (trimmed.length === 0) return null;
 
@@ -209,7 +216,7 @@ export function renderRestrictedMarkdown(source: string): ReactNode {
       {blocks.map((block, blockIndex) => {
         const key = `b${blockIndex}`;
         if (block.kind === "heading") {
-          const HeadingTag = `h${block.level}` as const;
+          const HeadingTag = `h${Math.min(6, block.level + offset) as HeadingBlock["level"]}` as const;
           return (
             <HeadingTag key={key} className={HEADING_SIZE_CLASS[block.level]}>
               {renderInline(block.text, key)}

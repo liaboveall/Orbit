@@ -285,13 +285,25 @@ test("list discards a delayed page after a mutation refresh", async ({
     release = r;
   });
   let held = false;
+  /** E5：fulfill 完成信号——route.fulfill 返回即代表响应已交给页面，替代不可靠的
+   * page 'response' 事件等待（拦截路由的该事件时序在不同版本下不一致）。 */
+  let markFulfilled = () => {};
+  const fulfilled = new Promise<void>((r) => {
+    markFulfilled = r;
+  });
   await page.route(
     `**/api/v1/projects/${project.id}/tasks?**`,
     async (route) => {
       const response = await route.fetch();
+      const body = await response.text();
       held = true;
       await gate;
-      await route.fulfill({ response }).catch(() => {});
+      // E5：先取出响应体再挂起——长延迟后 route.fulfill({response}) 可能因底层
+      // 资源失效而静默失败（.catch 吞掉后页面永远收不到响应，等待信号的断言超时）。
+      await route.fulfill({ response, body }).catch((e) => {
+        throw new Error(`stale route fulfill failed: ${e}`);
+      });
+      markFulfilled();
     },
   );
   try {
@@ -320,8 +332,10 @@ test("list discards a delayed page after a mutation refresh", async ({
     const row = page.getByRole("row").filter({ hasText: "分页 001" });
     await expect(row).toHaveCount(1);
     await expect(row.getByRole("combobox")).toHaveText("进行中");
+    // E5 修复：放行后等待被扣留的旧响应**确实送达页面**（fulfill 完成信号），
+    // 再断言页面未被污染——固定 sleep 在慢机上会漏掉「迟到的旧响应」。
     release();
-    await page.waitForTimeout(300);
+    await fulfilled;
     await expect(row).toHaveCount(1);
     await expect(row.getByRole("combobox")).toHaveText("进行中");
   } finally {

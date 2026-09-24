@@ -26,6 +26,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { InlineError } from "@/components/ui/inline-error";
 import { useToast } from "@/components/ui/toast";
 import { Spinner } from "@/features/auth/auth-form";
+import { formatEventDateTime, useUserTimezone } from "@/lib/user-timezone";
 import { loginPathWithReturnTo } from "@/lib/return-to";
 
 /**
@@ -75,20 +76,7 @@ const FILTER_LABEL: Record<Filter, string> = {
   USED: "已使用",
 };
 
-/** ISO 日期时间 → 「2026年9月10日 14:03」（浏览器本地时区）。 */
-function formatDateTime(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat("zh-CN", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date);
-}
-
+// F23 修复：事件时间改用账户时区（formatEventDateTime），不再用设备时区。
 export type InvitationsListProps = {
   projectId: string;
   /** 当前用户是否为项目 owner：仅 owner 可创建/撤销邀请（服务端仍权威复核）。 */
@@ -103,6 +91,7 @@ export function InvitationsList({
 }: InvitationsListProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const tz = useUserTimezone(); // F23：账户时区。
 
   const [filter, setFilter] = useState<Filter>("ALL");
   const [createOpen, setCreateOpen] = useState(false);
@@ -218,7 +207,7 @@ export function InvitationsList({
     <div className="mx-auto w-full max-w-4xl">
       <header className="mb-6">
         <p className="font-mono text-caption uppercase tracking-[0.18em] text-foreground-muted">
-          invitations · /api/v1/projects/{projectId}/invitations
+          邀请协作
         </p>
         <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
@@ -339,19 +328,19 @@ export function InvitationsList({
                 </Badge>
                 <div className="min-w-0 flex-1 space-y-0.5">
                   <p className="text-label text-foreground-secondary">
-                    创建于 {formatDateTime(invitation.createdAt)}
+                    创建于 {formatEventDateTime(invitation.createdAt, tz)}
                     {invitation.state !== "EXPIRED" ? (
-                      <> · 过期于 {formatDateTime(invitation.expiresAt)}</>
+                      <> · 过期于 {formatEventDateTime(invitation.expiresAt, tz)}</>
                     ) : null}
                   </p>
                   {invitation.state === "USED" && invitation.acceptedAt ? (
                     <p className="text-caption text-foreground-muted">
-                      已于 {formatDateTime(invitation.acceptedAt)} 被接受
+                      已于 {formatEventDateTime(invitation.acceptedAt, tz)} 被接受
                     </p>
                   ) : null}
                   {invitation.state === "REVOKED" && invitation.revokedAt ? (
                     <p className="text-caption text-foreground-muted">
-                      已于 {formatDateTime(invitation.revokedAt)} 被撤销
+                      已于 {formatEventDateTime(invitation.revokedAt, tz)} 被撤销
                     </p>
                   ) : null}
                 </div>

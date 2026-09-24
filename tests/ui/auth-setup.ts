@@ -171,7 +171,7 @@ export async function createProjectAndTask(
     data: {
       name: "UI 测试项目",
       key: `UT${Math.floor(Math.random() * 1e6).toString().padStart(6, "0")}`, // ProjectKeySchema /^[A-Z][A-Z0-9]{1,7}$/：2–8 字符，此处固定 8
-      description: "m0-review 独立详情页测试用",
+      description: "独立详情页测试用",
       color: "BLUE",
     },
   });

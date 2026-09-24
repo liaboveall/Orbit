@@ -24,7 +24,17 @@ import { uploadMultipart } from "@/server/modules/attachments/multipart";
 import { cleanupOrphanAttachmentsLocked } from "@/server/modules/attachments/cleanup";
 import { AttachmentSchema } from "@/contracts";
 import { m5Fixture } from "../support/m5-fixture";
+import { inspectStorageAccounting } from "@/server/modules/maintenance/inspect";
 let f: Awaited<ReturnType<typeof m5Fixture>>;
+
+it("read-only accounting includes soft-deleted tasks and reports drift without modifying balances", async () => {
+  await upload();
+  await prisma.task.update({ where: { id: f.taskId }, data: { deletedAt: new Date() } });
+  expect(await inspectStorageAccounting(prisma, f.projectId)).toEqual({ checked: 1, mismatches: 0 });
+  const before = await prisma.project.update({ where: { id: f.projectId }, data: { usedBytes: { increment: 1n } } });
+  expect(await inspectStorageAccounting(prisma, f.projectId)).toEqual({ checked: 1, mismatches: 1 });
+  expect((await prisma.project.findUniqueOrThrow({ where: { id: f.projectId } })).usedBytes).toBe(before.usedBytes);
+});
 const sha = (data: Buffer) => createHash("sha256").update(data).digest("hex");
 async function upload(
   data = Buffer.from("真实附件内容"),
@@ -70,6 +80,29 @@ afterEach(async () => {
   if (f) await f.cleanup();
 });
 describe("M5 private attachments: real PostgreSQL and MinIO", () => {
+  it("同 uploadId 并发只保留一份预留，完成后可重放", async () => {
+    const data = Buffer.from("same upload identity"), id = randomUUID();
+    let entered!: () => void, resume!: () => void;
+    const atStorage = new Promise<void>(resolve => { entered = resolve; });
+    const released = new Promise<void>(resolve => { resume = resolve; });
+    const put = storage.putFile;
+    vi.spyOn(storage, "putFile").mockImplementationOnce(async (...args) => {
+      entered(); await released; return put(...args);
+    });
+    const first = upload(data, f.member, id);
+    try {
+      await atStorage;
+      await expect(upload(data, f.member, id)).rejects.toMatchObject({ code: "UPLOAD_IN_PROGRESS" });
+    } finally { resume(); }
+    const saved = await first;
+    const replay = await upload(data, f.member, id);
+    expect(replay.replayed).toBe(true);
+    expect(replay.attachment.id).toBe(saved.attachment.id);
+    expect(await prisma.attachment.count({ where: { projectId: f.projectId } })).toBe(1);
+    const project = await prisma.project.findUniqueOrThrow({ where: { id: f.projectId } });
+    expect(project.reservedBytes).toBe(0n);
+    expect(project.usedBytes).toBe(BigInt(data.length));
+  });
   it("rejects incomplete or misordered multipart without retaining a reservation", async () => {
     const form = new FormData();
     form.append("file", new File(["x"], "x.txt", { type: "text/plain" }));

@@ -41,6 +41,13 @@ export function usePagedTasks(endpoint: string, context: string, query: Query, i
                 if (!controller.signal.aborted) setState((prev) => ({ ...prev, items: [], cursor: null }));
                 router.refresh();
               }
+              // F11 修复：游标失效（如跨午夜后筛选指纹变化）→ 放弃旧窗口、回到首屏
+              // 重新读取，绝不把不同日期窗口的结果拼接在一起。
+              if (result.error.code === "INVALID_CURSOR") {
+                if (!controller.signal.aborted) setState((prev) => ({ ...prev, items: prev.source, cursor: null, target: prev.source.length, refreshing: false }));
+                router.refresh();
+                return;
+              }
               throw new Error(result.error.message);
             }
             items.push(...result.data);
@@ -66,6 +73,12 @@ export function usePagedTasks(endpoint: string, context: string, query: Query, i
       if (!result.ok) {
         if (result.status === 401) window.location.assign(loginPathWithReturnTo(location.pathname + location.search));
         if (result.status === 403 || result.status === 404) router.refresh();
+        // F11 修复：旧游标失效 → 重置回首屏（router.refresh 拉新服务端 props），不卡死。
+        if (result.error.code === "INVALID_CURSOR") {
+          if (!controller.signal.aborted) setState((prev) => ({ ...prev, items: prev.source, cursor: null, target: prev.source.length, busy: false }));
+          router.refresh();
+          return;
+        }
         throw new Error(result.error.message);
       }
       if (!controller.signal.aborted) setState((prev) => prev.source !== state.source || prev.identity !== state.identity ? prev : {

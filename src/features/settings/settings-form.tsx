@@ -2,7 +2,8 @@
 
 import { Mail, RotateCcw, Save, ShieldCheck, ShieldQuestion } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { UnsavedChangesProvider, useUnsavedChanges } from "@/features/tasks/unsaved-changes";
 import {
   ApiClientError,
   UserSchema,
@@ -55,8 +56,20 @@ function joinIds(...ids: Array<string | null | undefined>): string | undefined {
   return present.length > 0 ? present.join(" ") : undefined;
 }
 
-export function SettingsForm({ user }: { user: UserDTO }) {
+/**
+ * B6 修复：个人设置草稿保护（dirty=姓名/时区有未保存修改；pending=保存在途）。
+ */
+export function SettingsForm(props: { user: UserDTO }) {
+  return (
+    <UnsavedChangesProvider>
+      <SettingsFormContent {...props} />
+    </UnsavedChangesProvider>
+  );
+}
+
+function SettingsFormContent({ user }: { user: UserDTO }) {
   const router = useRouter();
+  const composing = useRef(false);
   const { toast } = useToast();
   const nameId = useId();
   const timezoneId = useId();
@@ -87,6 +100,7 @@ export function SettingsForm({ user }: { user: UserDTO }) {
   const nameDirty = trimmedName !== saved.name;
   const timezoneDirty = draft.timezone !== saved.timezone;
   const dirty = nameDirty || timezoneDirty;
+  useUnsavedChanges(dirty, pending);
 
   function handleReset(): void {
     setDraft({ name: saved.name, timezone: saved.timezone });
@@ -96,6 +110,7 @@ export function SettingsForm({ user }: { user: UserDTO }) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    if (composing.current) return;
     if (pending || !dirty) return;
 
     // 客户端预校验（服务端仍是权威）：即时反馈，省一次往返。
@@ -172,7 +187,7 @@ export function SettingsForm({ user }: { user: UserDTO }) {
           void handleSubmit(event);
         }}
         noValidate
-        className="overflow-hidden rounded-card border border-line bg-surface shadow-popover"
+        className="overflow-hidden rounded-card border border-line bg-surface"
       >
         <header className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
           <div className="min-w-0">
@@ -190,12 +205,12 @@ export function SettingsForm({ user }: { user: UserDTO }) {
             )}
             aria-live="polite"
           >
-            {pending ? "saving" : dirty ? "unsaved" : "saved"}
+            {pending ? "保存中…" : dirty ? "未保存" : "已保存"}
           </span>
         </header>
 
         {/* 01 姓名 */}
-        <FieldRow index="01" title="姓名" caption="name">
+        <FieldRow index="01" title="姓名" caption="1—40 个字符，向队友展示">
           <div className="space-y-1.5">
             <Label htmlFor={nameId} className="sr-only">
               姓名
@@ -204,6 +219,11 @@ export function SettingsForm({ user }: { user: UserDTO }) {
               <Input
                 id={nameId}
                 name="name"
+                onCompositionStart={() => { composing.current = true; }}
+                onCompositionEnd={() => { composing.current = false; }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && (composing.current || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229)) event.preventDefault();
+                }}
                 type="text"
                 autoComplete="name"
                 maxLength={NAME_MAX}
@@ -243,7 +263,7 @@ export function SettingsForm({ user }: { user: UserDTO }) {
         </FieldRow>
 
         {/* 02 时区 */}
-        <FieldRow index="02" title="时区" caption="timezone · iana">
+        <FieldRow index="02" title="时区" caption="决定日期与时间的显示">
           <div className="space-y-1.5">
             <Label htmlFor={timezoneId} className="sr-only">
               时区
@@ -365,7 +385,7 @@ function FieldRow({
             {index}
           </span>
           <p className="text-label font-semibold text-foreground">{title}</p>
-          <p className="mt-0.5 font-mono text-caption uppercase tracking-widest text-foreground-muted">
+          <p className="mt-0.5 text-caption text-foreground-muted">
             {caption}
           </p>
         </div>

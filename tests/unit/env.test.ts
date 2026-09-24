@@ -70,8 +70,39 @@ describe("parseEnv · 合法输入", () => {
   });
 
   it("production 下提供足够长度的 BETTER_AUTH_SECRET 时通过", () => {
-    const raw = { ...validEnv(), APP_ENV: "production", BETTER_AUTH_SECRET: "x".repeat(48) };
+    const raw = { ...validEnv(), APP_ENV: "production", APP_URL: "https://orbit.example", BETTER_AUTH_URL: "https://orbit.example", STORAGE_ENDPOINT: "https://storage.example", BETTER_AUTH_SECRET: "x".repeat(48), TRUSTED_PROXY_COUNT: "1" };
     expect(() => parseEnv(raw)).not.toThrow();
+  });
+
+  it.each(["staging", "production"])("%s 拒绝零受信任代理，防止认证限流共用桶", (appEnv) => {
+    const raw = {
+      ...validEnv(),
+      APP_ENV: appEnv,
+      APP_URL: "https://orbit.example",
+      BETTER_AUTH_URL: "https://orbit.example",
+      STORAGE_ENDPOINT: "https://storage.example",
+      BETTER_AUTH_SECRET: "x".repeat(48),
+      TRUSTED_PROXY_COUNT: "0",
+    };
+    const { key, expected } = captureIssues(() => parseEnv(raw));
+    expect(key).toBe("TRUSTED_PROXY_COUNT");
+    expect(expected).toContain("production 环境必须 ≥ 1");
+  });
+
+  it.each(["staging", "production"])("%s 接受可信代理；development 仍可直连", (appEnv) => {
+    expect(
+      () =>
+        parseEnv({
+          ...validEnv(),
+          APP_ENV: appEnv,
+          APP_URL: "https://orbit.example",
+          BETTER_AUTH_URL: "https://orbit.example",
+          STORAGE_ENDPOINT: "https://storage.example",
+          BETTER_AUTH_SECRET: "x".repeat(48),
+          TRUSTED_PROXY_COUNT: "1",
+        }),
+    ).not.toThrow();
+    expect(() => parseEnv(validEnv())).not.toThrow();
   });
 });
 

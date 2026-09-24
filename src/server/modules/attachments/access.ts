@@ -5,7 +5,6 @@ import {
   MAX_ATTACHMENT_BYTES,
   MAX_PROJECT_STORAGE_BYTES,
 } from "@/server/modules/limits";
-import type { Prisma } from "@/generated/prisma/client";
 
 /**
  * 附件域错误与配额辅助（M5 / ORB-018，docs/01 §8）。
@@ -83,42 +82,11 @@ export class CleanupFailedError extends Error {
 /**
  * 统计某任务有效附件数（state ∈ {UPLOADING, READY}）。
  */
-export async function countActiveAttachments(
-  tx: Prisma.TransactionClient,
-  taskId: string,
-): Promise<number> {
-  return tx.attachment.count({
-    where: { taskId, state: { in: ["UPLOADING", "READY"] as const } },
-  });
-}
 
 /**
  * 判定是否可删除附件：作者本人 OR 项目 owner（docs/01 §8）。
  */
-export function canDeleteAttachment(
-  role: "OWNER" | "MEMBER",
-  uploaderId: string,
-  userId: string,
-): boolean {
-  return role === "OWNER" || uploaderId === userId;
-}
 
 /** MIME 白名单（docs/01 §8）。 */
-const ALLOWED_MIMETYPES = new Set([
-  "application/pdf",
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "text/plain",
-  "text/markdown",
-]);
 
 /** 验证文件类型，失败时抛错。 */
-export function validateFileType(
-  mimeType: string,
-): asserts mimeType is typeof ALLOWED_MIMETYPES extends Set<infer T>
-  ? T
-  : never {
-  if (!ALLOWED_MIMETYPES.has(mimeType))
-    throw unsupportedFileTypeError(mimeType);
-}
