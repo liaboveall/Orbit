@@ -21,6 +21,18 @@ try {
   docker(["exec", name, "nginx", "-t"]);
   const port = docker(["port", name, "8080/tcp"]).split(":").at(-1);
   const base = `http://127.0.0.1:${port}`;
+  // `docker run --detach` returns before the image entrypoint execs nginx; until nginx listens,
+  // the published port accepts and then drops connections. Probe outside the auth rate-limit zone.
+  const readyBy = Date.now() + 30000;
+  for (;;) {
+    try {
+      assert.equal((await fetch(`${base}/health/ready`, { signal: AbortSignal.timeout(2000) })).status, 204);
+      break;
+    } catch (error) {
+      if (error instanceof assert.AssertionError || Date.now() > readyBy) throw error;
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+  }
   const secret = "synthetic-private-" + randomUUID();
   const headers = { referer: `https://example.invalid/${secret}`, cookie: `session=${secret}` };
   const responses = await Promise.all(Array.from({ length: 60 }, () => fetch(`${base}/api/auth/${secret}?token=${secret}`, { headers })));
@@ -37,7 +49,7 @@ try {
   assert(!log.includes(secret));
   const rows = log.split("\n").filter(Boolean).map(line => JSON.parse(line));
   assert(rows.some(row => row.status === 429 && (row.rateLimit === "REJECTED" || row.connectionLimit === "REJECTED")));
-  assert(rows.some(row => row.upstreamStatus === "204"));
+  assert(rows.some(row => row.route === "auth" && row.upstreamStatus === "204"));
   assert(rows.some(row => row.status === 503 && row.upstreamStatus === "503"));
   const imageId = docker(["image", "inspect", image, "--format", "{{.Id}}"]);
   const summary = { imageId, requests: responses.length, accepted: responses.filter(r => r.status === 204).length,
