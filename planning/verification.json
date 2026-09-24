@@ -403,6 +403,57 @@
    "fixVerification": "Fixed script passed with the delayed-start image and with the locked image (60 requests: 11 accepted and proxied upstream, 49 rate limited); with a never-ready image it failed after the 30 s bound and removed its container; eslint passed"
   }
  ],
+ "dependencyUpdates": [
+  {
+   "date": "2026-09-24",
+   "change": "react, react-dom, @types/react and @types/react-dom moved together from 19.2.x to 19.3.0; Dependabot lockstep groups added for the react, prisma and tailwind families",
+   "replaces": "https://github.com/liaboveall/Orbit/pull/9 (bumped react and @types/react without react-dom; unit tests failed with 'Incompatible React versions' in run https://github.com/liaboveall/Orbit/actions/runs/35976740477)",
+   "baseCommit": "2229ed14e1a52d766a504d8e4a703dda9440fbe6",
+   "localGate": {
+    "runner": "scripts/verify-remediation.mjs",
+    "directory": "artifacts/deps-react-19.3-20260924",
+    "result": "PASS",
+    "sourceDigest": "e45ba603818636b3dc6f6a3e96a380b3be3fe2175aadb3039281551c967d83e8",
+    "sourceUnchangedDuringRun": true,
+    "startedAt": "2026-09-24T09:12:07.899Z",
+    "finishedAt": "2026-09-24T09:21:16.224Z",
+    "counts": {
+     "unit": 297,
+     "contract": 172,
+     "integration": 380,
+     "e2e": 102,
+     "ui": 13
+    },
+    "total": 964,
+    "zeroBrowserRetries": true
+   },
+   "postGateChanges": ".github/dependabot.yml groups (configuration only, not executed by any check) and these handoff records",
+   "compatibility": [
+    "React 19.3.0 was released 2026-09-09; its release notes list no deprecations, and the only removal (react-server-dom-webpack/*.unbundled) is not used",
+    "next 16.3.4 peers accept ^19; the App Router already runs Next's vendored 19.3.0-canary-cbb046ab-20260731, so the top-level packages affect Vitest (react-dom/server), types and lint rather than the app runtime",
+    "Every installed package with a React peer accepts 19.3.0; react-dom 19.3.0 peers react ^19.3.0 and @types/react-dom 19.3.0 peers @types/react ^19.3.0"
+   ],
+   "dependabotGroups": {
+    "react": [
+     "react",
+     "react-dom",
+     "@types/react",
+     "@types/react-dom"
+    ],
+    "prisma": [
+     "prisma",
+     "@prisma/client",
+     "@prisma/adapter-pg"
+    ],
+    "tailwind": [
+     "tailwindcss",
+     "@tailwindcss/postcss"
+    ],
+    "notGrouped": "next/eslint-config-next, Playwright, Vitest, dnd-kit, Radix, Better Auth, eslint/typescript: no evidence that a split breaks them; peer ranges or exact transitive pins already cover them",
+    "reviewed": "Adversarial review against the official Dependabot options reference: valid keys, exact-name patterns with no unintended matches; no ignore rules added"
+   }
+  }
+ ],
  "limitations": [
   "Auth email timing verified with local stalled/rejecting SMTP stubs; real provider latency to be re-checked after deployment",
   "Page read quota verified in production configuration with real session and database bucket; no deployed RSC flood test",
