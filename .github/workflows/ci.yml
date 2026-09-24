@@ -6,6 +6,8 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  # 拉取私有 GHCR 上的 MinIO 镜像（ADR-028）。
+  packages: read
 concurrency:
   group: quality-${{ github.ref }}
   cancel-in-progress: true
@@ -30,6 +32,10 @@ jobs:
       - name: Verify POSIX Playwright server teardown
         timeout-minutes: 2
         run: node scripts/verify-web-server-lifecycle.mjs
+      - name: Authenticate to the private MinIO image registry
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Configure isolated synthetic services
         run: |
           cp .env.example .env.local
