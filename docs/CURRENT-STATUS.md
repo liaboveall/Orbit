@@ -16,6 +16,8 @@ M0—M5 已完成：认证与账户设置、项目与邀请、任务列表与看
 
 2026-09-24 依赖更新：react、react-dom、@types/react、@types/react-dom 一起升到 19.3.0，取代只升了 react 与 @types/react 而单元测试失败的 Dependabot #9；并为 React、Prisma、Tailwind 三组必须同版本的依赖加 Dependabot 分组。在基于 `2229ed1` 的冻结工作区上完整门禁 PASS（964 项，指纹一致），之后只加了分组配置与本条记录，见 verification 的 dependencyUpdates。
 
+2026-09-25 依赖更新：合并处理 10 个 Dependabot 提案（#3—#8、#10—#12、#14）。npm：typescript 6.0.3（typescript-eslint 的 peer 限制在 6.0 系列）、@types/node 26.6.2、lucide-react 1.47.0、@axe-core/playwright 4.13.0、tailwind-merge 3.7.0；CI Action：checkout v7.0.1、setup-node v7.0.0、upload-artifact v7.0.1、pnpm/action-setup v4.3.0、trivy-action v0.36.0（不在 GHSA-69fq-xp46-6x23 影响范围内），每个提交号都经 API 核对为官方标签所指提交。在基于 `c4eaa7e` 的冻结工作区上完整门禁 PASS（964 项，指纹一致），之后只加了本条记录；Action 变更只由远端 CI 覆盖。pnpm/action-setup 仍声明 Node 20，迁到支持 Node 24 的版本留作后续。
+
 2026-09-22 首轮审查的 925 项基线门禁与 5 个 P2 观察保留在 verification 的 previousAudit 中；本轮新增回归覆盖全部 10 个问题，其中浏览器、看板筛选、认证邮件与上传分类回归已在原实现上确认失败。
 
 测试按现有行为维护，不按编写日期删除：带日期的套件已改为功能名；首页冒烟并入公开入口套件，保留原断言。构建、类型、契约、隔离、维护与恢复检查仍用于本地和 CI。
