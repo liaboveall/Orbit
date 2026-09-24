@@ -17,11 +17,11 @@ jobs:
       CI: "true"
       E2E_PORT: "3100"
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
         with:
           version: 10.34.5
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24"
           cache: pnpm
@@ -76,7 +76,7 @@ jobs:
       - run: mkdir -p artifacts/release
       - name: Scan runtime container (OS and application dependencies)
         if: ${{ !cancelled() && steps.build-runner.outcome == 'success' }}
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: orbit:${{ github.sha }}
           version: v0.69.3
@@ -87,7 +87,7 @@ jobs:
           output: artifacts/release/trivy-runtime.json
       - name: Scan operations container
         if: ${{ !cancelled() && steps.build-operations.outcome == 'success' }}
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: orbit-operations:${{ github.sha }}
           version: v0.69.3
@@ -101,7 +101,7 @@ jobs:
       - name: Enforce image risk policy
         if: ${{ !cancelled() && steps.build-runner.outcome == 'success' && steps.build-operations.outcome == 'success' }}
         run: node scripts/check-image-scan.mjs artifacts/release/trivy-runtime.json artifacts/release/trivy-operations.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: quality-evidence
