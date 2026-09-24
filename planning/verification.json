@@ -388,6 +388,21 @@
   "testedTreeMatchesHead": true,
   "treeVerification": "GitHub Git commits API and local git rev-parse HEAD^{tree}"
  },
+ "remoteCiLaterRuns": [
+  {
+   "headSha": "198ec2369f123c97223b5095870bb463f99cc602",
+   "change": "Handoff records only; application code identical to the remediation commit",
+   "url": "https://github.com/liaboveall/Orbit/actions/runs/35968230138",
+   "conclusion": "failure",
+   "failedStep": "node scripts/verify-nginx.mjs",
+   "error": "TypeError: fetch failed (SocketError: other side closed, UND_ERR_SOCKET, bytesRead 0) on the first request batch, right after nginx -t succeeded",
+   "otherSteps": "Every other executed step succeeded, including check, integration, recovery drill, E2E, UI, audits, image builds, runtime smoke and image scans; only the release directory step after the failure was skipped",
+   "cause": "Test harness startup race, not an application or proxy configuration defect: docker run --detach returns before the nginx image entrypoint execs nginx, and until nginx listens the published port accepts and then drops connections",
+   "reproduction": "Locally the unmodified script failed with the identical error when the locked image was given a 3 s /docker-entrypoint.d delay through NGINX_TEST_IMAGE, and passed with the locked image",
+   "fix": "scripts/verify-nginx.mjs waits up to 30 s for /health/ready (outside the auth rate-limit zone, retrying network errors only) before the rate-limit batch; the upstream 204 log assertion is scoped to auth rows so the readiness probe cannot satisfy it",
+   "fixVerification": "Fixed script passed with the delayed-start image and with the locked image (60 requests: 11 accepted and proxied upstream, 49 rate limited); with a never-ready image it failed after the 30 s bound and removed its container; eslint passed"
+  }
+ ],
  "limitations": [
   "Auth email timing verified with local stalled/rejecting SMTP stubs; real provider latency to be re-checked after deployment",
   "Page read quota verified in production configuration with real session and database bucket; no deployed RSC flood test",

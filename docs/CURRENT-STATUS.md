@@ -22,6 +22,7 @@ M0—M5 已完成：认证与账户设置、项目与邀请、任务列表与看
 
 - M6 保持 review，V1 尚未发布。用户服务器未配置，真实部署验收暂缓；M7/AI 尚未开始。
 - 基线 SHA 的 [完整 CI 成功](https://github.com/liaboveall/Orbit/actions/runs/35671586439)；修复提交 `5730d69` 的[完整 CI 成功](https://github.com/liaboveall/Orbit/actions/runs/35953986961)，受测代码树一致。正式发布仍须绑定实际交付提交与不可变镜像；服务器仍需 HTTPS 双账户、邮件/存储、资源预算、告警、定时维护和备份恢复验证。
+- 其后只更新记录的 `198ec23` 的 [CI 失败](https://github.com/liaboveall/Orbit/actions/runs/35968230138)在 nginx 校验脚本：容器入口尚未启动 nginx 时脚本就发出请求（启动竞态；其余已执行步骤均通过）。本机以延迟启动镜像复现了同一错误，脚本已改为先有上限地等待就绪。
 - 实机输入法、原生缩放和辅助技术验证不能由自动化浏览器结果代替。
 - 开发库迁移 `20260911031124_add_subtask_comment_attachment` 与 `20260911031200_add_m5_check_constraints` 的历史 checksum 不符；后者记录为 `manual_resolve`。2026-09-24 只读复查结果未变：测试库正常、两库结构一致。原始迁移字节仍未找回，未改写数据库历史。
 - 先前数据事件缺少原始记录和备份，无法宣称已经恢复；当前测试具有独立数据库、夹具所有权和前后指纹保护。
