@@ -375,9 +375,20 @@
   "totalDependencies": 761
  },
  "serverAcceptance": "deferred_by_user",
- "remoteCi": "Not yet run for the remediation: changes are uncommitted; previous CI evidence below covers the baseline commit only",
+ "remoteCi": {
+  "headSha": "5730d69c064528272faa832c5f612f92cd867389",
+  "url": "https://github.com/liaboveall/Orbit/actions/runs/35953986961",
+  "status": "completed",
+  "conclusion": "success",
+  "createdAt": "2026-09-24T04:03:06Z",
+  "updatedAt": "2026-09-24T04:20:13Z",
+  "testedMergeCommit": "d51b2b8001d53ec806be1082c5b469aa6a518bcb",
+  "headTree": "6d88e3761e955e7f81905c5b22d25422033ae4b3",
+  "testedMergeTree": "6d88e3761e955e7f81905c5b22d25422033ae4b3",
+  "testedTreeMatchesHead": true,
+  "treeVerification": "GitHub Git commits API and local git rev-parse HEAD^{tree}"
+ },
  "limitations": [
-  "Remediation is uncommitted; remote CI has not covered it yet",
   "Auth email timing verified with local stalled/rejecting SMTP stubs; real provider latency to be re-checked after deployment",
   "Page read quota verified in production configuration with real session and database bucket; no deployed RSC flood test",
   "Native IME/zoom/assistive-technology acceptance pending",
@@ -665,5 +676,6 @@
    "Historical data recovery remains unproven",
    "Local probe files and logs are ignored artifacts; report includes independent reproduction steps"
   ]
- }
+ },
+ "remediationCommit": "5730d69c064528272faa832c5f612f92cd867389"
 }

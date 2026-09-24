@@ -12,7 +12,7 @@ M0—M5 已完成：认证与账户设置、项目与邀请、任务列表与看
 
 ## 验证
 
-2026-09-24 在基线 `09e9898a2dc06c467a5d70d1d01524f279129e59` 加本轮未提交修复的冻结工作区上运行完整门禁（scripts/verify-remediation.mjs，PASS，运行前后源码指纹一致）：297 unit、172 contract、380 integration、102 E2E、13 UI，共 **964 项通过**；浏览器零重试，真实开发/测试库前后指纹一致；恢复演练与依赖审计通过。实际结果及证据摘要见 [verification](../planning/verification.json)。
+2026-09-24 在冻结工作区（随后提交为 `5730d69`）上运行完整门禁（scripts/verify-remediation.mjs，PASS，运行前后源码指纹一致）：297 unit、172 contract、380 integration、102 E2E、13 UI，共 **964 项通过**；浏览器零重试，真实开发/测试库前后指纹一致；恢复演练与依赖审计通过。实际结果及证据摘要见 [verification](../planning/verification.json)。
 
 2026-09-22 首轮审查的 925 项基线门禁与 5 个 P2 观察保留在 verification 的 previousAudit 中；本轮新增回归覆盖全部 10 个问题，其中浏览器、看板筛选、认证邮件与上传分类回归已在原实现上确认失败。
 
@@ -21,7 +21,7 @@ M0—M5 已完成：认证与账户设置、项目与邀请、任务列表与看
 ## 发布与历史边界
 
 - M6 保持 review，V1 尚未发布。用户服务器未配置，真实部署验收暂缓；M7/AI 尚未开始。
-- 基线 SHA 的 [完整 CI 成功](https://github.com/liaboveall/Orbit/actions/runs/35671586439)；本轮修复尚未提交，提交后须核对该提交的完整 CI。正式发布仍须绑定实际交付提交与不可变镜像；服务器仍需 HTTPS 双账户、邮件/存储、资源预算、告警、定时维护和备份恢复验证。
+- 基线 SHA 的 [完整 CI 成功](https://github.com/liaboveall/Orbit/actions/runs/35671586439)；修复提交 `5730d69` 的[完整 CI 成功](https://github.com/liaboveall/Orbit/actions/runs/35953986961)，受测代码树一致。正式发布仍须绑定实际交付提交与不可变镜像；服务器仍需 HTTPS 双账户、邮件/存储、资源预算、告警、定时维护和备份恢复验证。
 - 实机输入法、原生缩放和辅助技术验证不能由自动化浏览器结果代替。
 - 开发库迁移 `20260911031124_add_subtask_comment_attachment` 与 `20260911031200_add_m5_check_constraints` 的历史 checksum 不符；后者记录为 `manual_resolve`。2026-09-24 只读复查结果未变：测试库正常、两库结构一致。原始迁移字节仍未找回，未改写数据库历史。
 - 先前数据事件缺少原始记录和备份，无法宣称已经恢复；当前测试具有独立数据库、夹具所有权和前后指纹保护。
