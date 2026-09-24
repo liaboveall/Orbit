@@ -41,9 +41,20 @@ try {
     { keyHash: "b".repeat(64), windowStart: new Date(), count: 1, expiresAt: new Date(Date.now() + 3600000) },
   ] });
   await db.uploadLease.create({ data: { keyHash: "a".repeat(64), expiresAt: new Date(0) } });
+  const authUser = await db.user.create({ data: { email: `maintenance-${tag}@recovery.orbit.test`, name: "维护演练", emailVerified: true } });
+  await db.session.createMany({ data: [
+    { token: `expired-${tag}`, userId: authUser.id, expiresAt: new Date(0) },
+    { token: `live-${tag}`, userId: authUser.id, expiresAt: new Date(Date.now() + 3600000) },
+  ] });
+  await db.verification.createMany({ data: [
+    { identifier: `reset-password:expired-${tag}`, value: authUser.id, expiresAt: new Date(0) },
+    { identifier: `reset-password:live-${tag}`, value: authUser.id, expiresAt: new Date(Date.now() + 3600000) },
+  ] });
   const maintenance = await cleanupExpiredRecords(db);
   const repeated = await cleanupExpiredRecords(db);
   if (maintenance.buckets !== 1 || maintenance.leases !== 1 || repeated.buckets !== 0 || repeated.leases !== 0 || await db.rateLimitBucket.count() !== 1) throw new Error("Maintenance isolation or idempotency failed");
+  if (maintenance.sessions !== 1 || maintenance.verifications !== 1 || repeated.sessions !== 0 || repeated.verifications !== 0
+    || await db.session.count() !== 1 || await db.verification.count() !== 1) throw new Error("Expired auth record cleanup failed");
   await db.rateLimitBucket.createMany({ data: Array.from({ length: 1001 }, (_, i) => ({
     keyHash: createHash("sha256").update(`drain-${tag}-${i}`).digest("hex"),
     windowStart: new Date(0), expiresAt: new Date(0), count: 1,

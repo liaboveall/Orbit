@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginPathWithReturnTo } from "@/lib/return-to";
+import { clearProjectDrafts } from "@/features/tasks/draft-storage";
 import {
   Dialog,
   DialogContent,
@@ -68,6 +69,8 @@ export function usePermissionLossHandler({ projectId, onLoss }: UsePermissionLos
   /** 403/被移除：离开本项目，回到可访问的「全部项目」列表（私有数据不再展示）。 */
   const leaveProject = (): void => {
     setPermissionLossReason(null);
+    // 失去项目访问：该项目的本机任务草稿不再可保存，离开时删除。
+    clearProjectDrafts(projectId);
     router.push("/app/projects");
   };
 

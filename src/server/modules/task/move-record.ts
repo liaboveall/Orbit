@@ -1,7 +1,6 @@
 import "server-only";
 
 import type { Prisma } from "@/generated/prisma/client";
-import { prisma } from "@/server/db/prisma";
 
 /**
  * 任务移动记录 schema（M3 Phase 1）。
@@ -33,28 +32,5 @@ export async function createMoveRecord(
       ...input,
       // M3 Phase 1: 后续扩展为完整表时添加 userId、createdAt 等字段
     },
-  });
-}
-
-/**
- * 查询任务的移动历史（M3 Phase 1）。
- *
- * @param taskId - 任务 ID
- * @returns 移动记录列表（从新到旧）
- */
-export async function getTaskMoveHistory(taskId: string): Promise<
-  Array<{
-    id: string;
-    fromStatus: string;
-    toStatus: string;
-    fromPosition: bigint;
-    toPosition: bigint;
-    boardVersion: number;
-    createdAt: Date;
-  }>
-> {
-  return prisma.moveRecord.findMany({
-    where: { taskId },
-    orderBy: { createdAt: "desc" },
   });
 }

@@ -1,7 +1,5 @@
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getSessionUser } from "@/server/auth/session";
+import { requirePageUser } from "@/server/auth/page-session";
 import { getOverview, listMyTasks } from "@/server/modules/workbench/service";
 import { MyTasksQuerySchema, MyTaskBuckets } from "@/contracts";
 import { WorkbenchStats } from "@/features/workbench/workbench-stats";
@@ -35,8 +33,7 @@ export default async function TodayPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const user = await getSessionUser(await headers());
-  if (!user) redirect("/auth/login?returnTo=%2Fapp%2Ftoday");
+  const user = await requirePageUser();
   const raw = await searchParams;
   const parsed = MyTasksQuerySchema.safeParse(
     Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== undefined)),

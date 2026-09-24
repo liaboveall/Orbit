@@ -16,6 +16,7 @@ import {
 import { Avatar } from "@/components/ui/avatar";
 import { useSignOut } from "@/features/auth/use-auth";
 import { confirmLeave, navigateAfterConfirmedLeave, useGuardedNavigate } from "@/features/tasks/unsaved-changes";
+import { clearUserDrafts } from "@/features/tasks/draft-storage";
 
 /**
  * 个人菜单（M1 / ORB-006）：AppShell 侧栏底部与平板 rail 态的用户入口。
@@ -25,8 +26,8 @@ import { confirmLeave, navigateAfterConfirmedLeave, useGuardedNavigate } from "@
  *    不再引用 fixture 的 CURRENT_USER —— 姓名/邮箱/时区都是账户真实数据；
  *  - 「个人设置」从占位 toast 改为真实导航 `router.push("/app/settings")`；
  *  - 「退出登录」保持整页硬跳转（`window.location.assign`）：signOut 清除 httpOnly 会话
- *    cookie 后，硬跳转同时销毁全部客户端内存态（React 状态、模块级缓存、表单草稿），
- *    这是验收标准 #3「退出/换账号不泄露上一账户私有缓存」的关键一环；
+ *    cookie 后，先删除该用户的本机任务草稿，再用硬跳转销毁全部客户端内存态（React 状态、
+ *    模块级缓存、表单草稿），这是验收标准 #3「退出/换账号不泄露上一账户私有缓存」的关键一环；
  *    服务端侧再由 /me 的 `Cache-Control: private, no-store` 保证浏览器/共享缓存不留副本。
  *
  * 边界：客户端组件，只依赖 @/components/ui、@/features/auth 与 @/contracts（均客户端安全），
@@ -72,7 +73,8 @@ export function UserMenu({
         });
         return;
       }
-      // Successful sign out - redirect to login page
+      // 成功退出才清除该用户的本机草稿（取消/失败保留），共享浏览器不残留私有文字。
+      clearUserDrafts(user.id);
       navigateAfterConfirmedLeave("/auth/login");
     } finally {
       signingOut.current = false;

@@ -12,8 +12,9 @@ import "server-only";
  *  - pg-pool@3.14.0 源码中两种固定 message 的超时 Error（无 code）；
  *  - Node 网络系统错误码（cause 链深处出现）。
  *
- * 刻意**不**按「任意无 code Error」「任意 message 包含」或 P2028（事务回滚，通常是
- * 编程问题）扩大范围：未知形状仍按 500 上报，保持可观测。
+ * 刻意**不**按「任意无 code Error」「任意 message 包含」或泛化的 P2028（事务回滚，
+ * 通常是编程问题）扩大范围：未知形状仍按 500 上报，保持可观测。唯一例外是 P2028 中
+ * 「maxWait 内无法开始事务」这一固定形状——它就是连接池饱和。
  */
 
 /** 已知错误码集合：Prisma P 码 + Node 网络码 + PG 服务器码（errors.ts 原白名单 + P2037）。 */
@@ -42,6 +43,18 @@ const PG_POOL_TIMEOUT_MESSAGES = new Set([
   PG_POOL_CONNECT_TIMEOUT_MESSAGE,
 ]);
 
+/**
+ * Prisma 7.10 交互式事务在 maxWait 内拿不到连接时抛出的 P2028 固定文案
+ * （TransactionManagerError「Unable to start a transaction in the given time.」）。
+ * 事务 maxWait（2s）短于 pg-pool 等待上限（5s），池饱和时写路径最先遇到的正是它；
+ * 其余 P2028（事务已关闭/回滚等）仍按编程错误处理。
+ */
+const PRISMA_TRANSACTION_START_TIMEOUT = "Unable to start a transaction in the given time";
+
+function isTransactionStartTimeout(code: unknown, message: unknown): boolean {
+  return code === "P2028" && typeof message === "string" && message.includes(PRISMA_TRANSACTION_START_TIMEOUT);
+}
+
 /** cause 链最大深度：防御循环引用/异常长链，白名单判断不需要更深。 */
 const MAX_CAUSE_DEPTH = 8;
 
@@ -59,6 +72,7 @@ function errorHasUnavailableShape(error: unknown, depth: number): boolean {
   if (typeof message === "string" && PG_POOL_TIMEOUT_MESSAGES.has(message)) {
     return true;
   }
+  if (isTransactionStartTimeout(code, message)) return true;
 
   const cause = (error as { cause?: unknown }).cause;
   return cause !== undefined && cause !== null && errorHasUnavailableShape(cause, depth + 1);

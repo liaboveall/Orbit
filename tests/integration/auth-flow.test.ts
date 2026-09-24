@@ -7,6 +7,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import { parseEnv } from "@/server/env";
 import { createAuth, createAuthOptions } from "@/server/auth/options";
+import { drainAuthEmails } from "@/server/auth/email-dispatch";
 import {
   DEFAULT_RETURN_TO,
   loginPathWithReturnTo,
@@ -168,8 +169,10 @@ it("SMTP failure teardown removes unconsumed reset tokens without touching other
     const failingAuth = createAuth(testPrisma, {
       ...env, APP_ENV: "test", SMTP_HOST: "127.0.0.1", SMTP_PORT: address.port, SMTP_SECURE: false,
     });
-    // Better Auth deliberately returns the same success envelope on delivery failure.
+    // Better Auth deliberately returns the same success envelope on delivery failure;
+    // delivery itself runs after the response (email-dispatch), so drain before asserting.
     await expect(failingAuth.api.requestPasswordReset({ body: { email } })).resolves.toMatchObject({ status: true });
+    await drainAuthEmails();
     expect(rejectedConnections).toBe(1);
     expect(await testPrisma.verification.count({ where: { value: id } })).toBe(1);
     await cleanupAuthUsers(testPrisma, tag);

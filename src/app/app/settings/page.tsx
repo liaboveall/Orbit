@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { UserDTO } from "@/contracts";
 import { SettingsForm } from "@/features/settings/settings-form";
 import { loginPathWithReturnTo } from "@/lib/return-to";
-import { getSessionUser } from "@/server/auth/session";
+import { requirePageUser } from "@/server/auth/page-session";
 import { DomainError } from "@/server/http/errors";
 import { readUserById } from "@/server/me/read-user";
 
@@ -14,7 +13,7 @@ import { readUserById } from "@/server/me/read-user";
  * docs/02 §3 路由表：`/app/settings | 姓名与时区 | 登录`。
  *
  * 服务端组件（无 "use client"）负责**权威数据读取**：
- *  1. `getSessionUser(await headers())` 取会话用户；未认证 → redirect 到带 returnTo 的登录页
+ *  1. `requirePageUser()` 取会话用户并消费一次读取额度；未认证 → 带 returnTo 的登录页，读取超额 → 限流说明页
  *     （proxy 已保护 /app/*，这里是第二道防线：组件重定向只是体验，数据安全在服务端）；
  *  2. `readUserById` **直接查库**取最新档案，而不是复用会话快照 —— 与 GET /me 同源，
  *     保证 PATCH 后刷新页面立即看到新值（验收标准 #1）；
@@ -29,8 +28,7 @@ export const dynamic = "force-dynamic";
 const SETTINGS_PATH = "/app/settings";
 
 export default async function SettingsPage() {
-  const sessionUser = await getSessionUser(await headers());
-  if (!sessionUser) redirect(loginPathWithReturnTo(SETTINGS_PATH));
+  const sessionUser = await requirePageUser();
 
   let user: UserDTO;
   try {

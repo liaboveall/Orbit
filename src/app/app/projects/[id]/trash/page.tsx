@@ -1,14 +1,12 @@
 import { Trash2 } from "lucide-react";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/ui/empty-state";
 import { buttonVariants } from "@/components/ui/button";
 import { formatDateTimeCN } from "@/features/tasks/real/datetime";
 import { TaskRestoreButton } from "@/features/tasks/real/task-restore-button";
-import { loginPathWithReturnTo } from "@/lib/return-to";
-import { getSessionUser } from "@/server/auth/session";
+import { requirePageUser } from "@/server/auth/page-session";
 import { DomainError } from "@/server/http/errors";
 import { getProject } from "@/server/modules/project";
 import { listProjectTasks } from "@/server/modules/task";
@@ -34,8 +32,7 @@ type PageProps = {
 
 export default async function ProjectTrashPage({ params }: PageProps) {
   const { id } = await params;
-  const sessionUser = await getSessionUser(await headers());
-  if (!sessionUser) redirect(loginPathWithReturnTo(`/app/projects/${id}/trash`));
+  const sessionUser = await requirePageUser();
 
   let project;
   let deletedTasks;

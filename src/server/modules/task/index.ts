@@ -18,8 +18,7 @@ export {
 export {
   listProjectTasks,
   getTask,
-  // ORB-010: 任务详情别名为 findTaskDetail（与 API contract 一致）
-  getTask as findTaskDetail,
+  findProjectTask,
   type TaskListResult,
 } from "./read";
 export { updateTask } from "./update";
@@ -31,4 +30,4 @@ export {
 } from "./restore";
 export { toTaskDTO, toTaskSummaryDTO } from "./mappers";
 export { moveTask } from "./move";
-export { createMoveRecord, getTaskMoveHistory } from "./move-record";
+export { createMoveRecord } from "./move-record";

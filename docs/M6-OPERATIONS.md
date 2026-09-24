@@ -34,11 +34,13 @@ docker build --target operations -t orbit-operations:<commit> .
 
 ## 共享准入与维护
 
-staging/production 使用 PostgreSQL 原子固定窗口：业务写 60/用户/分钟、业务 GET 300/用户/分钟、邀请预览和接受合计 20/IP/分钟。Better Auth 1.7.3 的 `customStorage.consume` 使用同一原子实现并保留现有各端点阈值；数据库只持久化命名空间和标识的 SHA-256，不记录原始 IP/邮箱。development/test 保留内存路径，双连接池集成测试专门验证 PostgreSQL 实现。
+staging/production 使用 PostgreSQL 原子固定窗口：业务写 60/用户/分钟、业务 GET 与完整页面请求共用 300/用户/分钟（页面每请求计 1 次，链接预取不计，超额跳转 /rate-limited）、邀请预览和接受合计 20/IP/分钟。Better Auth 1.7.3 的 `customStorage.consume` 使用同一原子实现并保留现有各端点阈值；数据库只持久化命名空间和标识的 SHA-256，不记录原始 IP/邮箱。development/test 保留内存路径，双连接池集成测试专门验证 PostgreSQL 实现。
 
 上传使用独立数据库滑动分钟（10 次）和最多 2 个并发租约。事务级 advisory lock 串行化同用户准入；不在事务内上传。120 秒请求超时，租约 180 秒自动过期；finally 幂等释放活跃状态但保留频率记录。
 
-平台按计划（维护脚本默认每小时可运行一次，实际节奏由部署方配置 cron/调度决定）执行 operations 镜像的 `node --conditions=react-server --import tsx scripts/maintenance-cleanup.ts`：单批最多 10 批 × 1000 条过期幂等/限流/租约记录（分批排空，批间让位），附件清理每批 100 条；同机并发运行由 flock 串行化，不会双跑。日志只含数量、释放字节和成功/失败事件。失败返回非零，交给平台告警；积压较大时增加调度频率。仓库不自动创建真实平台定时任务。
+平台按计划（维护脚本默认每小时可运行一次，实际节奏由部署方配置 cron/调度决定）执行 operations 镜像的 `node --conditions=react-server --import tsx scripts/maintenance-cleanup.ts`：单批最多 10 批 × 1000 条过期幂等/限流/租约/会话/验证记录（分批排空，批间让位），附件清理每批 100 条；同机并发运行由 flock 串行化，不会双跑。日志只含数量、释放字节和成功/失败事件。失败返回非零，交给平台告警；积压较大时增加调度频率。仓库不自动创建真实平台定时任务。
+
+认证邮件在响应之后经 Next `after()` 投递，Next 优雅停机会等待进行中的投递；compose 的 `stop_grace_period: 150s` 覆盖 20 秒 SMTP 预算。强制终止（SIGKILL/OOM）时未发出的邮件会丢失，告警关注 `auth_email_failed` 与 `auth_email_dropped` 事件。
 
 ## 备份与恢复
 

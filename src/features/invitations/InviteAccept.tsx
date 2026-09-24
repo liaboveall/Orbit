@@ -15,6 +15,7 @@ import { InlineError } from "@/components/ui/inline-error";
 import { Skeleton, SkeletonBlock } from "@/components/ui/skeleton";
 import { Spinner } from "@/features/auth/auth-form";
 import { formatEventDateTime, useUserTimezone } from "@/lib/user-timezone";
+import { forgetInviteToken, recallInviteToken, rememberInviteToken } from "./pending-invite";
 
 /**
  * 邀请预览与接受 (M4 / ORB-013，公开页 /invite#token=<hash>).
@@ -92,8 +93,8 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
       if (hash.startsWith("token=")) {
         try {
           const decoded = decodeURIComponent(hash.slice(6));
-          // Store in sessionStorage for logout/login flow
-          sessionStorage.setItem("inviteToken", decoded);
+          // 标签页内暂存（最多 30 分钟），支持登录/换账号后回到 /invite 接受
+          rememberInviteToken(decoded);
           // Clear hash from URL bar for privacy
           history.replaceState(null, "", window.location.pathname);
           return decoded;
@@ -111,7 +112,7 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
         // First check hash, then sessionStorage (for login redirect scenario)
         let tokenToUse = extractFromHash();
         if (!tokenToUse) {
-          tokenToUse = sessionStorage.getItem("inviteToken");
+          tokenToUse = recallInviteToken();
         }
 
         if (!tokenToUse || tokenToUse.trim().length === 0) {
@@ -134,7 +135,7 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
           // A13 修复：预览阶段已判定为终态失效（过期/撤销/已用/不存在），token 不再有
           // 任何用途，清除 sessionStorage 里的临时副本，不留下无限期滞留的令牌。
           if (["NOT_FOUND", "INVITATION_EXPIRED", "INVITATION_REVOKED", "INVITATION_USED"].includes(result.error.code)) {
-            sessionStorage.removeItem("inviteToken");
+            forgetInviteToken();
             setClientToken(null);
           }
           setStatus({ kind: "error", ...describePreviewError(result.error.code, result.error.message) });
@@ -163,7 +164,7 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
     setAccepting(true);
     setAcceptError(null);
     try {
-      const tokenToSubmit = clientToken || sessionStorage.getItem("inviteToken");
+      const tokenToSubmit = clientToken || recallInviteToken();
 
       if (!tokenToSubmit) {
         setAcceptError("邀请链接无效或已过期，请向项目所有者重新获取。");
@@ -174,7 +175,7 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
       const result = await api.post("/invitations/accept", AcceptedInvitationSchema, { token: tokenToSubmit });
       if (result.ok) {
         // SUCCESS: CLEAR TOKEN from memory immediately after acceptance!
-        sessionStorage.removeItem("inviteToken");
+        forgetInviteToken();
         setClientToken(null);
         
         // Hard redirect to project board
@@ -194,7 +195,7 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
         result.status === 410 ||
         (result.status === 409 && result.error.code === "INVITATION_USED")
       ) {
-        sessionStorage.removeItem("inviteToken");
+        forgetInviteToken();
         setClientToken(null);
       }
       setAcceptError(result.error.message);

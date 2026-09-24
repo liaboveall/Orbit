@@ -238,6 +238,25 @@ export async function listProjectTasks(
   return { tasks, nextCursor, hasMore };
 }
 
+/**
+ * 页面读取「项目内的指定任务」：不存在、已软删除、属于其他项目或不可见时返回 null。
+ * 调用方须已确认项目可访问；看板/列表据此在任务被他人删除后保留页面与草稿，
+ * 而不是把整页变成不可访问（项目本身不可见仍由 getProject 统一 404）。
+ */
+export async function findProjectTask(
+  taskId: string,
+  projectId: string,
+  userId: string,
+): Promise<TaskDTO | null> {
+  try {
+    const task = await getTask(taskId, userId);
+    return task.projectId === projectId ? task : null;
+  } catch (error) {
+    if (error instanceof DomainError && error.code === "NOT_FOUND") return null;
+    throw error;
+  }
+}
+
 /** 读取单个未删除任务详情（成员可见）；不存在/非成员/已软删除 → 404 NOT_FOUND。 */
 export async function getTask(taskId: string, userId: string): Promise<TaskDTO> {
   if (!UuidSchema.safeParse(taskId).success) throw taskNotFoundError();

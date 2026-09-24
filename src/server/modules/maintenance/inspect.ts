@@ -17,14 +17,16 @@ export async function inspectStorageAccounting(db: PrismaClient, projectId: stri
 }
 
 export async function previewMaintenance(db: PrismaClient) {
-  const [idempotency, buckets, leases, attachments] = await Promise.all([
+  const [idempotency, buckets, leases, sessions, verifications, attachments] = await Promise.all([
     db.idempotencyRecord.count({ where: { expiresAt: { lt: new Date() } } }),
     db.rateLimitBucket.count({ where: { expiresAt: { lt: new Date() } } }),
     db.uploadLease.count({ where: { expiresAt: { lt: new Date() } } }),
+    db.session.count({ where: { expiresAt: { lt: new Date() } } }),
+    db.verification.count({ where: { expiresAt: { lt: new Date() } } }),
     db.attachment.count({ where: { OR: [
       { state: "UPLOADING", updatedAt: { lt: new Date(Date.now() - 3600000) } },
       { cleanupPending: true, state: { in: ["FAILED", "DELETED"] }, updatedAt: { lt: new Date(Date.now() - 180000) } },
     ] } }),
   ]);
-  return { idempotency, buckets, leases, attachments };
+  return { idempotency, buckets, leases, sessions, verifications, attachments };
 }

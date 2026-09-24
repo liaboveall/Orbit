@@ -21,6 +21,7 @@ import { useToast } from "@/components/ui/toast";
 import { Spinner } from "@/features/auth/auth-form";
 import { formatEventDate, useUserTimezone } from "@/lib/user-timezone";
 import { loginPathWithReturnTo } from "@/lib/return-to";
+import { clearProjectDrafts } from "@/features/tasks/draft-storage";
 
 /**
  * 项目成员列表（M4 / ORB-014，`/app/projects/[id]/members`）。
@@ -94,6 +95,8 @@ export function MembersList({
       }
 
       if (action.kind === "exit") {
+        // 已非成员：该项目的本机任务草稿不再可保存，立即删除。
+        clearProjectDrafts(projectId);
         toast({ title: "你已退出该项目", variant: "success" });
         // 已非成员：硬跳转项目列表，离开本项目所有页面。
         void router.push("/app/projects");
