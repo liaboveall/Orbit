@@ -452,6 +452,126 @@
     "notGrouped": "next/eslint-config-next, Playwright, Vitest, dnd-kit, Radix, Better Auth, eslint/typescript: no evidence that a split breaks them; peer ranges or exact transitive pins already cover them",
     "reviewed": "Adversarial review against the official Dependabot options reference: valid keys, exact-name patterns with no unintended matches; no ignore rules added"
    }
+  },
+  {
+   "date": "2026-09-25",
+   "change": "Ten Dependabot proposals applied together in one change and regression-tested as one tree",
+   "supersedes": [
+    "https://github.com/liaboveall/Orbit/pull/3",
+    "https://github.com/liaboveall/Orbit/pull/4",
+    "https://github.com/liaboveall/Orbit/pull/5",
+    "https://github.com/liaboveall/Orbit/pull/6",
+    "https://github.com/liaboveall/Orbit/pull/7",
+    "https://github.com/liaboveall/Orbit/pull/8",
+    "https://github.com/liaboveall/Orbit/pull/10",
+    "https://github.com/liaboveall/Orbit/pull/11",
+    "https://github.com/liaboveall/Orbit/pull/12",
+    "https://github.com/liaboveall/Orbit/pull/14"
+   ],
+   "baseCommit": "c4eaa7eda8430f0ecc1c3e12b349e8596bf45f51",
+   "npm": [
+    {
+     "package": "typescript",
+     "from": "5.9.3",
+     "to": "6.0.3",
+     "pr": 8,
+     "notes": "tsconfig.json and tsconfig.scripts.json set strict, target, module and moduleResolution explicitly and use no option deprecated in 6.0, so no ignoreDeprecations; tsc printed no diagnostics. npm latest is 7.0.2, but typescript-eslint 8.70.x (including latest 8.70.1) peers typescript >=4.8.4 <6.1.0, so 6.0.3 is the highest compatible version"
+    },
+    {
+     "package": "@types/node",
+     "from": "26.5.0",
+     "to": "26.6.2",
+     "pr": 10,
+     "notes": "Type-only; the only breaking typings are in experimental node:stream/iter, which is not used. The pre-existing gap between Node 26 types and the Node 24 runtime is unchanged"
+    },
+    {
+     "package": "lucide-react",
+     "from": "1.43.0",
+     "to": "1.47.0",
+     "pr": 11,
+     "notes": "Icon additions and renames kept as deprecated aliases; the icons Orbit imports are unchanged"
+    },
+    {
+     "package": "@axe-core/playwright",
+     "from": "4.11.1",
+     "to": "4.13.0",
+     "pr": 12,
+     "notes": "Moves axe-core 4.11.4 -> 4.13.0; upstream lists no breaking changes. Tests run the default rule set and fail on critical/serious violations, as before"
+    },
+    {
+     "package": "tailwind-merge",
+     "from": "3.6.0",
+     "to": "3.7.0",
+     "pr": 14,
+     "notes": "Conflict-resolution changes only affect utilities Orbit does not pass through cn()"
+    }
+   ],
+   "actions": [
+    {
+     "action": "actions/checkout",
+     "from": "11d5960a326750d5838078e36cf38b85af677262 (v4.4.0)",
+     "to": "3d3c42e5aac5ba805825da76410c181273ba90b1 (v7.0.1)",
+     "pr": 6,
+     "pin": "tag ref resolved through the GitHub API to exactly this commit; official repository (fork=false); commit reachable from the default branch",
+     "notes": "Runs on node24; credentials persist in a separate file under RUNNER_TEMP (v6); the inputs Orbit uses are unchanged; the unsafe fork checkout guard applies to pull_request_target/workflow_run, which Orbit does not use"
+    },
+    {
+     "action": "pnpm/action-setup",
+     "from": "f40ffcd9367d9f12939873eb1018b921a783ffaa (tag object of the moving v4 tag)",
+     "to": "b906affcce14559ad1aafd4ab0e942779e9f58b1 (v4.3.0)",
+     "pr": 7,
+     "pin": "tag ref resolved through the GitHub API to exactly this commit; official repository (fork=false); commit reachable from the default branch",
+     "notes": "Same action code: the old pin was the v4 tag object, which dereferences to this commit. v4.3.0 still declares node20 and runs only because the runner forces Node 24; moving to a node24 release (v4.4.0/v5) remains a follow-up"
+    },
+    {
+     "action": "actions/setup-node",
+     "from": "49933ea5288caeca8642d1e84afbd3f7d6820020 (v4.4.0)",
+     "to": "820762786026740c76f36085b0efc47a31fe5020 (v7.0.0)",
+     "pr": 4,
+     "pin": "tag ref resolved through the GitHub API to exactly this commit; official repository (fork=false); commit reachable from the default branch",
+     "notes": "Runs on node24; automatic caching applies only to npm and an explicit cache input takes precedence, and Orbit sets node-version 24 with cache pnpm; always-auth is removed and was not used"
+    },
+    {
+     "action": "aquasecurity/trivy-action",
+     "from": "57a97c7e7821a5776cebc9bb87c984fa69cba8f1 (0.35.0)",
+     "to": "ed142fd0673e97e23eac54620cfb913e5ce36c25 (v0.36.0)",
+     "pr": 5,
+     "pin": "tag ref resolved through the GitHub API to exactly this commit; official repository (fork=false); commit reachable from the default branch; annotated tag, immutable release published 2026-04-22",
+     "notes": "GHSA-69fq-xp46-6x23 / CVE-2026-33634 affects trivy-action < 0.35.0, setup-trivy < 0.2.6 and trivy 0.69.4; v0.36.0 is outside those ranges and moves its nested setup-trivy to the patched 0.2.6. Pin comment now names the real tag v0.36.0"
+    },
+    {
+     "action": "actions/upload-artifact",
+     "from": "ea165f8d65b6e75b540449e92b4886f43607fa02 (v4.6.2)",
+     "to": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a (v7.0.1)",
+     "pr": 3,
+     "pin": "tag ref resolved through the GitHub API to exactly this commit; official repository (fork=false); commit reachable from the default branch",
+     "notes": "Runs on node24 (runner >= 2.327.1); defaults for the inputs Orbit uses (name, path, retention-days) are unchanged; the new archive input defaults to true"
+    }
+   ],
+   "localGate": {
+    "runner": "scripts/verify-remediation.mjs",
+    "directory": "artifacts/deps-batch-20260925",
+    "result": "PASS",
+    "sourceDigest": "be7f6f15b03070a81606343aa7a7d33ae285c2458ba171107eed8c8456b3aedc",
+    "sourceUnchangedDuringRun": true,
+    "startedAt": "2026-09-24T17:27:20.893Z",
+    "finishedAt": "2026-09-24T17:35:57.315Z",
+    "counts": {
+     "unit": 297,
+     "contract": 172,
+     "integration": 380,
+     "e2e": 102,
+     "ui": 13
+    },
+    "total": 964,
+    "zeroBrowserRetries": true,
+    "scope": "Application, tests and scripts with the new npm versions; GitHub Actions pins are exercised only by remote CI"
+   },
+   "postGateChanges": "These handoff records only",
+   "postMergeChecks": [
+    "In the first push run on main, setup-node v7 should restore the pnpm cache saved by v4.4.0 (this restore path has not run yet)",
+    "The Node 20 deprecation annotation should list only pnpm/action-setup"
+   ]
   }
  ],
  "limitations": [
