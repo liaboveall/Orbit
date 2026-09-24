@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Request as PwRequest } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import dotenv from "dotenv";
 import { establishSessionCookies } from "../ui/auth-setup";
@@ -101,10 +101,13 @@ test("A10：项目列表「加载更多」的旧分页响应在切换 tab 代次
       releaseStale = resolve;
     });
     let staleRequestSeen = false;
+    /** E5：记录被扣留的请求对象，供放行后等待其响应确实送达页面。 */
+    let staleProjectRequest: PwRequest | null = null;
     await page.route(
       (url) => /\/api\/v1\/projects\?/.test(url.pathname + "?" + url.search),
       async (route) => {
         staleRequestSeen = true;
+        staleProjectRequest = route.request();
         const response = await route.fetch();
         const body = await response.text();
         await staleGate;
@@ -128,9 +131,13 @@ test("A10：项目列表「加载更多」的旧分页响应在切换 tab 代次
     // 已归档 tab 数据量很小，不应该出现「加载更多」（hasMore 应为 false）。
     await expect(page.getByRole("button", { name: "加载更多", exact: true })).toHaveCount(0);
 
-    // 现在放行被挂起的「未归档」旧分页响应。
+    // 现在放行被挂起的「未归档」旧分页响应。E5 修复：等待旧响应确实送达页面
+    // （响应事件），而非固定 sleep——慢机上迟到落地也不会漏掉污染检查。
+    const staleProjectLanded = page.waitForResponse(
+      (r) => r.request() === staleProjectRequest,
+    );
     releaseStale!();
-    await page.waitForTimeout(500);
+    await staleProjectLanded;
 
     // 核心断言：已归档 tab 的这 1 张卡片没有被旧响应污染成别的数量，也没有因此多出
     // 一个「加载更多」按钮（旧响应的 hasMore=true 语义没有被错误地应用到当前 tab）。

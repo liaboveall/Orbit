@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Orbit 站点图标（B4）：品牌蓝圆环 + 中心点，对应 OrbitWordmark 的标识语言。
+       无文字、单一品牌色，保证 16px 下可辨识。 -->
+  <rect width="32" height="32" rx="8" fill="#355cff"/>
+  <circle cx="16" cy="16" r="8.5" fill="none" stroke="#ffffff" stroke-width="2.5"/>
+  <circle cx="16" cy="16" r="3" fill="#ffffff"/>
+</svg>

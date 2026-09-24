@@ -2,7 +2,7 @@
 
 ## 1. 范围与维护
 
-机器可读的 V1 业务协议见 [openapi.json](../contracts/openapi.json)，OpenAPI 3.1，基路径 /api/v1。认证库挂在 /api/auth/*，遵循锁定 Better Auth 版本的协议，不伪造业务包装。健康检查 /health/live、/health/ready 也不使用业务包装。AI 扩展单独见09，V1 不暴露未实现 AI 路由。
+机器可读的 V1 业务协议见 [openapi.json](../contracts/openapi.json)，OpenAPI 3.1，基路径 /api/v1。认证库挂在 /api/auth/*，遵循锁定 Better Auth 版本的协议，不伪造业务包装。注册、重发验证邮件、找回密码等匿名入口的响应状态、正文与耗时不依赖账户是否存在或是否已验证：认证邮件在响应之后投递，投递失败不改变响应（见架构 §8）。健康检查 /health/live、/health/ready 也不使用业务包装。AI 扩展单独见09，V1 不暴露未实现 AI 路由。
 
 开发时将契约实现为 src/contracts 的 Zod schemas/DTO，并添加契约测试。OpenAPI、运行时 schema 和业务规则必须同步；禁止只有类型声明而没有服务端校验。
 
@@ -25,11 +25,11 @@
 |---|---|---|
 | 400 | VALIDATION_ERROR / INVALID_CURSOR | 字段旁提示；不重试 |
 | 401 | UNAUTHENTICATED | 登录并保留合法 returnTo |
-| 403 | FORBIDDEN / EMAIL_UNVERIFIED / ORIGIN_NOT_ALLOWED | 显示访问限制 |
+| 403 | FORBIDDEN / EMAIL_UNVERIFIED / ORIGIN_NOT_ALLOWED | 显示访问限制。EMAIL_UNVERIFIED 为保留码（邮箱未验证由认证库流程拦截，V1 业务层不抛出） |
 | 404 | NOT_FOUND | 不区分不存在和非成员不可见 |
 | 409 | VERSION_CONFLICT / BOARD_CONFLICT | 保留草稿/回滚，重新获取 |
 | 409 | PROJECT_KEY_TAKEN / PROJECT_ARCHIVED | 项目字段冲突或只读 |
-| 409 | INVITATION_USED / ALREADY_EXISTS / IDEMPOTENCY_CONFLICT / UPLOAD_IN_PROGRESS / LOCKED | 按具体业务处理 |
+| 409 | INVITATION_USED / ALREADY_EXISTS / IDEMPOTENCY_CONFLICT / UPLOAD_IN_PROGRESS / LOCKED | 按具体业务处理。ALREADY_EXISTS 为保留码（V1 各创建路径用幂等/唯一键语义处理，不抛出该码） |
 | 410 | INVITATION_EXPIRED / INVITATION_REVOKED | 显示邀请失效 |
 | 413 | PAYLOAD_TOO_LARGE | 拒绝请求并提示 |
 | 415 | UNSUPPORTED_FILE_TYPE | 不支持的文件格式 |
@@ -38,7 +38,9 @@
 | 500 | INTERNAL_ERROR | 服务器内部错误 |
 | 503 | STORAGE_UNAVAILABLE / SERVICE_UNAVAILABLE | 服务暂时不可用 |
 
-错误 message 给普通用户看；代码供程序分支判断。违反方法/内容类型等框架级错误可在入口转换。不能用 200 携带 error 假装成功。
+错误 message 给普通用户看；代码供程序分支判断。查询校验使用统一中文消息与字段错误。违反方法/内容类型等框架级错误可在入口转换。不能用 200 携带 error 假装成功。
+
+附件传输受进程容量保护：总上传 4 条、总下载 8 条、每用户下载 2 条，超限返回 429/Retry-After；上传临时空间不足返回 503/STORAGE_UNAVAILABLE。与既有每用户上传 2 条、10 次/分钟限制同时生效；详情见环境文档。
 
 ## 4. 权限入口与子资源
 
@@ -66,7 +68,7 @@ Comment、Subtask 自己维护 version。正文编辑与父任务标量字段冲
 
 任务列表用 TaskSummary，不包含大段 description；详情 TaskDTO 才包含 description。deleted=only 返回回收站摘要，普通结果 deletedAt=null。分页期间发生更新可能导致列表跨页重复，客户端按 id 去重；不承诺列表的跨请求数据库快照。
 
-看板初次 GET /projects/{id}/board 返回三列及同快照 boardVersion，每列最多limit（默认50）；status+cursor 用于后续加载单列。看板 cursor 必须携带原 boardVersion；版本改变返回409 BOARD_CONFLICT，客户端清空已拼接列并重新获取，避免在过时分页上拖拽。
+看板初次 GET /projects/{id}/board 返回三列及同快照 boardVersion，每列最多limit（默认50）；status+cursor 用于后续加载单列。看板 cursor 必须携带原 boardVersion，并携带本列已返回前缀的数量与摘要；版本改变或筛选集合在两次请求之间变化（任务进入/离开已加载前缀）均返回409 BOARD_CONFLICT，客户端清空已拼接列并重新获取，避免在过时分页上拖拽或把缺卡片的结果当成已加载完。过滤指纹随日期等条件失效返回400 INVALID_CURSOR，看板客户端同样整体重新读取。
 
 筛选 q（最多100字）、status、priority、assigneeId、unassigned、overdue；assigneeId 与 unassigned=true 互斥。我的任务可跨当前参与项目，并固定当前用户为负责人；服务端按会话过滤，客户端不能指定任意 userId。
 
@@ -114,6 +116,8 @@ move 成功 data 为 {task:TaskDTO,boardVersion:13}。错误示例：
 
 ## 8. 文件上传协议
 
+上传失败分类（2026-09-24）：超过120秒总时限返回503 STORAGE_UNAVAILABLE（上传超时）；客户端中断同码（上传已中断）；数据库不可用或连接池饱和等依赖故障按统一错误映射返回503 SERVICE_UNAVAILABLE；只有元信息缺失、顺序错误或 multipart 格式损坏才返回400 VALIDATION_ERROR。文件名拒绝路径分隔符、C0/DEL/C1 控制字符与 bidi 嵌入/覆盖/隔离字符（与姓名同一口径），返回415 UNSUPPORTED_FILE_TYPE。
+
 POST /tasks/{id}/attachments 使用 multipart/form-data：uploadId（客户端 UUID）、declaredSizeBytes、sha256（客户端计算的内容摘要）、file。客户端按此顺序追加，file最后；服务端在收到文件流前完成元信息校验与配额预留，元信息缺失/顺序不合法返回400。服务端重新计算摘要，不能信任客户端结果。file MIME/名称从 multipart 元数据取得，按上传规则验证。空文件拒绝；单次上传总时限120秒；元信息区最大64KiB。
 
 Attachment 增加 clientUploadId、claimedSha256；UNIQUE(taskId,uploaderId,clientUploadId)。相同 uploadId 同元信息：READY 返回既有附件200，UPLOADING 返回409 UPLOAD_IN_PROGRESS，FAILED/DELETED 返回409并要求新的 uploadId；元信息或内容摘要不同返回409 IDEMPOTENCY_CONFLICT。这样网络超时重传不创建第二个附件。
@@ -140,3 +144,11 @@ PROJECT_CREATED、PROJECT_UPDATED、PROJECT_ARCHIVED、PROJECT_RESTORED、MEMBER
 附件 uploadId 保持 UUID；内部 DELETED + deletedAt 同步，公开 DTO 不返回 DELETED。下载端点保持 Download JSON，url 为 60 秒有效且绑定当前用户的应用签名链接。GET /attachments/{attachmentId}/content 校验签名、当前会话、当前项目成员、父任务未删除和附件 READY 后代理私有 S3 流，强制 attachment、private,no-store；不向客户端暴露 objectKey。该选择取代先前签名存储 URL 与直接二进制响应混用的实现。
 
 上传先持久预留，再有界流接收至私有临时文件并校验实际内容/大小/摘要、流写 S3，最后独立事务复核权限并提交 READY。请求总时限 120 秒；临时文件请求结束删除。维护命令 cleanup:attachments 处理一小时以上失效上传及 cleanupPending 对象；FAILED/DELETED 的待删标志保留至少 3 分钟，让取消中的 PUT 结束后再物理删除。对象删除失败保留待重试标志，已清理对象不重复释放配额。
+
+### HEAD 读取准入
+
+框架为 GET 路由提供的 HEAD 使用同一会话、授权与生产读取额度（300 次/用户/分钟）；不返回正文。私有文件 content 路由显式返回 405，避免 HEAD 打开对象流。该方法支持说明不新增 JSON 数据结构。
+
+### 综合审查传输补充（2026-09-13）
+
+任务/评论/子任务 DELETE 的 expectedVersion 只允许单个正十进制安全整数；缺失、重复、指数/十六进制和越界输入返回400中文校验信封。附件 content HEAD 返回405并保留合法上游 requestId。通用客户端在 DELETE 显式传 z.void()/z.undefined() 时接受204；对象 Schema 仍拒绝意外204，200删除响应保持原契约。代理拒绝返回429 + RATE_LIMITED信封、Retry-After:1；应用限流仍使用自身精确恢复时间。

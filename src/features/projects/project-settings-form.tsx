@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { UnsavedChangesProvider, useUnsavedChanges } from "@/features/tasks/unsaved-changes";
 import { Archive, ArchiveRestore, Save } from "lucide-react";
 import {
   ApiClientError,
@@ -47,7 +48,18 @@ export type ProjectSettingsFormProps = {
   project: ProjectDTO;
 };
 
-export function ProjectSettingsForm({ project }: ProjectSettingsFormProps) {
+/**
+ * B6 修复：项目设置草稿保护（资料编辑 dirty + 归档/冲突在途 pending）。
+ */
+export function ProjectSettingsForm(props: ProjectSettingsFormProps) {
+  return (
+    <UnsavedChangesProvider>
+      <ProjectSettingsFormContent {...props} />
+    </UnsavedChangesProvider>
+  );
+}
+
+function ProjectSettingsFormContent({ project }: ProjectSettingsFormProps) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -85,6 +97,12 @@ export function ProjectSettingsForm({ project }: ProjectSettingsFormProps) {
   const trimmedDescription = description.trim();
   const profileDirty =
     trimmedName !== baseline.name || trimmedDescription !== baseline.description;
+
+  // B6：资料草稿未保存或任一操作在途 → 不可静默离开。
+  useUnsavedChanges(
+    profileDirty,
+    savingProfile || archiving || conflictPending || fetchingRemote,
+  );
   const profileValid =
     trimmedName.length >= 1 &&
     trimmedName.length <= NAME_MAX &&
@@ -263,7 +281,7 @@ export function ProjectSettingsForm({ project }: ProjectSettingsFormProps) {
             项目资料
           </h2>
           <span className="font-mono text-caption uppercase tracking-widest text-foreground-muted">
-            patch · /projects/{project.id}
+            项目资料
           </span>
         </header>
 
@@ -282,6 +300,8 @@ export function ProjectSettingsForm({ project }: ProjectSettingsFormProps) {
               type="text"
               maxLength={NAME_MAX}
               value={name}
+              aria-invalid={profileError ? true : undefined}
+              aria-describedby={profileError ? "project-settings-error" : undefined}
               disabled={savingProfile || archiving || fetchingRemote || archived}
               onChange={(event) => setName(event.target.value)}
             />
@@ -300,12 +320,14 @@ export function ProjectSettingsForm({ project }: ProjectSettingsFormProps) {
               rows={3}
               maxLength={DESCRIPTION_MAX}
               value={description}
+              aria-invalid={profileError ? true : undefined}
+              aria-describedby={profileError ? "project-settings-error" : undefined}
               disabled={savingProfile || archiving || fetchingRemote || archived}
               onChange={(event) => setDescription(event.target.value)}
             />
           </div>
 
-          <InlineError>{profileError}</InlineError>
+          {profileError ? <InlineError id="project-settings-error">{profileError}</InlineError> : null}
 
           {conflictPending ? (
             <div className="space-y-3 rounded-card border border-warning/30 bg-warning-soft p-4">

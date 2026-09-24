@@ -5,8 +5,9 @@ import { Button } from "@/components/ui";
 import { TASK_STATUS, TASK_PRIORITY, type MemberDTO } from "@/contracts";
 import { STATUS_LABEL, PRIORITY_LABEL } from "../task-meta";
 
+// B5 修复：手机 16px 输入字号（防 iOS 聚焦自动放大），md+ 恢复 12px 控件小字。
 const inputClass =
-  "min-w-0 rounded-control border border-line bg-surface px-3 py-2 text-caption outline-none focus-visible:ring-2 focus-visible:ring-brand";
+  "min-w-0 rounded-control border border-line bg-surface px-3 py-2 text-body md:text-caption outline-none focus-visible:ring-2 focus-visible:ring-brand";
 export function TaskFilters({
   projectId,
   members,
@@ -19,6 +20,7 @@ export function TaskFilters({
   const router = useRouter();
   const path = usePathname();
   const search = useSearchParams();
+  const filterKey = JSON.stringify([projectId, board, ...["q", "status", "priority", "assigneeId", "unassigned", "overdue", "sort"].map(key => search.get(key))]);
   const viewQuery = new URLSearchParams(search.toString());
   viewQuery.delete("task");
   viewQuery.delete("cursor");
@@ -40,7 +42,7 @@ export function TaskFilters({
         </Link>
       </nav>
       <form
-        key={search.toString()}
+        key={filterKey}
         className="flex flex-wrap gap-2"
         onSubmit={(e) => {
           e.preventDefault();

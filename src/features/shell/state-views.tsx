@@ -50,6 +50,44 @@ export function SampleError({
 }
 
 /**
+ * 真实错误面板（F24 修复）：单一明确的重试动作，重试由调用方传入真实重新拉取回调，
+ * 不再弹出样例 toast（样例页请继续用上方 SampleError）。
+ * docs/02 §7：网络失败 → 局部错误、可重试、保留草稿（不清空用户输入/已选文件）。
+ */
+export function ErrorPanel({
+  message,
+  onRetry,
+  retryLabel = "重新加载",
+  draftNote,
+  className,
+}: {
+  message: ReactNode;
+  /** 真实的重新拉取回调；不传则只显示错误说明。 */
+  onRetry?: () => void;
+  retryLabel?: string;
+  /** 草稿保留说明（可选）。 */
+  draftNote?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className} role="alert">
+      <InlineError className="mb-2">{message}</InlineError>
+      <div className="flex flex-wrap items-center gap-3">
+        {onRetry ? (
+          <Button variant="secondary" size="sm" onClick={onRetry}>
+            <RotateCw className="h-4 w-4" aria-hidden="true" />
+            {retryLabel}
+          </Button>
+        ) : null}
+        {draftNote ? (
+          <p className="text-caption text-foreground-muted">{draftNote}</p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/**
  * 统一不可访问页面：不泄露项目名/资源是否存在（无权限与不存在同一外观）。
  * 未登录/会话过期场景可传 `reason="session"` 显示登录跳转提示。
  */

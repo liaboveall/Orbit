@@ -3,6 +3,7 @@ import type { UserDTO } from "@/contracts";
 import { toUserDto } from "@/server/me/read-user";
 import { DomainError } from "@/server/http/errors";
 import { auth } from "./index";
+import { consumeReadQuota } from "./read-quota";
 
 /**
  * 会话查询帮助函数（M1 / ORB-004）。
@@ -37,6 +38,13 @@ export async function requireSessionUser(source: Request | Headers): Promise<Use
   const user = await getSessionUser(source);
   if (!user) {
     throw new DomainError("UNAUTHENTICATED", "请先登录后再访问该资源。");
+  }
+  if (source instanceof Request && ["GET", "HEAD"].includes(source.method)) {
+    // 与服务端页面共用每用户读取额度（见 ./read-quota 与 ./page-session）。
+    const admission = await consumeReadQuota(user.id);
+    // F02 修复：携带精确 resetAfter，供 Retry-After 头使用。
+    if (!admission.allowed)
+      throw new DomainError("RATE_LIMITED", "读取过于频繁，请稍后重试。", undefined, undefined, admission.retryAfter);
   }
   return user;
 }

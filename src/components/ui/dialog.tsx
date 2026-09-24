@@ -59,6 +59,9 @@ export function DialogContent({
         ? event.target.closest('[role="dialog"], [role="menu"], [role="listbox"]')
         : null;
       if (!dialog || layer !== dialog) return;
+      // Keep native IME candidate cancellation while preventing Radix/parent
+      // layers from treating the same composing Escape as a dialog dismissal.
+      if (event.isComposing || event.keyCode === 229) { event.stopImmediatePropagation(); return; }
       event.stopImmediatePropagation();
       onEscapeKeyDown?.(event);
       if (!event.defaultPrevented) {
@@ -80,7 +83,10 @@ export function DialogContent({
           className,
         )}
         {...props}
-        onEscapeKeyDown={onEscapeKeyDown}
+        onEscapeKeyDown={(event) => {
+          if (event.isComposing || event.keyCode === 229) { event.preventDefault(); return; }
+          onEscapeKeyDown?.(event);
+        }}
       >
         {children}
         <DialogPrimitive.Close asChild>

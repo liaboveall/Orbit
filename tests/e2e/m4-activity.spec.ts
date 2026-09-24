@@ -2,6 +2,7 @@ import {
   test,
   expect,
   type APIRequestContext,
+  type Request as PwRequest,
 } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import dotenv from "dotenv";
@@ -359,10 +360,13 @@ test("A10：加载更多的旧分页响应在刷新代次前移后落地，必�
     releaseStale = resolve;
   });
   let staleRequestSeen = false;
+  /** E5：记录被扣留的请求对象，供放行后等待其响应确实送达页面。 */
+  let staleApiRequest: PwRequest | null = null;
   await page.route(
     (url) => /\/api\/v1\/projects\/[^/]+\/activity\?/.test(url.pathname + "?" + url.search),
     async (route) => {
       staleRequestSeen = true;
+      staleApiRequest = route.request();
       const response = await route.fetch();
       const body = await response.text();
       await staleGate; // 挂起：等测试主体明确放行后才把响应交给页面。
@@ -399,9 +403,13 @@ test("A10：加载更多的旧分页响应在刷新代次前移后落地，必�
 
   const countAfterRefreshBeforeStaleLands = await items.count();
 
-  // 现在放行被挂起的旧响应。
+  // 现在放行被挂起的旧响应。E5 修复：等待旧响应确实送达（响应事件）而非固定 sleep，
+  // 保证负向断言「页面未被污染」在旧响应已落地的前提下成立（慢机不漏判）。
+  const staleActivityLanded = page.waitForResponse(
+    (r) => r.request() === staleApiRequest,
+  );
   releaseStale!();
-  await page.waitForTimeout(500); // 给旧响应一个足够的时间窗口把自己（错误地）拼进 state。
+  await staleActivityLanded;
 
   // 断言 1+2：条目数没有因为旧响应落地而改变——它被整批丢弃，不是「去重后仍追加了0条
   // 因为id重复」（本例的合成活动id对新基线是全新的，去重不会拦住它们，只有代次校验能）。

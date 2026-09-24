@@ -19,7 +19,7 @@ import { prisma } from "./prisma";
 
 /** 事务可选项：超时与获取连接的最大等待。 */
 export interface TransactionOptions {
-  /** 事务执行上限（ms），默认 5000。 */
+  /** 事务执行上限（ms），默认 10000（与 statement_timeout 一致，见下方模块注释）。 */
   timeout?: number;
   /** 从连接池获取连接的等待上限（ms），默认 2000。 */
   maxWait?: number;

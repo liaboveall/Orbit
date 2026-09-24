@@ -1,0 +1,113 @@
+name: Orbit quality
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      CI: "true"
+      E2E_PORT: "3100"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 10.34.5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node scripts/verify-compose.mjs
+      - name: Verify POSIX Playwright server teardown
+        timeout-minutes: 2
+        run: node scripts/verify-web-server-lifecycle.mjs
+      - name: Configure isolated synthetic services
+        run: |
+          cp .env.example .env.local
+          echo 'BETTER_AUTH_SECRET=orbit-ci-synthetic-secret-not-for-production-2026' >> .env.local
+          docker compose -f infra/compose.dev.yml up -d --wait
+      - name: Migrate isolated development database
+        run: pnpm db:migrate:deploy
+      - name: Migrate test database
+        run: pnpm db:migrate:deploy
+        env:
+          DATABASE_URL: postgresql://orbit:orbit_dev_only@localhost:5432/orbit_test
+      - run: pnpm check
+      - run: node scripts/verify-migration-history.mjs
+      - run: pnpm typecheck:scripts
+      - run: python planning/validate_plan.py
+      - run: python planning/validate_plan_probes.py
+      - run: python planning/current_status.py --check
+      - name: Verify evidence runner failure semantics
+        run: node scripts/verify-remediation.mjs --self-test
+        env:
+          ORBIT_VERIFICATION_DIRECTORY: artifacts/runner-selftest
+      - run: pnpm test:integration
+      - run: node --conditions=react-server --import tsx scripts/recovery-drill.ts
+      - name: Verify backup integrity handling in a disposable container
+        run: docker run --rm --network none -v "$PWD/scripts:/source/scripts:ro" -v "$PWD/infra:/source/infra:ro" debian:bookworm-slim bash /source/scripts/verify-backup.sh
+      - run: node scripts/verify-image-policy.mjs
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e --retries=0
+      - run: pnpm test:ui --retries=0
+      - run: pnpm audit --prod --audit-level=high
+      # F39：开发依赖扫描仅作可观测信号（漏洞公告随时变化，不作为阻塞门禁）。
+      - run: pnpm audit --audit-level=high
+        continue-on-error: true
+      - id: build-runner
+        run: docker build --target runner -t orbit:${{ github.sha }} .
+      - id: build-operations
+        run: docker build --target operations -t orbit-operations:${{ github.sha }} .
+      # OI-19：不只构建——实际启动 runner，验证 ready 探针、demo 冒烟、非 root、无构建期 env 文件，并可靠清理。
+      - name: Runtime smoke of the runner container
+        run: node scripts/container-smoke.mjs
+        env:
+          ORBIT_SMOKE_IMAGE: orbit:${{ github.sha }}
+      - run: node scripts/verify-nginx.mjs
+      - run: mkdir -p artifacts/release
+      - name: Scan runtime container (OS and application dependencies)
+        if: ${{ !cancelled() && steps.build-runner.outcome == 'success' }}
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          image-ref: orbit:${{ github.sha }}
+          version: v0.69.3
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: '0'
+          format: json
+          output: artifacts/release/trivy-runtime.json
+      - name: Scan operations container
+        if: ${{ !cancelled() && steps.build-operations.outcome == 'success' }}
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          image-ref: orbit-operations:${{ github.sha }}
+          version: v0.69.3
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: '0'
+          format: json
+          output: artifacts/release/trivy-operations.json
+      # Personal-project policy: retain findings; scanner failures still fail the
+      # steps above. Block fixable HIGH/CRITICAL and confirmed-impact findings.
+      - name: Enforce image risk policy
+        if: ${{ !cancelled() && steps.build-runner.outcome == 'success' && steps.build-operations.outcome == 'success' }}
+        run: node scripts/check-image-scan.mjs artifacts/release/trivy-runtime.json artifacts/release/trivy-operations.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: quality-evidence
+          path: |
+            playwright-report
+            test-results
+            artifacts/release
+            artifacts/comprehensive-20260913/nginx
+          retention-days: 7

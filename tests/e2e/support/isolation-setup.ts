@@ -1,6 +1,10 @@
 import pg from "pg";
 import {createHash} from "node:crypto";
 import {withTestDb} from "./db";
+import { mkdtemp, writeFile, rm, rmdir } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fixtureUserHash } from "../../support/fixture-ownership";
 
 async function fingerprint(connectionString: string): Promise<string> {
   const url = new URL(connectionString);
@@ -22,12 +26,24 @@ async function fingerprint(connectionString: string): Promise<string> {
   } finally {await client.end();}
 }
 export default async function setup() {
-  await withTestDb(async () => undefined);
+  const startedAt = new Date().toISOString();
+  const protectedUserHashes = await withTestDb(async client =>
+    (await client.query<{ id: string }>('SELECT id FROM "User"')).rows.map(user => fixtureUserHash(user.id)));
+  const directory = await mkdtemp(join(tmpdir(), "orbit-test-ownership-"));
+  const manifest = join(directory, "baseline.json");
+  await writeFile(manifest, JSON.stringify({ startedAt, protectedUserHashes }));
+  process.env.ORBIT_TEST_BASELINE_FILE = manifest;
   const dev = process.env.DATABASE_URL!, test = process.env.TEST_DATABASE_URL!;
   const beforeDev = await fingerprint(dev), beforeTest = await fingerprint(test);
   return async () => {
+    try {
     if (await fingerprint(dev) !== beforeDev) throw new Error("Development database contents changed during browser tests");
     if (await fingerprint(test) !== beforeTest) throw new Error("Test database did not return to its pre-run contents; inspect fixture cleanup");
     console.log("[isolation] Development and test database content fingerprints unchanged after fixture cleanup.");
+    } finally {
+      await rm(manifest, { force: true });
+      await rmdir(directory);
+      delete process.env.ORBIT_TEST_BASELINE_FILE;
+    }
   };
 }

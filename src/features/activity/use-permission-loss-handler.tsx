@@ -1,187 +1,142 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginPathWithReturnTo } from "@/lib/return-to";
+import { clearProjectDrafts } from "@/features/tasks/draft-storage";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export type PermissionLossReason = "removed" | "expired" | "revoked";
 
 export type UsePermissionLossOptions = {
-  /** 
-   * Project ID to monitor for permission changes
-   */
+  /** 监听权限变化的项目 ID（仅用于 401 回跳 returnTo）。 */
   projectId: string;
-  
-  /** 
-   * Callback when permission loss is detected
-   */
+  /** 检测到权限丢失时的回调（同步调用，无自动跳转定时器）。 */
   onLoss?: (reason: PermissionLossReason) => void;
-  
-  /** 
-   * Delay before checking permissions after mount (ms)
-   */
-  checkDelay?: number;
 };
 
 /**
- * Hook to detect and handle user permission loss in real-time
- * 
- * Monitors the current page for permission-related errors and triggers
- * appropriate handling when user loses access to a project.
- * 
- * @param options - Configuration options
- * @example
- * ```tsx
- * function ActivityPage() {
- *   usePermissionLossHandler({
- *     projectId: projectId,
- *     onLoss: (reason) => {
- *       if (reason === 'removed') {
- *         // Show toast notification before redirecting
- *         toast.error("你已不再属于此项目");
- *       }
- *     },
- *   });
- *   
- *   return <ActivityFeed ... />;
- * }
- * ```
+ * 权限丢失检测与恢复（F22 修复）。
+ *
+ * 与旧实现的差异：
+ *  - **移除 300ms 自动强跳与无效定时器**：检测到 401/403 后只置状态、弹遮罩，
+ *    由用户点击选择去向（按钮可达、可键盘操作）；
+ *  - **401 与 403 分流**：401（会话过期）引导重新登录并保留 returnTo；
+ *    403/被移除（revoked/removed）退出项目回「全部项目」，不再跳登录页
+ *    （会话仍有效时登录页会立即弹回，形成登录循环）；
+ *  - 组件卸载（用户自行导航离开）不触发任何跳转，不会跳回旧项目。
  */
-export function usePermissionLossHandler(options: UsePermissionLossOptions) {
-  const {
-    projectId,
-    onLoss,
-    checkDelay = 1000,
-  } = options;
-  
+export function usePermissionLossHandler({ projectId, onLoss }: UsePermissionLossOptions) {
   const router = useRouter();
-  
-  const [hasPermissionError, setHasPermissionError] = useState(false);
-  const [permissionLossReason, setPermissionLossReason] = useState<PermissionLossReason | null>(null);
-  const [isChecking, setIsChecking] = useState(true);
 
-  useEffect(() => {
-    // Initial delay to allow page to hydrate
-    const timeoutId = setTimeout(() => {
-      setIsChecking(false);
-    }, checkDelay);
-
-    return () => clearTimeout(timeoutId);
-  }, [checkDelay]);
-
-  useEffect(() => {
-    if (!hasPermissionError) return;
-
-    const handleRedirect = async () => {
-      // Small delay to allow UI to show error message
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      onLoss?.(permissionLossReason ?? "removed");
-      
-      // Redirect to login with return URL
-      const returnUrl = `/app/projects/${projectId}`;
-      void router.replace(loginPathWithReturnTo(returnUrl));
-    };
-
-    handleRedirect();
-  }, [hasPermissionError, permissionLossReason, onLoss, projectId, router]);
+  const [permissionLossReason, setPermissionLossReason] = useState<PermissionLossReason | null>(
+    null,
+  );
 
   /**
-   * Check if the current request resulted in a permission error
-   * Call this from your data fetching code when you receive a 401 response
+   * 数据请求收到 401/403 时调用：置权限丢失状态并弹出恢复遮罩。
+   * reason 语义：expired=会话失效（401）；removed/revoked=被移出或无权限（403）。
    */
-  const handlePermissionError = (error: Error, reason: PermissionLossReason = "removed"): void => {
-    console.warn(`[Permission Loss Handler] ${reason} for project ${projectId}`, error.message);
-    
+  const handlePermissionError = (
+    error: Error,
+    reason: PermissionLossReason = "removed",
+  ): void => {
+    void error;
+    void projectId; // 保留入参形状；回跳目标见 goToLogin（当前页作为 returnTo）。
+    onLoss?.(reason);
     setPermissionLossReason(reason);
-    setHasPermissionError(true);
   };
 
-  /**
-   * Clear permission error state (useful for navigation away and back)
-   */
+  /** 清除权限丢失状态（用户显式选择留下时使用）。 */
   const clearPermissionError = (): void => {
-    setHasPermissionError(false);
     setPermissionLossReason(null);
   };
 
+  /** 401（会话失效）：带 returnTo 前往登录页；登录后回到当前页面。 */
+  const goToLogin = (): void => {
+    setPermissionLossReason(null);
+    router.push(loginPathWithReturnTo(location.pathname + location.search));
+  };
+
+  /** 403/被移除：离开本项目，回到可访问的「全部项目」列表（私有数据不再展示）。 */
+  const leaveProject = (): void => {
+    setPermissionLossReason(null);
+    // 失去项目访问：该项目的本机任务草稿不再可保存，离开时删除。
+    clearProjectDrafts(projectId);
+    router.push("/app/projects");
+  };
+
   return {
-    hasPermissionError,
+    hasPermissionError: permissionLossReason !== null,
     permissionLossReason,
-    isChecking,
     handlePermissionError,
     clearPermissionError,
+    goToLogin,
+    leaveProject,
   };
 }
 
 /**
- * Component wrapper that displays permission loss recovery UI
- * Can be used as an overlay or inline message
+ * 权限丢失恢复遮罩（F22 修复）：用现有 Dialog 原语提供焦点陷阱 / Escape / 焦点恢复，
+ * 样式全部来自设计 token（不再使用 bg-black/50、text-red-500 等脱离 token 的组合）。
+ *  - expired（401）：「前往登录」为主操作，可留在当前页；
+ *  - removed/revoked（403）：唯一出口是「返回全部项目」，Escape 同样离开，
+ *    不保留旧项目的私有活动列表。
  */
 export function PermissionLossOverlay({
-  projectId,
   isVisible,
+  reason,
   onDismiss,
+  onGoToLogin,
+  onLeaveProject,
 }: {
-  projectId: string;
   isVisible: boolean;
+  reason: PermissionLossReason;
   onDismiss: () => void;
+  onGoToLogin: () => void;
+  onLeaveProject: () => void;
 }) {
-  const router = useRouter();
+  const expired = reason === "expired";
 
-  if (!isVisible) return null;
-
-  const handleLoginNow = () => {
-    const returnUrl = `/app/projects/${projectId}`;
-    void router.push(loginPathWithReturnTo(returnUrl));
+  const handleOpenChange = (open: boolean): void => {
+    if (open) return;
+    // Escape / 遮罩点击：expired 允许留下；被移除则必须离开（不残留私有数据）。
+    if (expired) onDismiss();
+    else onLeaveProject();
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="permission-loss-title"
-    >
-      <div className="mx-4 max-w-md rounded-lg bg-surface p-6 shadow-xl">
-        <div className="mb-3 flex items-center gap-2">
-          <svg
-            className="h-8 w-8 text-red-500"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
-          <h3 id="permission-loss-title" className="text-xl font-semibold text-page">
-            访问权限失效
-          </h3>
-        </div>
-
-        <p className="mb-6 text-foreground-secondary">
-          您当前的操作权限已失效，可能是因为您已被移出该项目的成员列表。请重新登录以确认您的账户状态。
-        </p>
-
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onDismiss}
-            className="rounded-md border px-4 py-2 text-label hover:bg-surface-secondary"
-          >
-            稍后处理
-          </button>
-          <button
-            onClick={handleLoginNow}
-            className="rounded-md bg-brand px-4 py-2 text-white hover:bg-brand-hover"
-          >
-            立即登录
-          </button>
-        </div>
-      </div>
-    </div>
+    <Dialog open={isVisible} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{expired ? "登录状态已失效" : "访问权限失效"}</DialogTitle>
+          <DialogDescription>
+            {expired
+              ? "你的会话可能已过期。重新登录后，我们会把你带回原来的页面。"
+              : "你已不再属于此项目，无法继续查看其活动。项目列表仍可正常访问。"}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          {expired ? (
+            <Button variant="secondary" onClick={onDismiss}>
+              留在本页
+            </Button>
+          ) : null}
+          {expired ? (
+            <Button onClick={onGoToLogin}>前往登录</Button>
+          ) : (
+            <Button onClick={onLeaveProject}>返回全部项目</Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

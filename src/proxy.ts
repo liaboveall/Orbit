@@ -47,7 +47,7 @@ export function proxy(request: NextRequest): NextResponse {
 
   // 1) /api/v1/*：需要认证。未登录返回 401 JSON（不重定向，API 语义）。
   //    排除匿名端点：邀请预览不要求认证（openapi security:[]）。
-  if (pathname.startsWith("/api/v1/")) {
+  if (pathname === "/api/v1" || pathname.startsWith("/api/v1/")) {
     if (pathname === "/api/v1/invitations/preview") {
       return NextResponse.next();
     }
@@ -72,7 +72,9 @@ export function proxy(request: NextRequest): NextResponse {
 
 /**
  * 只在需要保护的前缀上运行：
- *  - /app/*（受保护页面）、/auth/*（已登录回跳）、/api/v1/*（受保护 API）。
+ *  - /app/*（受保护页面）、/api/v1/*（受保护 API）；/auth/* 页面**不在**拦截范围——
+ *    登录/注册/验证页自行检查真实会话并回跳（上面的 return NextResponse.next() 分支），
+ *    不按 Cookie 存在性做任何改写。
  *  - **不含** /api/auth/*（Better Auth catch-all 自管理，含限流/会话/邮件端点，绝不拦截）。
  *  - 不含静态资源与根路径，减少无谓执行。
  */

@@ -191,7 +191,7 @@ export async function removeMember(params: RemoveMemberParams): Promise<void> {
       action,
       metadata: {
         targetUserId,
-        ...(isSelfExit ? {} : { count: affected.count }), // Only include count for forced removals
+        count: affected.count,
       },
     });
   });

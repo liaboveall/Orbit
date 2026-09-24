@@ -1,13 +1,32 @@
 import "server-only";
 import { APIError } from "better-auth/api";
 import { normalizeTimezone } from "@/server/me/timezone";
+import { hasUnsafeDisplayCharacters } from "@/server/modules/unsafe-characters";
 
 export const DEFAULT_TIMEZONE = "Asia/Shanghai";
+
+/**
+ * 姓名校验的可复用判定：返回拒绝原因文案；null = 通过（F09：注册与资料更新同规则）。
+ * 危险字符（bidi 覆盖/隔离符与非空白控制字符）与附件文件名共用同一口径，见
+ * `@/server/modules/unsafe-characters`；正常中文、组合字符与 emoji 全部保留。
+ */
+export function requireUserNameRejectedReason(trimmed: string): string | null {
+  if (trimmed.length < 1) return "姓名不能为空";
+  if (trimmed.length > 40) return "姓名不能超过 40 个字符";
+  if (hasUnsafeDisplayCharacters(trimmed)) {
+    return "姓名包含不支持的不可见字符，请修改后重试。";
+  }
+  return null;
+}
 
 /** 所有认证库用户写入口与 /me 使用相同的姓名规则。 */
 export function requireUserName(value: unknown): string {
   if (typeof value !== "string" || value.trim().length < 1 || value.trim().length > 40) {
     throw new APIError("BAD_REQUEST", { code: "INVALID_NAME", message: "姓名需为 1—40 个字符。" });
+  }
+  const rejection = requireUserNameRejectedReason(value.trim());
+  if (rejection) {
+    throw new APIError("BAD_REQUEST", { code: "INVALID_NAME", message: rejection });
   }
   return value.trim();
 }

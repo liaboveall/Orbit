@@ -171,7 +171,7 @@ export function TaskDetail({ task, variant, projectId, currentUserId, onClose, o
         : `/app/projects/${task.projectId}/tasks/${task.id}`;
     try {
       await navigator.clipboard.writeText(url);
-      toast({ title: "已复制任务链接", variant: "success" });
+      toast({ title: "链接已复制到剪贴板", variant: "success" });
     } catch {
       toast({ title: "复制失败，请手动复制链接", variant: "danger" });
     }
@@ -252,7 +252,7 @@ export function TaskDetail({ task, variant, projectId, currentUserId, onClose, o
                 disabled={saving}
               >
                 {saving ? <Spinner /> : null}
-                <span>{saving ? "保存中..." : "保存"}</span>
+                <span>{saving ? "保存中…" : "保存"}</span>
               </Button>
               <Button
                 size="sm"
@@ -363,7 +363,7 @@ export function TaskDetail({ task, variant, projectId, currentUserId, onClose, o
                   disabled={saving}
                 >
                   {saving ? <Spinner /> : null}
-                  <span>{saving ? "保存中..." : "保存"}</span>
+                  <span>{saving ? "保存中…" : "保存"}</span>
                 </Button>
                 <Button
                   size="sm"

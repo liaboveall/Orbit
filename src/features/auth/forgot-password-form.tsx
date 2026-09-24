@@ -32,7 +32,7 @@ export function ForgotPasswordForm() {
           如果该邮箱已注册，你将收到一封密码重置邮件。请点击邮件中的链接设置新密码。
         </p>
         <p className="text-caption text-foreground-muted">
-          没有收到？确认邮箱拼写、检查垃圾邮件，或稍后重试。链接 1 小时内有效。
+          没有收到？确认邮箱拼写、检查垃圾邮件，或「返回重新填写」再次提交（受发送限流约束）。链接 1 小时内有效。
         </p>
         <div className="flex flex-col gap-2 pt-1">
           <button
@@ -43,7 +43,7 @@ export function ForgotPasswordForm() {
             }}
             className="inline-flex h-11 items-center justify-center rounded-control border border-line-strong bg-surface text-label font-medium text-foreground transition-colors duration-150 ease-standard hover:bg-surface-sunken"
           >
-            重新发送
+            返回重新填写
           </button>
           <Link
             href="/auth/login"

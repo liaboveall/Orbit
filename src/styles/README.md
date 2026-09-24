@@ -1,6 +1,6 @@
-# src/styles · tokens 与 globals
+# 样式与设计变量
 
-- `globals.css`：Tailwind CSS 4 入口与最小基础排版（M0 已建）。
-- 设计 tokens（颜色 / 间距 / 字体 / 圆角 / 阴影等视觉变量）是设计的唯一视觉源，属 **ORB-002**。
+- tokens.css：颜色、间距、字体、圆角和阴影等共享设计变量。
+- globals.css：Tailwind CSS 4 入口、主题映射与全局基础样式。
 
-M0 不实现设计系统；tokens 与主题在 ORB-002 按 docs/02 引入。
+组件使用共享变量，视觉和交互约定见 [设计文档](../../docs/02-UX-AND-DESIGN.md)。

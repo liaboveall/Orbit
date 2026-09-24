@@ -4,7 +4,7 @@
 
 | 主题 | 官方来源 | 本项目使用点 |
 |---|---|---|
-| Agent仓库指令 | [OpenAI AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md) | AGENTS.md作短入口，按任务读取详细规格；其他IDE手动附加 |
+| Agent仓库指令 | [AGENTS.md 社区规范](https://agents.md/) | AGENTS.md作短入口，按任务读取详细规格；其他IDE手动附加 |
 | Next安装 | [Next.js installation](https://nextjs.org/docs/app/getting-started/installation) | M0核对runtime与React兼容条件 |
 | Server/Client边界 | [Next.js Server and Client Components](https://nextjs.org/docs/app/getting-started/server-and-client-components) | 数据与秘密在server，交互局部client以减少客户端JS |
 | Node支持周期 | [Node.js releases](https://nodejs.org/en/about/previous-releases) | 本规划选Node24 LTS，并非追逐Current版本 |
@@ -12,6 +12,7 @@
 | 邮箱密码/验证/重置 | [Email & Password](https://better-auth.com/docs/authentication/email-password) | 邮件回调和验证逻辑按锁定版本实现 |
 | Prisma runtime | [System requirements](https://docs.prisma.io/docs/orm/reference/system-requirements) | 核对Node/TS/系统环境 |
 | Prisma7迁移差异 | [Upgrade to Prisma ORM 7](https://www.prisma.io/docs/guides/upgrade-prisma-orm/v7) | ESM、生成器、adapter与配置差异；不要混用旧版示例 |
+| SMTP发送预算 | [Nodemailer SMTP](https://nodemailer.com/smtp/) | connectionTimeout/greetingTimeout/socketTimeout 与 requireTLS 语义；默认超时不能当作请求预算 |
 | 客户端数据流 | [Next.js Server and Client Components](https://nextjs.org/docs/app/getting-started/server-and-client-components) | 实际采用 RSC 直查 + router.refresh（非 TanStack Query）；服务器组件为数据真源，写后刷新 |
 | 数据库锁 | [PostgreSQL explicit locking](https://www.postgresql.org/docs/current/explicit-locking.html) | 项目写锁与统一锁顺序；实现时选择17版本页面 |
 | CSRF | [OWASP CSRF](https://owasp.org/www-community/attacks/csrf) | 自有变更API同源检查，认证路由遵循库机制 |

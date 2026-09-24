@@ -1,0 +1,696 @@
+{
+ "scope": "Remediation of all reproduced application defects (5 prior P2 + 3 new P2 + 2 new P3) and low-priority findings; full frozen local gate; server acceptance still deferred",
+ "completedAt": "2026-09-24T03:39:44.745Z",
+ "baselineCommit": "09e9898a2dc06c467a5d70d1d01524f279129e59",
+ "workingTreeUncommitted": true,
+ "runner": "scripts/verify-remediation.mjs",
+ "sourceDigest": "df291c5fbb00a982391b969dffa361f00ce3193fc67ad8e75cbbbfcfcdc0a77b",
+ "sourceUnchangedDuringRun": true,
+ "result": "PASS",
+ "postSnapshotChanges": "Handoff records only: docs/CURRENT-REVIEW.md, docs/CURRENT-STATUS.md, PROGRESS.md, planning/backlog.json, planning/open-items.json, planning/verification.json",
+ "counts": {
+  "unit": 297,
+  "contract": 172,
+  "integration": 380,
+  "e2e": 102,
+  "ui": 13
+ },
+ "total": 964,
+ "zeroBrowserRetries": true,
+ "databaseFingerprintsUnchanged": true,
+ "checks": [
+  {
+   "name": "planning",
+   "command": [
+    "python",
+    "planning/validate_plan.py",
+    "--check"
+   ],
+   "exitCode": 0,
+   "passed": null,
+   "durationMs": 2280,
+   "logSha256": "7f806ba7e8b2325082e2835bbe11c27cba96555ece2af6a0be7e204e1ec35a1e",
+   "log": "artifacts/remediation-20260924/planning.log"
+  },
+  {
+   "name": "probes",
+   "command": [
+    "python",
+    "planning/validate_plan_probes.py"
+   ],
+   "exitCode": 0,
+   "passed": null,
+   "durationMs": 23154,
+   "logSha256": "ed6f72f3d8c16010f2f98a99a69cef8211ecbb507e6f2b7d9b25c4bb8b47dadd",
+   "log": "artifacts/remediation-20260924/probes.log"
+  },
+  {
+   "name": "status",
+   "command": [
+    "python",
+    "planning/current_status.py",
+    "--check"
+   ],
+   "exitCode": 0,
+   "passed": null,
+   "durationMs": 250,
+   "logSha256": "8ae12a49c13891923ab9f1959a5f9ea0f94f5a78a3dd02f5c9f347e67d9f01c7",
+   "log": "artifacts/remediation-20260924/status.log"
+  },
+  {
+   "name": "image-policy",
+   "command": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "scripts/verify-image-policy.mjs"
+   ],
+   "exitCode": 0,
+   "passed": null,
+   "durationMs": 120,
+   "logSha256": "8908b4c8f00a12789c35ada6957d0c7238b79095587b206404fe3baded7a724d",
+   "log": "artifacts/remediation-20260924/image-policy.log"
+  },
+  {
+   "name": "lint",
+   "command": [
+    "pnpm",
+    "lint"
+   ],
+   "exitCode": 0,
+   "passed": null,
+   "durationMs": 21370,
+   "logSha256": "7806d2bb6445e87bbee850038349a66497dc9f76d097e3b3e750a1333bdc03f5",
+   "log": "artifacts/remediation-20260924/lint.log"
+  },
+  {
+   "name": "typecheck",
+   "command": [
+    "pnpm",
+    "typecheck"
+   ],
+   "exitCode": 0,
+   "passed": null,
+   "durationMs": 9195,
+   "logSha256": "313563b52d340e1594289d5000e00cd060e7869f9dcf81793b7fa810349bfdad",
+   "log": "artifacts/remediation-20260924/typecheck.log"
+  },
+  {
+   "name": "scripts",
+   "command": [
+    "pnpm",
+    "typecheck:scripts"
+   ],
+   "exitCode": 0,
+   "passed": null,
+   "durationMs": 3337,
+   "logSha256": "bc7d9dc87d7dd29399bbde0d73d2c22503bc3e7493266af4a86eb5bd812c7a29",
+   "log": "artifacts/remediation-20260924/scripts.log"
+  },
+  {
+   "name": "unit",
+   "command": [
+    "pnpm",
+    "test:unit"
+   ],
+   "exitCode": 0,
+   "passed": 297,
+   "durationMs": 3237,
+   "logSha256": "c27d6d54d74a8897a6cc511499f536ba6f758ed8df5a6deeecbe8997eebd6026",
+   "log": "artifacts/remediation-20260924/unit.log"
+  },
+  {
+   "name": "contract",
+   "command": [
+    "pnpm",
+    "test:contract"
+   ],
+   "exitCode": 0,
+   "passed": 172,
+   "durationMs": 1975,
+   "logSha256": "c304eb99fb0c9430a341afff64dbae5c7171b13a71d7ec0ce57b973b78332334",
+   "log": "artifacts/remediation-20260924/contract.log"
+  },
+  {
+   "name": "integration",
+   "command": [
+    "pnpm",
+    "test:integration"
+   ],
+   "exitCode": 0,
+   "passed": 380,
+   "durationMs": 271026,
+   "logSha256": "42f687071079d6aaa8e553d3aab3d17828a8ee5da1dfa68682f8d731e2246515",
+   "log": "artifacts/remediation-20260924/integration.log"
+  },
+  {
+   "name": "e2e",
+   "command": [
+    "pnpm",
+    "test:e2e",
+    "--retries=0"
+   ],
+   "exitCode": 0,
+   "passed": 102,
+   "durationMs": 238333,
+   "logSha256": "5b895f8cde08f3b3bf888842c37c994b920a495fb88787386bf75c3a48ef358e",
+   "log": "artifacts/remediation-20260924/e2e.log"
+  },
+  {
+   "name": "bundles",
+   "command": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "scripts/measure-client-bundles.mjs"
+   ],
+   "exitCode": 0,
+   "passed": null,
+   "durationMs": 125,
+   "logSha256": "2acd0ca629d921c34bb3c816b530ed932f204ca0033703c01c25c2faf0458d96",
+   "log": "artifacts/remediation-20260924/bundles.log"
+  },
+  {
+   "name": "ui",
+   "command": [
+    "pnpm",
+    "test:ui",
+    "--retries=0"
+   ],
+   "exitCode": 0,
+   "passed": 13,
+   "durationMs": 42278,
+   "logSha256": "df59e7d4421d894a9b530ba7514a8888058d81d2753a60e43fea8254dc415ae2",
+   "log": "artifacts/remediation-20260924/ui.log"
+  },
+  {
+   "name": "audit",
+   "command": [
+    "pnpm",
+    "audit",
+    "--prod",
+    "--audit-level=high",
+    "--json"
+   ],
+   "exitCode": 0,
+   "passed": null,
+   "durationMs": 2064,
+   "logSha256": "843404eec3f1458beb6566e468ce321a9a44c3891b4e38ad43c6b3906de93428",
+   "log": "artifacts/remediation-20260924/audit.log"
+  }
+ ],
+ "fixedFindings": [
+  {
+   "id": "DRAFT-LOGOUT",
+   "priority": "P2",
+   "source": "2026-09-22",
+   "regression": [
+    "tests/e2e/draft-lifecycle-and-deleted-tasks.spec.ts: sign-out",
+    "tests/unit/draft-storage.test.ts"
+   ]
+  },
+  {
+   "id": "DRAFT-HIDDEN",
+   "priority": "P2",
+   "source": "2026-09-24",
+   "regression": [
+    "tests/e2e/draft-lifecycle-and-deleted-tasks.spec.ts: confirmed leave",
+    "tests/e2e/draft-lifecycle-and-deleted-tasks.spec.ts: reload"
+   ]
+  },
+  {
+   "id": "DRAFT-HISTORY",
+   "priority": "P2",
+   "source": "2026-09-22",
+   "regression": [
+    "tests/e2e/draft-lifecycle-and-deleted-tasks.spec.ts: without the Navigation API"
+   ]
+  },
+  {
+   "id": "TASK-DELETED-404",
+   "priority": "P2",
+   "source": "2026-09-24",
+   "regression": [
+    "tests/e2e/draft-lifecycle-and-deleted-tasks.spec.ts: board, stale links, standalone"
+   ]
+  },
+  {
+   "id": "BOARD-FILTER-CURSOR",
+   "priority": "P2",
+   "source": "2026-09-22",
+   "regression": [
+    "tests/integration/transaction-and-board-invariants.test.ts: filtered board pagination"
+   ]
+  },
+  {
+   "id": "PAGE-READ-LIMIT",
+   "priority": "P2",
+   "source": "2026-09-22",
+   "regression": [
+    "tests/integration/page-read-limit.test.ts",
+    "tests/unit/rate-limited-path.test.ts"
+   ]
+  },
+  {
+   "id": "AUTH-VERIFY-FAILURE",
+   "priority": "P2",
+   "source": "2026-09-22",
+   "regression": [
+    "tests/integration/auth-email-dispatch.test.ts: rejecting SMTP"
+   ]
+  },
+  {
+   "id": "AUTH-EMAIL-TIMING",
+   "priority": "P2",
+   "source": "2026-09-24",
+   "regression": [
+    "tests/integration/auth-email-dispatch.test.ts: stalled SMTP reset and sign-up"
+   ]
+  },
+  {
+   "id": "POOL-SATURATION-500",
+   "priority": "P3",
+   "source": "2026-09-24",
+   "regression": [
+    "tests/integration/db-connection-errors.test.ts: real Prisma pool saturation"
+   ]
+  },
+  {
+   "id": "UPLOAD-ERROR-MAPPING",
+   "priority": "P3",
+   "source": "2026-09-24",
+   "regression": [
+    "tests/integration/upload-error-mapping.test.ts"
+   ]
+  }
+ ],
+ "regressionsFailOnOriginalCode": {
+  "method": "Temporarily restored the original implementation files, rebuilt where needed, ran only the new regressions, then restored the fixes",
+  "uploadErrorMapping": {
+   "failed": 2,
+   "note": "timeout case not run on original code (original 120 s deadline)"
+  },
+  "boardFilterCursor": {
+   "failed": 3,
+   "controlPassedOnBoth": 1
+  },
+  "authEmailDispatch": {
+   "failed": 3
+  },
+  "browser": {
+   "failed": 8,
+   "total": 8
+  },
+  "notRunOnOriginal": [
+   "PAGE-READ-LIMIT test depends on the new page gate module; original behaviour reproduced by the 2026-09-22 observation",
+   "POOL-SATURATION-500 original behaviour reproduced by a pre-fix probe (P2028 -> 500 INTERNAL_ERROR)"
+  ]
+ },
+ "supplementaryChecks": [
+  {
+   "name": "recovery-drill",
+   "command": "node --conditions=react-server --import tsx scripts/recovery-drill.ts",
+   "exitCode": 0,
+   "log": "artifacts/remediation-20260924/recovery-drill.log",
+   "logSha256": "70f06a33bdcd1f40a8b2dfae9541f57ba8a1a13fc482be8e97cbf76e797b2418",
+   "covers": "expired Session/Verification cleanup and backup restore in disposable databases"
+  },
+  {
+   "name": "dependency-audit-full",
+   "command": "pnpm audit --json",
+   "exitCode": 0,
+   "log": "artifacts/remediation-20260924/audit-full.json",
+   "logSha256": "09b0605da3e688a7c502c47546f54f92c8d9fcc59dbebe0caf790d0fa43dfbdc"
+  },
+  {
+   "name": "migration-history",
+   "command": "node scripts/verify-migration-history.mjs",
+   "exitCode": 1,
+   "log": "artifacts/remediation-20260924/migration-history.log",
+   "logSha256": "8cc42cb44695a553de6a9f7d29ce12e8b0bf839d0c3b2f8bebcd297478a504f2",
+   "meaning": "known historical checksum mismatch in orbit_dev; unchanged; not rewritten"
+  }
+ ],
+ "migrationHistory": {
+  "checkedAt": "2026-09-24T03:40:12.689Z",
+  "historyMatches": false,
+  "developmentAndTestSchemaMatch": true,
+  "results": [
+   {
+    "database": "orbit_dev",
+    "applied": 16,
+    "expected": 16,
+    "unknown": [],
+    "missing": [],
+    "mismatches": [
+     {
+      "migration": "20260911031124_add_subtask_comment_attachment",
+      "appliedChecksum": "dac4c3eb6f04d9816c4e5be36699dd66da595266be054c383e7a97e5c1b9bbd7"
+     },
+     {
+      "migration": "20260911031200_add_m5_check_constraints",
+      "appliedChecksum": "manual_resolve"
+     }
+    ],
+    "schemaDigest": "31e121f035c28985d0f964a758be43642d1efa62b090890ec60806de8bf076f2"
+   },
+   {
+    "database": "orbit_test",
+    "applied": 16,
+    "expected": 16,
+    "unknown": [],
+    "missing": [],
+    "mismatches": [],
+    "schemaDigest": "31e121f035c28985d0f964a758be43642d1efa62b090890ec60806de8bf076f2"
+   }
+  ]
+ },
+ "dependencyAudit": {
+  "vulnerabilities": {
+   "info": 0,
+   "low": 0,
+   "moderate": 0,
+   "high": 0,
+   "critical": 0
+  },
+  "dependencies": 761,
+  "devDependencies": 0,
+  "optionalDependencies": 0,
+  "totalDependencies": 761
+ },
+ "serverAcceptance": "deferred_by_user",
+ "remoteCi": {
+  "headSha": "5730d69c064528272faa832c5f612f92cd867389",
+  "url": "https://github.com/liaboveall/Orbit/actions/runs/35953986961",
+  "status": "completed",
+  "conclusion": "success",
+  "createdAt": "2026-09-24T04:03:06Z",
+  "updatedAt": "2026-09-24T04:20:13Z",
+  "testedMergeCommit": "d51b2b8001d53ec806be1082c5b469aa6a518bcb",
+  "headTree": "6d88e3761e955e7f81905c5b22d25422033ae4b3",
+  "testedMergeTree": "6d88e3761e955e7f81905c5b22d25422033ae4b3",
+  "testedTreeMatchesHead": true,
+  "treeVerification": "GitHub Git commits API and local git rev-parse HEAD^{tree}"
+ },
+ "remoteCiLaterRuns": [
+  {
+   "headSha": "198ec2369f123c97223b5095870bb463f99cc602",
+   "change": "Handoff records only; application code identical to the remediation commit",
+   "url": "https://github.com/liaboveall/Orbit/actions/runs/35968230138",
+   "conclusion": "failure",
+   "failedStep": "node scripts/verify-nginx.mjs",
+   "error": "TypeError: fetch failed (SocketError: other side closed, UND_ERR_SOCKET, bytesRead 0) on the first request batch, right after nginx -t succeeded",
+   "otherSteps": "Every other executed step succeeded, including check, integration, recovery drill, E2E, UI, audits, image builds, runtime smoke and image scans; only the release directory step after the failure was skipped",
+   "cause": "Test harness startup race, not an application or proxy configuration defect: docker run --detach returns before the nginx image entrypoint execs nginx, and until nginx listens the published port accepts and then drops connections",
+   "reproduction": "Locally the unmodified script failed with the identical error when the locked image was given a 3 s /docker-entrypoint.d delay through NGINX_TEST_IMAGE, and passed with the locked image",
+   "fix": "scripts/verify-nginx.mjs waits up to 30 s for /health/ready (outside the auth rate-limit zone, retrying network errors only) before the rate-limit batch; the upstream 204 log assertion is scoped to auth rows so the readiness probe cannot satisfy it",
+   "fixVerification": "Fixed script passed with the delayed-start image and with the locked image (60 requests: 11 accepted and proxied upstream, 49 rate limited); with a never-ready image it failed after the 30 s bound and removed its container; eslint passed"
+  }
+ ],
+ "limitations": [
+  "Auth email timing verified with local stalled/rejecting SMTP stubs; real provider latency to be re-checked after deployment",
+  "Page read quota verified in production configuration with real session and database bucket; no deployed RSC flood test",
+  "Native IME/zoom/assistive-technology acceptance pending",
+  "Historical data recovery remains unproven"
+ ],
+ "previousAudit": {
+  "scope": "Current application audit and complete existing local regression; five defects reproduced, not fixed; server acceptance deferred",
+  "completedAt": "2026-09-22T11:03:39.993605+00:00",
+  "baselineCommit": "09e9898a2dc06c467a5d70d1d01524f279129e59",
+  "sourceUnchangedDuringRun": true,
+  "postSnapshotChanges": "Current review, status, backlog, open items and verification metadata only; no application fixes",
+  "counts": {
+   "unit": 279,
+   "contract": 172,
+   "integration": 367,
+   "e2e": 94,
+   "ui": 13
+  },
+  "total": 925,
+  "zeroBrowserRetries": true,
+  "databaseFingerprintsUnchanged": true,
+  "checks": [
+   {
+    "name": "check",
+    "command": "pnpm.cmd check",
+    "exitCode": 0,
+    "logSha256": "8595aa2a821b1bbad26a3966d2c1d0dc77ba1e58784787b517db1a6954fbccff",
+    "log": "artifacts/current-audit-20260922/check.log"
+   },
+   {
+    "name": "scripts",
+    "command": "pnpm.cmd typecheck:scripts",
+    "exitCode": 0,
+    "logSha256": "6f137cb56599ae7ca5bfb1ffbf193762b26d5e8619e348c5b9109edefff1546c",
+    "log": "artifacts/current-audit-20260922/scripts.log"
+   },
+   {
+    "name": "integration",
+    "command": "pnpm.cmd test:integration",
+    "exitCode": 0,
+    "logSha256": "4eb605a5d96598bd9ebddd7909be5c39404e2612897d384db9c844ced11a4787",
+    "log": "artifacts/current-audit-20260922/integration.log"
+   },
+   {
+    "name": "e2e-and-observations",
+    "command": "pnpm.cmd exec playwright test --config artifacts/current-audit-20260922/audit-browser.config.ts --retries=0",
+    "exitCode": 0,
+    "logSha256": "5d5e22f4f728fb3c965e4729ef581a618f536c662ddc74efc81dfef21251566d",
+    "log": "artifacts/current-audit-20260922/e2e.log"
+   },
+   {
+    "name": "ui",
+    "command": "pnpm.cmd test:ui --retries=0",
+    "exitCode": 0,
+    "logSha256": "cb13a1f255624281adcc2fbd070caea1ff1e1dda581347ed3975ffd9a62607ea",
+    "log": "artifacts/current-audit-20260922/ui.log"
+   },
+   {
+    "name": "audit",
+    "command": "pnpm.cmd audit --json",
+    "exitCode": 0,
+    "logSha256": "312d3aa3e6a4b7078d56d96f57b3d04ae615fb8de224015fb95c30e8be1351f1",
+    "log": "artifacts/current-audit-20260922/dependency-audit.json"
+   },
+   {
+    "name": "service-observations",
+    "command": "node --conditions=react-server --import tsx artifacts/current-audit-20260922/service-probes.mjs",
+    "exitCode": 0,
+    "logSha256": "ef5e90c21f12ae070d5d9dc1c0052899673a276c26ea737f834729fbfc3dfb20",
+    "log": "artifacts/current-audit-20260922/service-probes.log"
+   },
+   {
+    "name": "auth-failure-observation",
+    "command": "node --conditions=react-server --import tsx artifacts/current-audit-20260922/auth-failure-probe.mjs",
+    "exitCode": 0,
+    "logSha256": "3452b23cc7a631cc29e259ad538e379a2743c68320184ce3f201a2c2397d9137",
+    "log": "artifacts/current-audit-20260922/auth-failure-probe.log"
+   },
+   {
+    "name": "migration-history",
+    "command": "node scripts/verify-migration-history.mjs",
+    "exitCode": 1,
+    "logSha256": "7092c64134f9d2a2c2c08edf147b01d4aa001581798d0e236a6daac42d06fcee",
+    "log": "artifacts/current-audit-20260922/migration-history.log"
+   },
+   {
+    "name": "planning",
+    "command": "python planning/validate_plan.py",
+    "exitCode": 0,
+    "logSha256": "7f806ba7e8b2325082e2835bbe11c27cba96555ece2af6a0be7e204e1ec35a1e",
+    "log": "artifacts/current-audit-20260922/planning.log"
+   },
+   {
+    "name": "planning-probes",
+    "command": "python planning/validate_plan_probes.py",
+    "exitCode": 0,
+    "logSha256": "ed6f72f3d8c16010f2f98a99a69cef8211ecbb507e6f2b7d9b25c4bb8b47dadd",
+    "log": "artifacts/current-audit-20260922/planning-probes.log"
+   },
+   {
+    "name": "status",
+    "command": "python planning/current_status.py --check",
+    "exitCode": 0,
+    "logSha256": "8ae12a49c13891923ab9f1959a5f9ea0f94f5a78a3dd02f5c9f347e67d9f01c7",
+    "log": "artifacts/current-audit-20260922/status.log"
+   }
+  ],
+  "newFindings": {
+   "count": 5,
+   "priority": "P2",
+   "status": "pending",
+   "ids": [
+    "DRAFT-LOGOUT",
+    "DRAFT-HISTORY",
+    "BOARD-FILTER-CURSOR",
+    "PAGE-READ-LIMIT",
+    "AUTH-VERIFY-FAILURE"
+   ],
+   "report": "docs/CURRENT-REVIEW.md",
+   "observationMeaning": "Success means the defective behavior was reproduced, not that a fix passed",
+   "browserObservations": 2,
+   "serviceAndEmailObservations": 3
+  },
+  "observations": {
+   "service-observations.json": {
+    "filteredBoard": {
+     "firstVersion": 1,
+     "nextVersion": 1,
+     "nextCursor": null,
+     "reportedTotal": 3,
+     "combinedCount": 2,
+     "freshCount": 3,
+     "missingNewMatch": true
+    },
+    "pageReadQuota": {
+     "apiCode": "RATE_LIMITED",
+     "pageSessionAccepted": true,
+     "pageDataRead": true,
+     "counterAfterApiAndPage": 301
+    }
+   },
+   "history-observation.json": {
+    "navigationApiDisabledForFallbackTest": true,
+    "dialogs": 0,
+    "editorUnmounted": true
+   },
+   "logout-observation.json": {
+    "retainedAfterLogout": true,
+    "apiStatusAfterLogout": 401
+   },
+   "auth-failure-observation.json": {
+    "smtp": "controlled local 421 failure",
+    "existingUnverifiedStatus": 500,
+    "unknownEmailStatus": 200,
+    "verifiedEmailStatus": 200
+   }
+  },
+  "observationEvidence": [
+   {
+    "path": "artifacts/current-audit-20260922/service-probes.mjs",
+    "sha256": "5a5240206ebac67e6447cd70ff13d53b8b3326af67f314f21338db090457b962"
+   },
+   {
+    "path": "artifacts/current-audit-20260922/audit-behavior.spec.ts",
+    "sha256": "11442243b966a278a413bd3977433308d2ede258a66f12b96f745b228142a6f8"
+   },
+   {
+    "path": "artifacts/current-audit-20260922/audit-browser.config.ts",
+    "sha256": "dd4c51a7e7992075a5e52911abc6e19def599907efd3af390878a832e050884e"
+   },
+   {
+    "path": "artifacts/current-audit-20260922/auth-failure-probe.mjs",
+    "sha256": "ad17836acefb59f4a1c5f17cbbf380d976942fae7c51b1c88bd618de9be71258"
+   }
+  ],
+  "performance": {
+   "environment": {
+    "platform": "win32",
+    "cpu": "13th Gen Intel(R) Core(TM) i9-13980HX",
+    "memoryGiB": 31.70691680908203,
+    "node": "v26.8.1",
+    "chrome": "153.0.8010.12",
+    "build": "production",
+    "database": "isolated orbit_test",
+    "concurrency": 10,
+    "tasks": 1000,
+    "subtasks": 1000,
+    "comments": 1000
+   },
+   "readMs": {
+    "samples": 100,
+    "p95": 76.94659999999567,
+    "median": 56.130099999994854,
+    "min": 29.328499999995984,
+    "max": 81.89869999999792
+   },
+   "writeMs": {
+    "samples": 40,
+    "p95": 133.24259999999776,
+    "median": 85.00080000000162,
+    "min": 28.099699999998847,
+    "max": 141.88410000000295
+   },
+   "errorRate": 0,
+   "boardBytes": 87111,
+   "workbenchReadyLabMs": {
+    "samples": 5,
+    "p95": 874.7869999999966,
+    "median": 605.7344999999987,
+    "min": 532.8715999999986,
+    "max": 874.7869999999966
+   },
+   "labConditions": "1440px, CPU 4x, 40ms latency, 10Mbps down/5Mbps up, cold HTTP cache; navigation to visible heading and focusable navigation, not INP or field CWV",
+   "axeSerious": []
+  },
+  "performanceLimit": "High-memory local workstation, production build with APP_ENV=test; not deployed 1GiB capacity or production shared-limit overhead",
+  "migrationHistory": {
+   "checkedAt": "2026-09-22T10:58:27.451Z",
+   "historyMatches": false,
+   "developmentAndTestSchemaMatch": true,
+   "results": [
+    {
+     "database": "orbit_dev",
+     "applied": 16,
+     "expected": 16,
+     "unknown": [],
+     "missing": [],
+     "mismatches": [
+      {
+       "migration": "20260911031124_add_subtask_comment_attachment",
+       "appliedChecksum": "dac4c3eb6f04d9816c4e5be36699dd66da595266be054c383e7a97e5c1b9bbd7"
+      },
+      {
+       "migration": "20260911031200_add_m5_check_constraints",
+       "appliedChecksum": "manual_resolve"
+      }
+     ],
+     "schemaDigest": "31e121f035c28985d0f964a758be43642d1efa62b090890ec60806de8bf076f2"
+    },
+    {
+     "database": "orbit_test",
+     "applied": 16,
+     "expected": 16,
+     "unknown": [],
+     "missing": [],
+     "mismatches": [],
+     "schemaDigest": "31e121f035c28985d0f964a758be43642d1efa62b090890ec60806de8bf076f2"
+    }
+   ]
+  },
+  "dependencyAudit": {
+   "vulnerabilities": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0
+   },
+   "dependencies": 761,
+   "devDependencies": 0,
+   "optionalDependencies": 0,
+   "totalDependencies": 761
+  },
+  "serverAcceptance": "deferred_by_user",
+  "remoteCi": {
+   "headSha": "09e9898a2dc06c467a5d70d1d01524f279129e59",
+   "url": "https://github.com/liaboveall/Orbit/actions/runs/35671586439",
+   "status": "completed",
+   "conclusion": "success",
+   "createdAt": "2026-09-22T00:21:09Z",
+   "updatedAt": "2026-09-22T00:36:56Z",
+   "testedMergeCommit": "461ab8ae3c8a2d2e074fdca9a0a35cfe2a41f677",
+   "headTree": "4325f186bca555b1ecfb1d4afb8352733d60236c",
+   "testedMergeTree": "4325f186bca555b1ecfb1d4afb8352733d60236c",
+   "testedTreeMatchesHead": true,
+   "treeVerification": "GitHub Git commits API and local git rev-parse HEAD^{tree}"
+  },
+  "remoteCiEvidence": {
+   "path": "artifacts/current-audit-20260922/remote-ci.json",
+   "sha256": "3bdfb4db4a4697349dabf53cd0784e8f983785aee18a0637440f48e593c578a9"
+  },
+  "limitations": [
+   "Native IME/zoom/assistive-technology acceptance pending",
+   "No deployed HTTP/RSC rate-limit load test",
+   "Historical data recovery remains unproven",
+   "Local probe files and logs are ignored artifacts; report includes independent reproduction steps"
+  ]
+ },
+ "remediationCommit": "5730d69c064528272faa832c5f612f92cd867389"
+}

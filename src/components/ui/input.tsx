@@ -15,6 +15,13 @@ const fieldBase =
   "disabled:cursor-not-allowed disabled:opacity-60 " +
   "aria-invalid:border-danger aria-invalid:bg-danger-soft/40";
 
+/**
+ * B5 修复：手机（<md）输入控件一律 16px，避免 iOS Safari 聚焦 <16px 输入框时
+ * 自动放大页面（不得通过禁用缩放规避）；md+ 恢复设计规范的 14px 控件字号。
+ * 标签仍保持 14px（docs/02 §2 设计不变）。
+ */
+const mobileFontBase = "text-body md:text-label";
+
 export type InputProps = ComponentProps<"input">;
 
 export function Input({ className, type = "text", ...props }: InputProps) {
@@ -23,7 +30,8 @@ export function Input({ className, type = "text", ...props }: InputProps) {
       type={type}
       className={cn(
         fieldBase,
-        "h-10 border-line-strong px-3 text-label outline-none",
+        mobileFontBase,
+        "h-10 border-line-strong px-3 outline-none",
         className,
       )}
       {...props}
@@ -39,7 +47,8 @@ export function Textarea({ className, rows = 4, ...props }: TextareaProps) {
       rows={rows}
       className={cn(
         fieldBase,
-        "resize-y border-line-strong px-3 py-2 text-body outline-none",
+        mobileFontBase,
+        "resize-y border-line-strong px-3 py-2 outline-none",
         className,
       )}
       {...props}

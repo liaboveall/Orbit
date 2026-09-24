@@ -6,7 +6,7 @@ import { BoardView } from "@/features/board/board-view";
  * /app/samples/board/[projectId] · M0 看板布局样例（分叉 1 迁移）。
  *
  * M3 分叉 1：原 fixture 看板从 /app/projects/[id]/board 迁到独立样例路由，
- * 侧栏 fixture 链接与 m0-review 均指向此处；真实 /app/projects/[id]/board
+ * 侧栏 fixture 链接与 accessibility-and-layout 均指向此处；真实 /app/projects/[id]/board
  * 后续接真实 Server Component 数据（ORB-002 样例行为在此完整保留）。
  *
  * Server Component：解析路由参数 projectId 与查询参数 `?state=` / `?task=`。

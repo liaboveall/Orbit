@@ -4,6 +4,7 @@ import { prisma } from "@/server/db/prisma";
 import { DomainError } from "@/server/http/errors";
 import { accountNotFoundError, toUserDto } from "./read-user";
 import { TIMEZONE_INVALID_MESSAGE, normalizeTimezone } from "./timezone";
+import { requireUserNameRejectedReason } from "@/server/auth/user-fields";
 
 /**
  * 当前账户更新服务（M1 / ORB-006）：PATCH /me 的领域逻辑。
@@ -59,7 +60,13 @@ export function buildUserUpdateData(updates: UpdateMeDTO): UserUpdateData {
     } else if (name.length > 40) {
       fieldErrors.name = ["姓名不能超过 40 个字符"];
     } else {
-      data.name = name;
+      // F09：与注册入口一致，拒绝 bidi 覆盖/控制字符（规则同 requireUserName）。
+      const rejection = requireUserNameRejectedReason(name);
+      if (rejection) {
+        fieldErrors.name = [rejection];
+      } else {
+        data.name = name;
+      }
     }
   }
 

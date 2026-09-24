@@ -1,4 +1,6 @@
 import "server-only";
+import { logEvent } from "./log";
+import { isDatabaseUnavailableError } from "@/server/db/connection-errors";
 import {
   buildErrorResponse,
   httpStatusForErrorCode,
@@ -41,18 +43,24 @@ export class DomainError extends Error {
   readonly code: ErrorCode;
   readonly fieldErrors?: Record<string, string[]>;
   readonly details?: DomainErrorDetails;
+  /** 429 RATE_LIMITED：桶重置的精确秒数（F02 修复）；缺省时 HTTP 层用保守上界 60。 */
+  readonly retryAfterSeconds?: number;
 
   constructor(
     code: ErrorCode,
     message: string,
     fieldErrors?: Record<string, string[]>,
     details?: DomainErrorDetails,
+    retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = "DomainError";
     this.code = code;
     if (fieldErrors) this.fieldErrors = fieldErrors;
     if (details) this.details = details;
+    if (typeof retryAfterSeconds === "number" && retryAfterSeconds > 0) {
+      this.retryAfterSeconds = Math.ceil(retryAfterSeconds);
+    }
   }
 
   /** 该错误对应的 HTTP 状态码（由 ErrorCode 派生，类型安全）。 */
@@ -103,7 +111,12 @@ export function errorResponse(
 /** 由 DomainError 构造错误 Response（透传 fieldErrors 与冲突明细 details）。 */
 export function domainErrorResponse(error: DomainError, requestId: string): Response {
   const body = buildBody(error.code, error.message, requestId, error.fieldErrors, error.details);
-  return toResponse(body, error.status, requestId);
+  const response = toResponse(body, error.status, requestId);
+  if (error.code === "RATE_LIMITED") {
+    // F02 修复：优先使用业务层传入的精确重置秒数；60 秒是缺省保守上界。
+    response.headers.set("Retry-After", String(error.retryAfterSeconds ?? 60));
+  }
+  return response;
 }
 
 /**
@@ -125,9 +138,15 @@ export function toErrorResponse(error: unknown, requestId: string): Response {
   if (error instanceof DomainError) {
     return domainErrorResponse(error, requestId);
   }
+  // 数据库不可用（连接失败/池耗尽/PG 连接上限）按有限已知形状识别（D2 修复），
+  // 含 driver adapter 下无 code 的 pg-pool 超时 Error；未知编程错误仍落 500。
+  if (isDatabaseUnavailableError(error)) {
+    logEvent("error", { requestId, errorCode: "SERVICE_UNAVAILABLE" });
+    return errorResponse("SERVICE_UNAVAILABLE", "服务暂时不可用，请稍后重试。", requestId);
+  }
   // 脱敏日志：只记录安全的结构化字段（requestId、errorCode、errorClass），
   // 完全移除可能含敏感信息的 message/name/stack 等字段
   const sanitized = sanitizeErrorForLog(error, requestId);
-  console.error(JSON.stringify(sanitized));
+  logEvent("error", sanitized);
   return internalErrorResponse(requestId);
 }

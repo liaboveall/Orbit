@@ -31,8 +31,8 @@ services:
       retries: 12
 
   minio:
-    # 私有 S3 兼容存储（附件属 M5）。开发用浮动标签，生产在 M6 锁定 digest。
-    image: minio/minio:latest
+    # 官方 Quay 镜像，与本地验收版本一致；固定多架构摘要，避免 Docker Hub 不可用和标签漂移。
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     container_name: orbit-minio
     restart: unless-stopped
     command: ["server", "/data", "--console-address", ":9001"]

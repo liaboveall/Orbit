@@ -131,9 +131,11 @@ describe("MemoryRateLimiter - Token Bucket Algorithm", () => {
 
 describe("R10 Rate Limiting Integration - Anonymous Invite Flow", () => {
   it("should handle sequential invite preview and accept requests independently", async () => {
-    const limiter = new MemoryRateLimiter({ 
-      maxTokens: 20, 
-      refillIntervalMs: 5000 
+    // F33⑤：把 refill 窗口拉到测试时长之外，使「共享桶确切限额」可确定性断言
+    // （原 refillIntervalMs:5000 下测试速度会影响结果，只能写永真的 typeof 断言）。
+    const limiter = new MemoryRateLimiter({
+      maxTokens: 20,
+      refillIntervalMs: 600_000,
     });
     
     if ("stopCleanupInterval" in limiter && typeof limiter.stopCleanupInterval === "function") {
@@ -153,12 +155,10 @@ describe("R10 Rate Limiting Integration - Anonymous Invite Flow", () => {
       expect(acceptResult.allowed).toBe(true);
     }
     
-    // Now should be close to limit (20 total used)
+    // F33⑤：20 个请求恰好耗尽共享桶 → 第 21 个（无论 preview 还是 accept）必须被拒，
+    // 且剩余额度为 0——「两个端点共享同一个桶」的确切断言。
     const nextPreviewResult = await limiter.checkLimit(ipKey, "anonymous-invite");
-    
-    // Could be either allowed or denied depending on timing
-    // The important part is that both endpoints share the SAME bucket
-    expect(typeof nextPreviewResult.allowed).toBe("boolean");
-    expect(nextPreviewResult.remaining).toBeLessThanOrEqual(1);
+    expect(nextPreviewResult.allowed).toBe(false);
+    expect(nextPreviewResult.remaining).toBe(0);
   });
 });

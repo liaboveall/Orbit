@@ -1,0 +1,17 @@
+{
+  "Rules": [
+    {
+      "ID": "orbit-retain-noncurrent-versions-30-days",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "" },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 30 },
+      "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 1 }
+    },
+    {
+      "ID": "orbit-remove-expired-delete-markers",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "" },
+      "Expiration": { "ExpiredObjectDeleteMarker": true }
+    }
+  ]
+}

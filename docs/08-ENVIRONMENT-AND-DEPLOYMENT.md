@@ -34,7 +34,7 @@ pnpm dev
 | pnpm db:migrate:deploy | 按环境应用已审阅迁移 |
 | pnpm db:seed | 幂等写入开发fixture |
 | pnpm cleanup:attachments | M5 已实现：限批处理失效上传与待删除附件，失败可重试 |
-| pnpm maintenance:cleanup | M6 待实现：统一清理过期幂等记录/限流桶等 |
+| pnpm maintenance:cleanup | M6 已实现：统一限批清理过期幂等记录/限流桶/上传租约/会话/验证记录与附件 |
 | pnpm worker:ai | M7才提供的持久AI任务worker |
 
 开发Agent负责让名称和实际行为一致。如果使用不同命令，同步README/AGENTS/CI，不能只改package.json。
@@ -76,14 +76,15 @@ pnpm dev
    ProjectMember→Project→User→Verification）删除，对不存在的邮箱是安全空操作，
    不做任何范围扩大的清理，失败时抛出异常而不是吞掉。
 7. `pnpm test:ui` 继承相同的隔离配置、夹具清理和 global teardown。
-   默认先生产构建，再启动 3100 端口的独立测试服务；显式 `E2E_SERVER_MODE=dev`
-   也只改变构建模式，不改变数据库隔离。两套测试结束后均核对开发库和测试库
+   UI 为验证开发专用样例页固定使用 dev 模式，E2E 默认使用生产构建；两者均启动
+   3100 端口的独立测试服务，构建模式不改变数据库隔离。两套测试结束后均核对开发库和测试库
    所有 public 表的内容指纹，残留、误删或其他内容变化均使命令失败。
 
-历史维护脚本：`cleanup-migration.ts` 已停用，不能重放删除迁移历史或 DROP 操作。
-`cleanup-invitation-tokens.ts` 默认仅输出候选数量；执行变更需同时传
-`--apply --database=<精确数据库名>`。更新在事务内完成，失败返回非零状态且不输出
+迁移异常先只读核对状态，不删除迁移历史或重放一次性 DROP 操作。
+`cleanup-invitation-tokens.ts` 默认仅输出候选数量和目标指纹；执行变更需显式设置 APP_ENV，并传
+`--execute --target=<本次预览指纹>`。指纹绑定环境、数据库主机/端口/库名/参数和脚本范围；旧 `--apply --database` 参数会被拒绝。更新在事务内完成，失败返回非零状态且不输出
 驱动错误原文。它识别旧参数化路径及当前真实项目路径，不输出令牌值。
+
 
 ## 3. 环境变量
 
@@ -116,7 +117,7 @@ pnpm dev
 
 构建：多阶段Dockerfile、锁定Node基础镜像主版本与可复现digest、安装冻结依赖、生成Prisma Client、Next standalone构建、最小运行层、非root用户。浏览器上传流经Node服务，入口限制约12MiB请求体并在应用层对实际文件限制10MiB。
 
-数据库与web尽量同区域，使用可信TLS，设置有限连接池（起点每实例5连接，结合实际数据库上限调整）。应用水平扩展时会话/幂等/限流来自数据库，不能依赖单机内存保存关键状态。
+数据库与web尽量同区域，使用可信TLS，设置有限连接池（起点每实例5连接（DATABASE_POOL_MAX 可配置为1–20），结合实际数据库上限调整）。应用水平扩展时会话/幂等/限流来自数据库，不能依赖单机内存保存关键状态。
 
 ## 5. 发布顺序
 
@@ -131,7 +132,7 @@ pnpm dev
 
 ## 6. 维护、备份与恢复
 
-维护任务由部署平台的定时任务每日执行一次，处理过期幂等记录、限流桶、1小时以上失效上传和cleanupPending对象；本规划不创建真实定时任务。函数本身幂等、限批量、记录处理数量和错误，不输出敏感key。
+维护任务由部署平台的定时任务每日执行一次，处理过期幂等记录、限流桶、上传租约、已过期的认证会话与验证记录、1小时以上失效上传和cleanupPending对象；本规划不创建真实定时任务。函数本身幂等、限批量、记录处理数量和错误，不输出敏感key。
 
 数据库每日备份，初始保留7天；附件存储开启适用的版本/备份机制并配置成本可控的保留策略。项目文件引用和实际对象都要能恢复，不能只备份数据库。V1不自动清空回收站。
 
@@ -150,16 +151,30 @@ pnpm dev
 
 报告位置 artifacts/release/：提交/镜像/迁移版本、CI链接、部署时间与环境、实际冒烟、性能测量、恢复演练、已知限制。不要填预期分数或虚构在线人数。
 
-### M5 附件与迁移运维验收（2026-09-11）
+### 附件维护与迁移运行约定
 
 `pnpm cleanup:attachments` 显式加载 .env.local/.env，通过 react-server 条件运行 server-only 业务模块；一次最多 100 条，打印 cleanedCount、failedCount、releasedBytes，不输出对象 key。错误返回非零退出码。UPLOADING 超过一小时释放预留；FAILED/DELETED 等待至少 3 分钟后物理删除，防止与取消中的 PUT 竞争。幂等重跑不会重复扣额度。真实定时调度仍属 M6，当前未配置。
 
-当前 11 个迁移均可从空库部署；uploadId 是 UUID，Attachment 的 task 关系是复合外键。中断遗留迁移会话可能持有 advisory lock；先核验持锁连接是否空闲、无事务及其来源，再处理旧迁移等待者与持锁者，不关闭迁移锁机制、不删除迁移历史。Windows 的 EACCES 端口错误可通过设置已确认可绑定的 E2E_PORT 避开；本轮使用 43127。
+迁移链以 prisma/migrations 为准；已应用 SQL 保持不可变。遇迁移锁等待先核验持锁连接、事务和来源，不关闭锁或删除历史。应用连接固定 UTC，date-only 截止日不变。
 
-### 全项目审查修复后的运行约定（2026-09-11）
+认证与业务端点统一按 `TRUSTED_PROXY_COUNT` 选择转发链中的来源；development/test 默认 0 忽略客户端提供的转发头并使用共享桶。staging/production 必须显式设置 ≥1，否则启动失败。大于 0 仅适用于受控代理正确追加/清洗头且源站禁止直接访问的部署。
 
-上述 11 迁移为 M5 历史验收；本轮新增事件时间 timestamptz 转换和已删除评论缓存清理，共 13 个迁移。先核对旧 TIMESTAMP 的 UTC 语义，再执行增量部署；详情见 [本轮迁移与验收记录](reviews/REVIEW-FIXES-2026-09-11.md)。应用连接固定 UTC，以满足当前 adapter-pg 7.10.0 的时间解析约定，date-only 截止日不变。
+附件集合端点不经过 Next Proxy，避免 Proxy 在路由准入之前缓冲请求体；会话、Origin、资源授权、通用写桶与上传专用门禁仍在路由/服务端执行。上传 10 次/用户/分钟、最多 2 条在途请求在 staging/production 使用 M6 PostgreSQL 共享租约；development/test 保留内存路径。部署、健康检查、维护与恢复演练见 [M6 运行手册](M6-OPERATIONS.md)。
 
-认证与业务端点统一按 `TRUSTED_PROXY_COUNT` 选择转发链中的来源；默认 0 忽略客户端提供的转发头并使用共享桶。大于 0 仅适用于受控代理正确追加/清洗头且源站禁止直接访问的部署。
+单个 Node 进程另限制总上传 4 条、总下载 8 条、每用户下载 2 条；超过返回 429/Retry-After。上传前检查临时目录所在文件系统可用空间至少 104MiB（64MiB 余量加 4×10MiB 最大文件预算），不足或无法读取容量时返回 503，且不消耗传输名额。下载名额在响应体完成、失败、取消或 120 秒总预算到期后释放，不能在收到响应头时提前释放。这是进程资源保护，不是跨副本的整机磁盘预留；多实例部署需按副本数规划临时空间，生产容量仍需实测。
 
-附件集合端点不经过 Next Proxy，避免 Proxy 在路由准入之前缓冲请求体；会话、Origin、资源授权、通用写桶与上传专用门禁仍在路由/服务端执行。上传 10 次/用户/分钟、最多 2 条在途请求为单进程限制，多副本共享准入仍须在 M6 按 PostgreSQL 方案完成。
+### 2026-09-12 传输、日志与对象保留
+
+staging/production 的 SMTP 强制 TLS：465 使用 SMTP_SECURE=true；587 使用 false 并由应用强制 STARTTLS，拒绝降级。开发/测试 Mailpit 可明文。测试邮件 API 通过 MAILPIT_API 覆盖，端口被占用时同步设置 Compose 宿主端口和测试 SMTP_PORT/MAILPIT_API。
+
+版本化 S3 使用 [生命周期配置](../infra/s3-lifecycle.json)：非当前版本保留 30 天、移除过期删除标记、终止超过一天的未完成分段上传。没有当前对象到期删除规则；历史版本在保留期间继续计费。更长数据库备份窗口需要同步延长对象保留时间。
+
+Nginx 在 http 上下文加载 [安全日志格式](../infra/nginx-http.conf)，server 使用 [代理配置](../infra/nginx.conf)。日志不记录路径、查询、Referer 等客户端字符串。Nginx 原始错误日志无法脱敏，应用虚拟主机将其定向 /dev/null，以安全访问日志状态/耗时和应用结构化错误诊断；禁止额外平台记录完整请求 URL。
+
+### 综合审查维护入口（2026-09-13，覆盖前述直接执行示例）
+
+三个入口 maintenance:cleanup / cleanup:attachments / cleanup:idempotency 默认只读预览；仅 --execute 才写入，且必须同时提供预览产生的 --target=<64位指纹>，或运行环境中的 ORBIT_MAINTENANCE_TARGET。指纹绑定范围、APP_ENV、数据库目标/schema、存储端点/区域/桶，任一变化需重新预览确认。缺失或错误目标在连接数据库前拒绝。开发/测试仅对应本机 orbit_dev/orbit_test 与 orbit-dev/orbit-test 桶；production/staging 允许经明确确认的目标，不使用测试库白名单阻断正常维护。
+
+预览含候选计数、目标指纹与只读存储配额对账；对账偏差返回非零并交给人工核查，绝不自动改账。执行仍只处理过期维护记录/失效上传/已标记附件，不清业务历史。清理超过每次批量预算或对象删除失败返回非零，由调度告警并按需重跑；一小时为失效上传候选阈值，不是恢复时间上限。
+
+DATABASE_POOL_MAX 默认5，合法范围1–20；总容量计算与测量要求见 [变更和升级清单](14-CHANGE-AND-UPGRADE-CHECKLIST.md)。当前新增邀请 RESTRICT 迁移后共16个迁移；禁止改写既有迁移。

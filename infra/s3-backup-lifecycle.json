@@ -1,0 +1,15 @@
+{
+  "Rules": [{
+    "ID": "orbit-daily-database-backups-7-days",
+    "Status": "Enabled",
+    "Filter": { "Prefix": "database/" },
+    "Expiration": { "Days": 7 },
+    "NoncurrentVersionExpiration": { "NoncurrentDays": 7 },
+    "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 1 }
+  }, {
+    "ID": "orbit-remove-backup-delete-markers",
+    "Status": "Enabled",
+    "Filter": { "Prefix": "database/" },
+    "Expiration": { "ExpiredObjectDeleteMarker": true }
+  }]
+}

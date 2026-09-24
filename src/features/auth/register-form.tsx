@@ -28,7 +28,6 @@ export function RegisterForm() {
     password?: string;
     confirm?: string;
   }>({});
-  const [networkError, setNetworkError] = useState<string | null>(null);
 
   if (submitted) {
     return (
@@ -76,7 +75,6 @@ export function RegisterForm() {
 
     // Clear previous errors on new submission
     setFieldErrors({});
-    setNetworkError(null);
     
     const ok = await signUp({ name: name.trim(), email: email.trim(), password });
     if (ok) {
@@ -133,22 +131,15 @@ export function RegisterForm() {
         disabled={pending}
       />
 
-      {/* Display network errors separately if present */}
-      {networkError && (
-        <InlineError role="alert">{networkError}</InlineError>
-      )}
-      
       {/* Error from server/API validation or other issues */}
-      {!networkError && error && (
-        <InlineError role="alert">{error}</InlineError>
-      )}
+      {error && <InlineError role="alert">{error}</InlineError>}
 
       <SubmitButton 
         pending={pending} 
-        disabled={pending || !!networkError}
+        disabled={pending}
         pendingText="注册中…"
       >
-        {networkError ? "重试" : pending ? "注册中…" : "注册"}
+        {pending ? "注册中…" : "注册"}
       </SubmitButton>
 
       <p className="text-center text-label text-foreground-secondary">

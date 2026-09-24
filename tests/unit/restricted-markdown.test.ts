@@ -684,3 +684,21 @@ describe("renderRestrictedMarkdown", () => {
     });
   });
 });
+
+describe("嵌入页面时的标题层级偏移", () => {
+  const renderWithOffset = (source: string, headingOffset: number): string =>
+    renderToStaticMarkup(renderRestrictedMarkdown(source, { headingOffset }) as ReactElement);
+
+  test("描述中的 # 位于页面「描述」h2 之下：下移为 h3，保留源层级字号", () => {
+    expect(renderWithOffset("# 目标\n## 细节", 2)).toBe(
+      `${ROOT_OPEN}<h3 class="text-page font-semibold">目标</h3><h4 class="text-section font-semibold">细节</h4></div>`,
+    );
+  });
+
+  test("偏移后最深为 h6，不产生非法标签；默认不偏移", () => {
+    expect(renderWithOffset("##### 五\n###### 六", 2)).toBe(
+      `${ROOT_OPEN}<h6 class="text-label font-medium">五</h6><h6 class="text-caption font-medium uppercase tracking-wide">六</h6></div>`,
+    );
+    expect(renderWithOffset("# 标题", 0)).toBe(render("# 标题"));
+  });
+});

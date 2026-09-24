@@ -2,6 +2,7 @@
 
 import { FolderPlus, X } from "lucide-react";
 import { useId, useState, type FormEvent } from "react";
+import { UnsavedChangesProvider, useUnsavedChanges, confirmLeave } from "@/features/tasks/unsaved-changes";
 import {
   ApiClientError,
   PROJECT_COLOR,
@@ -69,7 +70,18 @@ export type ProjectCreateFormProps = {
   onUnauthorized: () => void;
 };
 
-export function ProjectCreateForm({
+/**
+ * B6 修复：项目创建草稿保护（结构与任务创建表单一致，见 unsaved-changes.tsx）。
+ */
+export function ProjectCreateForm(props: ProjectCreateFormProps) {
+  return (
+    <UnsavedChangesProvider>
+      <ProjectCreateFormContent {...props} />
+    </UnsavedChangesProvider>
+  );
+}
+
+function ProjectCreateFormContent({
   onCreated,
   onCancelled,
   onUnauthorized,
@@ -97,6 +109,12 @@ export function ProjectCreateForm({
     trimmedName.length <= NAME_MAX &&
     keyValid &&
     trimmedDescription.length <= DESCRIPTION_MAX;
+
+  // B6：任一字段被修改或提交在途即视为「不可静默离开」。
+  useUnsavedChanges(
+    trimmedName.length > 0 || key.length > 0 || trimmedDescription.length > 0 || color !== "BLUE",
+    pending,
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -331,7 +349,7 @@ export function ProjectCreateForm({
           {pending ? <Spinner /> : <FolderPlus className="h-4 w-4" aria-hidden="true" />}
           <span>{pending ? "正在创建…" : "创建项目"}</span>
         </Button>
-        <Button type="button" variant="ghost" disabled={pending} onClick={onCancelled}>
+        <Button type="button" variant="ghost" disabled={pending} onClick={() => { if (confirmLeave()) onCancelled(); }}>
           <X className="h-4 w-4" aria-hidden="true" />
           取消
         </Button>

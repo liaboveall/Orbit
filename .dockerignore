@@ -1,0 +1,34 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+artifacts
+test-results
+playwright-report
+secrets
+uploads
+attachments
+*.dump
+*.log
+*.tsbuildinfo
+# F38：凭证类文件与派生产物不进构建上下文（Dockerfile 与 operations 目标同样受益）。
+*.pem
+*.key
+*.p12
+*.pfx
+*credentials*
+.credential*
+coverage
+src/generated
+.qoder
+.kiro
+.workbuddy
+logs
+prompts
+next-env.d.ts
+# OI-17：根目录临时探针输出与 planning 运行缓存不进构建上下文。
+/_*.txt
+__pycache__
+*.pyc

@@ -1,4 +1,5 @@
 import "server-only";
+import { acquireDownloadCapacity } from "./transfer-capacity";
 import { randomUUID, createHmac, timingSafeEqual } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -9,6 +10,7 @@ import { lockProjectRow, withTransaction } from "@/server/db/tx";
 import { DomainError } from "@/server/http/errors";
 import {
   UploadAttachmentMetaSchema,
+  SignedDownloadQuerySchema,
   UuidSchema,
   DownloadSchema,
   type AttachmentDTO,
@@ -361,10 +363,9 @@ export async function downloadContent(
   signal?: AbortSignal,
 ) {
   if (
-    !/^\d{13}$/.test(expires) ||
+    !SignedDownloadQuerySchema.safeParse({ expires, signature: mac }).success ||
     Number(expires) <= Date.now() ||
     Number(expires) > Date.now() + 60000 ||
-    !/^[0-9a-f]{64}$/.test(mac) ||
     !timingSafeEqual(
       Buffer.from(signature(id, userId, expires), "hex"),
       Buffer.from(mac, "hex"),
@@ -372,12 +373,17 @@ export async function downloadContent(
   )
     throw attachmentNotFoundError();
   const row = await readableAttachment(id, userId);
+  const release = acquireDownloadCapacity(userId);
   try {
+    // F15：同时返回存储端可信长度，供 HTTP 层设置 Content-Length（截断可被检测）。
+    const download = await streamDownload(row.objectKey, signal, release);
     return {
-      stream: await streamDownload(row.objectKey, signal),
+      stream: download.stream,
+      contentLength: download.contentLength,
       fileName: row.originalName,
     };
   } catch {
+    release();
     throw new DomainError(
       "STORAGE_UNAVAILABLE",
       "文件暂时无法下载，请稍后重试。",

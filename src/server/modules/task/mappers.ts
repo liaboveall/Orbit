@@ -93,6 +93,54 @@ export interface TaskWithPeople extends Task {
   creator: TaskPerson;
 }
 
+/**
+ * F14：摘要查询的显式投影（任务列表/看板/工作台共用）——不读取 description 等
+ * 摘要不消费的大字段；详情查询仍取完整行。口径与 toTaskSummaryDTO 消费的字段
+ * 一一对应（看板另需 position 参与游标）。
+ */
+export const TASK_SUMMARY_SELECT = {
+  id: true,
+  projectId: true,
+  number: true,
+  title: true,
+  status: true,
+  priority: true,
+  dueDate: true,
+  completedAt: true,
+  version: true,
+  deletedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  assignee: { select: { id: true, name: true } },
+  creator: { select: { id: true, name: true } },
+} as const;
+
+/** 看板摘要：额外携带 position（列内游标）。 */
+export const TASK_SUMMARY_SELECT_FOR_BOARD = {
+  ...TASK_SUMMARY_SELECT,
+  position: true,
+} as const;
+
+/** 摘要查询行的输入形状：toTaskSummaryDTO 实际消费的字段（投影行/完整行均可赋值）。 */
+export type TaskSummaryRow = Pick<
+  Task,
+  | "id"
+  | "projectId"
+  | "number"
+  | "title"
+  | "status"
+  | "priority"
+  | "dueDate"
+  | "completedAt"
+  | "version"
+  | "deletedAt"
+  | "createdAt"
+  | "updatedAt"
+> & {
+  assignee: TaskPerson | null;
+  creator: TaskPerson;
+};
+
 /** toTaskSummaryDTO / toTaskDTO 的选项。 */
 export interface TaskMapperOptions {
   /** 所属项目 key，用于拼装 identifier。 */
@@ -111,7 +159,7 @@ function toUserSummary(person: TaskPerson): { id: string; name: string } {
 
 /** 数据库 Task 行（含 assignee/creator）→ 契约 TaskSummaryDTO（不含 description）。 */
 export async function toTaskSummaryDTO(
-  task: TaskWithPeople,
+  task: TaskSummaryRow,
   opts: TaskMapperOptions,
   counts: {
     subtaskTotal: number;

@@ -1,6 +1,5 @@
 import { enforceWriteLimit } from "@/server/http/write-limit";
-import { z } from "zod";
-import { UpdateTaskSchema, parseQueryParams, parseRequestBody } from "@/contracts";
+import { UpdateTaskSchema, VersionQuerySchema, parseQueryParams, parseRequestBody } from "@/contracts";
 import { requireSessionUser } from "@/server/auth/session";
 import { errorResponse, toErrorResponse } from "@/server/http/errors";
 import { jsonEnvelope, jsonSuccess, readJsonBody } from "@/server/http/json";
@@ -35,11 +34,9 @@ interface RouteContext {
 
 /**
  * DELETE 的查询参数 schema（openapi deleteTask：expectedVersion 为必填 integer ≥ 1）。
- * 查询参数以字符串到达，用 z.coerce.number() 归一；缺失或非法 → parseQueryParams 失败 → 400。
+ * 查询参数只接受单个正十进制安全整数，与评论/子任务删除一致。
  */
-const DeleteTaskQuerySchema = z.object({
-  expectedVersion: z.coerce.number().int().min(1),
-});
+const DeleteTaskQuerySchema = VersionQuerySchema;
 
 /** GET /tasks/{taskId}：读取任务详情（成员可见；非成员/不存在/已软删除 → 404）。 */
 export async function GET(request: Request, context: RouteContext): Promise<Response> {
@@ -104,7 +101,8 @@ export async function DELETE(request: Request, context: RouteContext): Promise<R
     const limited = await enforceWriteLimit(sessionUser.id, requestId);
     if (limited) return limited;
 
-    const params = Object.fromEntries(new URL(request.url).searchParams.entries());
+    const values = new URL(request.url).searchParams.getAll("expectedVersion");
+    const params = { expectedVersion: values.length === 1 ? values[0] : undefined };
     const parsed = parseQueryParams(DeleteTaskQuerySchema, params, requestId);
     if (!parsed.ok) return jsonEnvelope(parsed.response, 400, requestId);
 

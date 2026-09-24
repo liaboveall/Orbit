@@ -139,18 +139,16 @@ export function useSignOut() {
       setPending(false);
       if (res?.error) {
         setError('退出失败，请稍后再试');
-        return { error: 'sign out failed' };
+        return { error: '退出失败，请稍后再试' };
       }
       return {};
     } catch (err) {
       setPending(false);
       // Distinguish network errors from other errors
-      if (err instanceof TypeError && err.message === 'Failed to fetch') {
-        setError('网络错误，请检查您的网络连接后重试');
-      } else {
-        setError('退出失败，请稍后再试');
-      }
-      return { error: 'sign out error' };
+      const message = err instanceof TypeError && err.message === 'Failed to fetch'
+        ? '网络错误，请检查您的网络连接后重试' : '退出失败，请稍后再试';
+      setError(message);
+      return { error: message };
     }
   }, []);
 

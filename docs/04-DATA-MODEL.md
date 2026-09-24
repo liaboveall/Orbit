@@ -86,6 +86,10 @@ id UUID PK；userId；method；routeKey（含真实资源ID的规范化路径）
 
 keyHash PK（不存原始邮箱/IP）；windowStart；count；expiresAt。实际表与 Better Auth 数据库存储方式可分开，不能破坏库 schema。计数原子递增，维护命令清理过期桶。不以 count 的 read-then-write 实现共享限流。
 
+### UploadLease（M6）
+
+id UUID PK；keyHash char(64)；startedAt timestamptz；expiresAt timestamptz；active boolean。索引 (keyHash,startedAt) 和 expiresAt。同用户准入通过事务级 advisory lock 串行化，频率统计 startedAt 的滑动一分钟、并发统计未过期 active。释放只改 active，不删除频率证据；超过 180 秒允许崩溃恢复，维护限批删除过期行。
+
 ## 4. 写入事务与锁
 
 所有同项目写入先锁 Project（SELECT FOR UPDATE 或语义等价实现），再检查权限和归档状态，之后按 Task → 子资源顺序锁定。涉及owner活动项目数量的创建/归档/恢复，须先取得User锁再取得Project锁；恢复时检查10项目配额。统一顺序 User（需要时）→ Project → Task → 子资源。必须使用参数化 SQL。网络 I/O 不能位于事务内。
@@ -104,7 +108,7 @@ keyHash PK（不存原始邮箱/IP）；windowStart；count；expiresAt。实际
 | 附件预留 | 任务/项目配额检查、UPLOADING 行、reservedBytes 增加 |
 | 附件完成 | 重新授权、READY、reservedBytes 减少、usedBytes 增加、活动 |
 
-项目资料修改递增 Project.version；boardVersion 专管看板成员/顺序集合。成员退出导致任务卡负责人变化，刷新查询即可，不需要递增 boardVersion；task.version 必须增加。任务删除、恢复也必须递增task.version。普通字段规范化后没有语义变化时不更新version和活动；一次PATCH即使修改多个字段也只增加一次version。
+项目资料修改递增 Project.version；boardVersion 专管看板成员/顺序集合。成员退出导致任务卡负责人变化，刷新查询即可，不需要递增 boardVersion（筛选集合的分页一致性由下文看板游标规则保证）；task.version 必须增加。任务删除、恢复也必须递增task.version。普通字段规范化后没有语义变化时不更新version和活动；一次PATCH即使修改多个字段也只增加一次version。
 
 ## 5. 看板排序算法
 
@@ -116,9 +120,23 @@ move 带 expectedVersion 与 expectedBoardVersion。任一不匹配返回409，�
 
 创建、跨/同列移动、删除、恢复都会改变 boardVersion。看板读取使用一致快照（REPEATABLE READ 短只读事务）获取列数据、总数与 boardVersion；不能三次独立读取拼接不同时刻的数据。
 
+看板分页游标绑定过滤指纹、boardVersion，以及本列已返回前缀（按 position,id）的数量与 SHA-256 摘要（BOARD-FILTER-CURSOR，2026-09-24）。优先级、标题、负责人、截止日变化与成员退出清空负责人不递增 boardVersion，却可能让任务进入或离开当前筛选集合；续页时在同一快照内重算前缀，数量或摘要不一致即返回 409 BOARD_CONFLICT，客户端整体重新读取。游标之后的集合变化由下一页查询自然反映，不视为冲突；描述等非筛选字段变化不影响续页。
+
 ## 6. 配额与文件一致性
 
 项目锁内计数并检查配额。文件预算条件 usedBytes+reservedBytes+declaredSizeBytes<=200MiB。子任务/任务/成员等上限同样在锁内判断，不能只靠前端。
+
+### 数据保留策略（F19 审查裁定，2026-09-13）
+
+以下数据**刻意不自动清理**，保留是产品决策而非疏漏：
+
+- 软删除任务（回收站）：用户可自行恢复/彻底删除；系统不代为清空。
+- 已过期/已撤销/已使用的邀请：作为操作审计与防重放记录保留；撤销邀请是显式动作。
+- MoveRecord（移动历史）：看板顺序争议时的审计依据；不做自动裁剪。
+
+认证库记录不属于上述业务数据：已过期的 Session 与一次性 Verification 值已不可使用，维护任务与幂等/限流/租约记录一同按 expiresAt 分批（每批 1000、SKIP LOCKED）删除，避免长期保留会话元数据（2026-09-24）。未过期记录不受影响。
+
+容量风险按附录监测（必要时人工清理或由产品变更明确授权后新增迁移），不得由维护脚本自动删除。
 
 软删除任务仍占用附件空间，恢复不需要重新上传。删除附件先把数据库状态变 DELETED 并扣 usedBytes，再尝试删除对象；失败保留 cleanupPending。过期 UPLOADING 清理扣 reservedBytes。清理命令重复运行不重复扣减，所有计数保持非负。
 
@@ -131,6 +149,12 @@ move 带 expectedVersion 与 expectedBoardVersion。任一不匹配返回409，�
 种子数据只允许明确的开发/测试数据库，脚本验证 APP_ENV 与库名并提供目标信息；不输出凭证。不通过删全库实现 seed：使用稳定 fixture ID/upsert，只修改 fixture 范围。测试清库仅限独立测试实例/指定 schema。
 
 fixture 的 now 是可注入基准时间，日期相对基准生成，以便覆盖昨天/今天/未来/无日期/跨时区。不用多年后失效的硬编码“今天”。V1 不需要 AI 表，后续在09新增迁移。
+
+### 迁移 16（20260913090000_align_invitation_restrict）语义与回滚口径
+
+- 变更 1：`Invitation.acceptedById` 外键改 `ON DELETE RESTRICT`。该列是接受行为的审计身份，与 `acceptedAt` 受成对 CHECK（`checked_accepted_at_and_by_id`）约束；原 CASCADE 置空既违反该 CHECK 也会抹掉审计记录。删除曾接受邀请的用户必须先显式处理邀请记录，与移除成员业务路径的显式清理一致。
+- 变更 2：删除 `Project_bytes_non_negative_check` 复合 CHECK。它已被 M5 迁移 `20260911033000_add_project_quota_checks` 的 `non_negative_reserved` / `non_negative_used` 两条独立约束完全覆盖；删除只为对齐 schema 与运行库约束清单，防护语义不变，不修改任何数据行。
+- 回滚口径：本项目迁移只向前。应用回滚=从备份恢复（docs/M6-OPERATIONS.md）；需修正时编写新的后续迁移，不得改写已应用文件（其字节与 `_prisma_migrations.checksum` 绑定）。
 
 
 ## 2026-09-11 · M5 协议冲突关闭
@@ -149,3 +173,7 @@ fixture 的 now 是可注入基准时间，日期相对基准生成，以便覆�
 锁定的 adapter-pg 7.10.0 时间解析器假定 PostgreSQL 返回 UTC 文本，应用连接必须固定 `timezone=UTC`；业务代码不得更改池连接时区。时区回归分别核对数据库 epoch 和恢复 UTC 会话后的 Prisma Date，用户时区仅用于展示及 date-only 筛选。认证 API 继续接收相同的 JavaScript Date。
 
 删除评论的事务同步将其创建幂等响应改为删除占位；旧数据迁移清除已删除评论残留的缓存正文。请求摘要和幂等标识继续保留，但不能再返回已删除正文。
+
+### 综合审查补充（2026-09-13）
+
+Invitation.acceptedBy 使用 RESTRICT，与 acceptedAt/acceptedById 成对 CHECK 一致；V1 不提供删用户功能，未来匿名化需保持审计身份。新增迁移移除 Project 冗余组合非负 CHECK，两个独立非负约束仍保留。维护对账用单一 SQL 快照比较所有 READY/UPLOADING 附件（含软删除任务）与项目 usedBytes/reservedBytes，仅报告偏差，不自动修正。

@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "scope": "Personal project; retain current official Node base, no zero-CVE or alternate-base requirement.",
+  "decisionDate": "2026-09-18",
+  "policy": "A successful scan is mandatory. Findings remain visible and are not labelled fixed. Fixable HIGH/CRITICAL findings block; upstream findings without a fix are accepted as an observed residual risk unless application impact is confirmed. Add confirmed-impact IDs to blockingIds regardless of fix availability.",
+  "blockingIds": [],
+  "reviewTrigger": "Review each dependency/base update and before public deployment; reassess unfixed findings when a fix or credible application exploit appears."
+}

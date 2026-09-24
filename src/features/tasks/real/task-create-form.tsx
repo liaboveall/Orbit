@@ -2,6 +2,7 @@
 
 import { Plus, X } from "lucide-react";
 import { useId, useState, type FormEvent } from "react";
+import { UnsavedChangesProvider, useUnsavedChanges, confirmLeave } from "../unsaved-changes";
 import {
   ApiClientError,
   TASK_PRIORITY,
@@ -63,7 +64,20 @@ export type TaskCreateFormProps = {
   onUnauthorized: () => void;
 };
 
-export function TaskCreateForm({
+/**
+ * B6 修复：任务创建草稿保护。Provider 安装链接点击/关闭/前进后退守卫；
+ * 内容组件经 useUnsavedChanges 注册 dirty/pending，程序化导航经模块级
+ * confirmLeave 询问（草稿只在组件内存，不写 URL / 不进共享缓存）。
+ */
+export function TaskCreateForm(props: TaskCreateFormProps) {
+  return (
+    <UnsavedChangesProvider>
+      <TaskCreateFormContent {...props} />
+    </UnsavedChangesProvider>
+  );
+}
+
+function TaskCreateFormContent({
   projectId,
   onCreated,
   onCancelled,
@@ -79,7 +93,7 @@ export function TaskCreateForm({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<TaskStatus>("TODO");
-  const [priority, setPriority] = useState<TaskPriority>("NONE");
+  const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   /** date input 的值（YYYY-MM-DD 或空 = 无截止日）。 */
   const [dueDate, setDueDate] = useState("");
   const [pending, setPending] = useState(false);
@@ -93,6 +107,17 @@ export function TaskCreateForm({
     trimmedTitle.length >= 1 &&
     trimmedTitle.length <= TITLE_MAX &&
     trimmedDescription.length <= DESCRIPTION_MAX;
+
+  // B6：任一字段被修改或提交在途即视为「不可静默离开」；成功创建后父组件收起表单，
+  // 组件卸载自动解除保护。
+  useUnsavedChanges(
+    trimmedTitle.length > 0 ||
+      trimmedDescription.length > 0 ||
+      status !== "TODO" ||
+      priority !== "MEDIUM" ||
+      dueDate.length > 0,
+    pending,
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -150,7 +175,7 @@ export function TaskCreateForm({
         return;
       }
       if (result.status === 422 && result.error.code === "LIMIT_EXCEEDED") {
-        setFormError(`未删除任务已达上限（${OPEN_TASK_LIMIT} 个），请先清理回收站。`);
+        setFormError(`未删除任务已达上限（${OPEN_TASK_LIMIT} 个），请删除不再需要的任务，或联系项目所有者处理。`);
         return;
       }
       // 其余业务错误：400 fieldErrors 映射到字段 + 信封 message 驻留展示。
@@ -339,7 +364,7 @@ export function TaskCreateForm({
           {pending ? <Spinner /> : <Plus className="h-4 w-4" aria-hidden="true" />}
           <span>{pending ? "正在创建…" : "创建任务"}</span>
         </Button>
-        <Button type="button" variant="ghost" disabled={pending} onClick={onCancelled}>
+        <Button type="button" variant="ghost" disabled={pending} onClick={() => { if (confirmLeave()) onCancelled(); }}>
           <X className="h-4 w-4" aria-hidden="true" />
           取消
         </Button>

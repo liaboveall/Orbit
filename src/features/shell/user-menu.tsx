@@ -1,10 +1,9 @@
 "use client";
 
 import { LogOut, Settings } from "lucide-react";
-import { useRouter } from "next/navigation";
 import type { UserDTO } from "@/contracts";
 import { useToast } from "@/components/ui/toast";
-import { useState } from "react";
+import { useRef } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +15,8 @@ import {
 } from "@/components/ui";
 import { Avatar } from "@/components/ui/avatar";
 import { useSignOut } from "@/features/auth/use-auth";
+import { confirmLeave, navigateAfterConfirmedLeave, useGuardedNavigate } from "@/features/tasks/unsaved-changes";
+import { clearUserDrafts } from "@/features/tasks/draft-storage";
 
 /**
  * 个人菜单（M1 / ORB-006）：AppShell 侧栏底部与平板 rail 态的用户入口。
@@ -25,8 +26,8 @@ import { useSignOut } from "@/features/auth/use-auth";
  *    不再引用 fixture 的 CURRENT_USER —— 姓名/邮箱/时区都是账户真实数据；
  *  - 「个人设置」从占位 toast 改为真实导航 `router.push("/app/settings")`；
  *  - 「退出登录」保持整页硬跳转（`window.location.assign`）：signOut 清除 httpOnly 会话
- *    cookie 后，硬跳转同时销毁全部客户端内存态（React 状态、模块级缓存、表单草稿），
- *    这是验收标准 #3「退出/换账号不泄露上一账户私有缓存」的关键一环；
+ *    cookie 后，先删除该用户的本机任务草稿，再用硬跳转销毁全部客户端内存态（React 状态、
+ *    模块级缓存、表单草稿），这是验收标准 #3「退出/换账号不泄露上一账户私有缓存」的关键一环；
  *    服务端侧再由 /me 的 `Cache-Control: private, no-store` 保证浏览器/共享缓存不留副本。
  *
  * 边界：客户端组件，只依赖 @/components/ui、@/features/auth 与 @/contracts（均客户端安全），
@@ -51,41 +52,39 @@ export function UserMenu({
   side = "top",
   align = "start",
 }: UserMenuProps) {
-  const router = useRouter();
-  const { signOut, pending, error: signOutError } = useSignOut();
+  // B6 修复：程序化导航同样受未保存草稿保护。
+  const guardedNavigate = useGuardedNavigate();
+  const { signOut, pending } = useSignOut();
   const { toast } = useToast();
-  const [signOutPromise, setSignOutPromise] = useState<Promise<{ error?: string }> | null>(null);
+  const signingOut = useRef(false);
 
   async function handleSignOut(): Promise<void> {
-    if (signOutPromise) return; // Already in progress
-    
-    const promise = signOut();
-    setSignOutPromise(promise);
-    
+    if (signingOut.current || !confirmLeave()) return;
+    signingOut.current = true;
     try {
-      const result = await promise;
+      const result = await signOut();
       if (result?.error) {
         // Sign out failed - show error toast and don't navigate
         toast({
           title: "退出失败",
-          description: signOutError || "退出失败，请稍后再试",
+          description: result.error,
           variant: "danger",
           duration: 4000,
         });
         return;
       }
-      // Successful sign out - redirect to login page
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-      window.location.assign("/auth/login");
+      // 成功退出才清除该用户的本机草稿（取消/失败保留），共享浏览器不残留私有文字。
+      clearUserDrafts(user.id);
+      navigateAfterConfirmedLeave("/auth/login");
     } finally {
-      setSignOutPromise(null);
+      signingOut.current = false;
     }
   }
 
   function handleSettings(): void {
     // 客户端软导航即可：设置页由服务端读取会话与账户档案（force-dynamic），
     // 每次进入都拿到最新数据，不存在跨账号的客户端缓存残留。
-    router.push("/app/settings");
+    guardedNavigate.push("/app/settings");
   }
 
   const trigger =
