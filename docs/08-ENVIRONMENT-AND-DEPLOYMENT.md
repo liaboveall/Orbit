@@ -6,6 +6,8 @@
 
 环境要求：Node.js24 LTS、pnpm兼容稳定版本、Docker/Compose（或等价独立PostgreSQL、MinIO、Mailpit）。不自动假设用户安装了Docker；M0先检查，缺少时说明具体安装/启动步骤，仍可完成独立的规格与UI工作。
 
+MinIO 社区版已归档，官方公开镜像已下架；`compose.dev.yml` 改用私有 GHCR 镜像 `ghcr.io/liaboveall/orbit-minio`（原锁定版本 RELEASE.2025-09-07T16-13-09Z 的逐层相同副本，仅 linux/amd64，见 ADR-028）。首次启动前用有该包读取权限的 GitHub 账号执行 `gh auth token | docker login ghcr.io -u <GitHub 用户名> --password-stdin`（`gh` 令牌需含 `read:packages`）；CI 用工作流的 `GITHUB_TOKEN` 登录。
+
 推荐本地端口：应用3000、PostgreSQL5432、MinIO API9000/控制台9001、Mailpit SMTP 宿主25025→容器1025/Web8025。只绑定localhost。Mailpit SMTP 宿主端口用25025而非1025：Windows 动态/临时端口区间（约1024–15000）会随机占用1025导致bind失败；`.env.local`/`.env.example` 的 SMTP_PORT 须与宿主端口一致（25025），容器内Mailpit始终监听1025（`compose.dev.yml` 映射 `${MAILPIT_SMTP_HOST_PORT:-25025}:1025`）。测试使用独立数据库orbit_test和独立对象前缀，不复用orbit_dev的数据（`pnpm test:e2e` 的具体实现见本节下方「E2E 测试环境隔离」）。
 
 ~~~text
