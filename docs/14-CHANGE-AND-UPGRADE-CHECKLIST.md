@@ -20,7 +20,7 @@
 - Radix：390/768/1440、嵌套 Dialog/Drawer/Menu、焦点恢复、组合 Enter/Escape、tab 方向键；不能仅凭源码猜测删掉兼容处理。
 - Prisma/pg：生成客户端、迁移、真实事务/并发/池耗尽映射、BIGINT 重编号及删除约束。
 - Better Auth：真实邮件验证/找回、STARTTLS 拒绝降级、超限合法 JSON、限流与可信代理、旧会话失效。保留账号枚举取舍，不能自写密码认证来规避库行为。
-- SDK/容器：真实 MinIO 上传/下载/取消/删除恢复；runner 和 operations 都跑 OS+应用漏洞扫描，扫描失败或高危项必须可见；正式生产环境单独验收。
+- SDK/容器：真实本地 S3 兼容存储（SeaweedFS）上传/下载/取消/删除恢复；runner 和 operations 都跑 OS+应用漏洞扫描，扫描失败或高危项必须可见；正式生产环境单独验收。
 
 ## 性能与 micro 部署
 

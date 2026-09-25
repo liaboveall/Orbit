@@ -3,7 +3,7 @@ import { z } from "zod";
 
 export type MaintenanceScope = "all" | "attachments" | "idempotency" | "invitation-tokens" | "invitation-inspect";
 const appEnv = z.enum(["development", "test", "staging", "production"]);
-const localHosts = new Set(["localhost", "127.0.0.1", "[::1]", "postgres", "minio"]);
+const localHosts = new Set(["localhost", "127.0.0.1", "[::1]", "postgres", "storage"]);
 
 /** Pure preflight: must run before importing any database/storage client. Never echo inputs. */
 export class MaintenancePreflightError extends Error { override name = "MaintenancePreflightError"; }

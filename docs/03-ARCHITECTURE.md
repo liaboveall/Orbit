@@ -15,7 +15,7 @@
 | Drag | @dnd-kit/core + sortable，选兼容版本 | 键盘/菜单替代、失败回滚 |
 | Persistence | PostgreSQL 17 + Prisma 7 + PostgreSQL adapter | SQL 迁移补充 ORM 不支持的约束 |
 | Auth | Better Auth + Prisma adapter | 邮箱密码、验证、重置、数据库会话 |
-| Storage | 私有 S3 兼容 API | 本地 MinIO，生产 S3 兼容供应商 |
+| Storage | 私有 S3 兼容 API | 本地/CI SeaweedFS，生产 S3 兼容供应商 |
 | Email | SMTP adapter | 本地 Mailpit，生产已配置的邮件服务 |
 | Testing | Vitest、Playwright | 真 PostgreSQL 做集成测试 |
 | CI/deploy | GitHub Actions、Docker | 单一标准 Node 容器部署路径 |

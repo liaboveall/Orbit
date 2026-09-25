@@ -38,15 +38,14 @@ pnpm install --frozen-lockfile
    node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
    ```
 
-3. 启动本地 PostgreSQL、MinIO 和 Mailpit。MinIO 使用私有 GHCR 镜像，首次需用有读取权限的 GitHub 账号登录（`gh` 令牌需含 `read:packages`）：
+3. 启动本地 PostgreSQL、S3 兼容存储（SeaweedFS）和 Mailpit。附件用的私有桶 `orbit-dev`（与 `STORAGE_BUCKET` 一致）会在存储服务启动时自动创建：
 
    ```sh
-   gh auth token | docker login ghcr.io -u <GitHub 用户名> --password-stdin
    docker compose -f infra/compose.dev.yml up -d
    ```
 
-4. 打开 [MinIO 控制台](http://localhost:9001)，使用 `.env.example` 中的本地存储账户登录，创建私有桶 `orbit-dev`（与 `STORAGE_BUCKET` 一致），用于附件上传。
-5. 应用现有迁移并启动：
+   从旧版（MinIO）切换过来时，运行 `docker compose -f infra/compose.dev.yml up -d --remove-orphans storage`：只启动新的存储服务并移除旧容器，不重建其他服务；旧数据卷 `orbit-dev_orbit_minio` 不会自动删除。
+4. 应用现有迁移并启动：
 
    ```sh
    pnpm db:migrate:deploy
