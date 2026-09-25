@@ -574,6 +574,101 @@
    ]
   }
  ],
+ "storageReplacement": {
+  "date": "2026-09-25",
+  "decision": "docs/11-DECISIONS-AND-RISKS.md ADR-029 (supersedes ADR-028)",
+  "baseCommit": "c94b668ed7ec79f679d6ea32d72ae028dd18c288",
+  "publicMinioImages": {
+   "method": "Anonymous registry queries with an empty Docker config (buildx imagetools inspect) and real docker pull without credentials",
+   "denied": [
+    "docker.io/minio/minio:latest, :RELEASE.2025-09-07T16-13-09Z, :RELEASE.2025-10-15T17-29-55Z (pull access denied; Docker Hub repository API 404)",
+    "quay.io/minio/minio:latest, :RELEASE.2025-09-07T16-13-09Z, @sha256:14cea493... (401 Unauthorized)",
+    "ghcr.io/minio/minio:latest (not found)",
+    "docker.io/minio/mc:latest, quay.io/minio/mc:latest"
+   ],
+   "controls": "postgres:17, quay.io/prometheus/prometheus, axllent/mailpit and quay.io/prometheus/busybox resolved or pulled anonymously",
+   "upstreamNotice": "github.com/minio/minio is archived; README: no longer maintained, community edition distributed as source code only"
+  },
+  "probe": "16 checks covering Orbit's storage use: HeadBucket 404 for a missing bucket, CreateBucket, 5 MiB streamed PutObject with ContentLength/ContentType (app client, requestChecksumCalculation WHEN_REQUIRED), GetObject length/type/bytes, 404 NoSuchKey, DeleteObject (existing and missing), empty object, aborted upload leaves no object, 20 concurrent uploads, SDK-default CRC32 PutObject and checksum-mode GetObject (recovery drill / E2E client), wrong secret 403",
+  "baseline": {
+   "server": "MinIO RELEASE.2025-09-07T16-13-09Z (previous local service)",
+   "probe": "16/16"
+  },
+  "candidates": [
+   {
+    "server": "versity/versitygw:v1.8.0",
+    "license": "Apache-2.0",
+    "probe": "15/16",
+    "result": "rejected: an upload aborted mid-body is committed as a truncated object (declared 1 MiB, 64 KiB or 192 KiB stored); MinIO, RustFS and SeaweedFS discard it"
+   },
+   {
+    "server": "rustfs/rustfs:1.0.0",
+    "license": "Apache-2.0",
+    "probe": "16/16",
+    "storageIntegration": "7 files, 44 tests passed",
+    "recoveryDrill": "passed",
+    "idleMemory": "about 367 MiB",
+    "result": "passing alternative; not chosen: 1.0.0 released 2026-09-16, no bucket creation at startup, about twice SeaweedFS's memory"
+   },
+   {
+    "server": "chrislusf/seaweedfs:4.47",
+    "license": "Apache-2.0",
+    "probe": "16/16",
+    "storageIntegration": "7 files, 44 tests passed (default and final configuration)",
+    "recoveryDrill": "passed",
+    "idleMemory": "about 155-167 MiB",
+    "startup": "about 2 s to a healthy S3 endpoint",
+    "result": "chosen"
+   },
+   {
+    "server": "ghcr.io/scality/cloudserver",
+    "result": "not tested: amd64-only image"
+   },
+   {
+    "server": "dxflrs/garage",
+    "license": "AGPL-3.0",
+    "result": "not tested: every new instance needs CLI layout, key and bucket setup"
+   }
+  ],
+  "finalConfiguration": {
+   "image": "chrislusf/seaweedfs:4.47@sha256:ce9e796f1fe6f06968f4c04bdaf8f678dad9c8acdfef3d244133d71bfa6bf882 (linux/amd64, arm64, arm/v7, 386)",
+   "command": "mini -dir=/data -bucket=orbit-dev -s3.autoCreateBucket=false -master.telemetry=false",
+   "port": "127.0.0.1:9000 -> 8333, so STORAGE_* values in .env.example are unchanged",
+   "healthcheck": "GET http://127.0.0.1:8333/healthz",
+   "telemetry": "Enabled upstream by default (anonymous statistics to telemetry.seaweedfs.com once 10 GiB are stored); disabled here, confirmed by the startup log",
+   "ci": "The GHCR login step and packages: read permission from ADR-028 are removed"
+  },
+  "localGate": {
+   "runner": "scripts/verify-remediation.mjs",
+   "directory": "artifacts/storage-seaweedfs-20260925",
+   "storage": "SeaweedFS on 127.0.0.1:9000",
+   "result": "PASS",
+   "sourceDigest": "528aa2c00d537d82e75e0a6baa3be4785de793c96b94c3961cf3258155cfe5a1",
+   "sourceUnchangedDuringRun": true,
+   "startedAt": "2026-09-25T03:01:17.517Z",
+   "finishedAt": "2026-09-25T03:13:24.474Z",
+   "counts": {
+    "unit": 297,
+    "contract": 172,
+    "integration": 380,
+    "e2e": 102,
+    "ui": 13
+   },
+   "total": 964,
+   "zeroBrowserRetries": true
+  },
+  "recoveryDrill": {
+   "command": "node --conditions=react-server --import tsx scripts/recovery-drill.ts",
+   "exitCode": 0,
+   "environment": "local Docker PostgreSQL + S3-compatible storage (SeaweedFS); synthetic isolated databases",
+   "attachmentSha256Verified": true
+  },
+  "postGateChanges": "These handoff records only",
+  "leftInPlace": [
+   "The old local MinIO volume orbit-dev_orbit_minio (its orbit-dev bucket was empty) is not deleted",
+   "The private GHCR package liaboveall/orbit-minio from ADR-028 is no longer used and is not deleted"
+  ]
+ },
  "limitations": [
   "Auth email timing verified with local stalled/rejecting SMTP stubs; real provider latency to be re-checked after deployment",
   "Page read quota verified in production configuration with real session and database bucket; no deployed RSC flood test",

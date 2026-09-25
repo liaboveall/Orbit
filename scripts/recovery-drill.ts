@@ -87,7 +87,7 @@ try {
   const download = await storage.send(new GetObjectCommand({ Bucket: bucket, Key: file.objectKey }));
   const actual = createHash("sha256").update(await download.Body!.transformToByteArray()).digest("hex");
   if (actual !== digest || (await restored.task.findUniqueOrThrow({ where: { id: task.id } })).version !== 3 || await restored.projectMember.count() !== 1 || await restored.comment.count() !== 1 || await restored.activityLog.count() !== 1) throw new Error("Recovery verification failed");
-  const report = { environment: "local Docker PostgreSQL + MinIO; synthetic isolated databases", restoredMembers: 1, taskVersion: 3, comments: 1, activities: 1, attachmentSha256Verified: true, restoreSeconds: (performance.now() - restoreStart) / 1000, totalSeconds: (performance.now() - start) / 1000, backupBytes: dump.length, productionRpoVerified: false };
+  const report = { environment: "local Docker PostgreSQL + S3-compatible storage (SeaweedFS); synthetic isolated databases", restoredMembers: 1, taskVersion: 3, comments: 1, activities: 1, attachmentSha256Verified: true, restoreSeconds: (performance.now() - restoreStart) / 1000, totalSeconds: (performance.now() - start) / 1000, backupBytes: dump.length, productionRpoVerified: false };
   await mkdir("artifacts/release", { recursive: true });
   await writeFile("artifacts/release/recovery.json", JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report));
