@@ -4,11 +4,11 @@
 
 仓库根为 Orbit。M0提供 package.json、锁文件、Docker Compose 和实际启动文档。这些运行文件已实现；下列命令与 package.json 对齐，实际验证结果以 PROGRESS.md 为准。
 
-环境要求：Node.js24 LTS、pnpm兼容稳定版本、Docker/Compose（或等价独立PostgreSQL、MinIO、Mailpit）。不自动假设用户安装了Docker；M0先检查，缺少时说明具体安装/启动步骤，仍可完成独立的规格与UI工作。
+环境要求：Node.js24 LTS、pnpm兼容稳定版本、Docker/Compose（或等价独立PostgreSQL、S3 兼容存储、Mailpit）。不自动假设用户安装了Docker；M0先检查，缺少时说明具体安装/启动步骤，仍可完成独立的规格与UI工作。
 
-MinIO 社区版已归档，官方公开镜像已下架；`compose.dev.yml` 改用私有 GHCR 镜像 `ghcr.io/liaboveall/orbit-minio`（原锁定版本 RELEASE.2025-09-07T16-13-09Z 的逐层相同副本，仅 linux/amd64，见 ADR-028）。首次启动前用有该包读取权限的 GitHub 账号执行 `gh auth token | docker login ghcr.io -u <GitHub 用户名> --password-stdin`（`gh` 令牌需含 `read:packages`）；CI 用工作流的 `GITHUB_TOKEN` 登录。
+本地与 CI 的 S3 兼容存储是 SeaweedFS（`compose.dev.yml` 的 `storage` 服务，`weed mini` 单容器模式，镜像按摘要固定，见 ADR-029）：宿主 127.0.0.1:9000 映射容器 S3 端口 8333，所以 `STORAGE_ENDPOINT` 仍是 `http://localhost:9000`；访问密钥由 `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` 配置，与 `.env.example` 一致；启动时创建 `orbit-dev` 桶；关闭上传时自动建桶（桶不存在即报错，与 S3 一致）和匿名统计上报。它只用于本地与 CI，生产使用托管的 S3 兼容存储。
 
-推荐本地端口：应用3000、PostgreSQL5432、MinIO API9000/控制台9001、Mailpit SMTP 宿主25025→容器1025/Web8025。只绑定localhost。Mailpit SMTP 宿主端口用25025而非1025：Windows 动态/临时端口区间（约1024–15000）会随机占用1025导致bind失败；`.env.local`/`.env.example` 的 SMTP_PORT 须与宿主端口一致（25025），容器内Mailpit始终监听1025（`compose.dev.yml` 映射 `${MAILPIT_SMTP_HOST_PORT:-25025}:1025`）。测试使用独立数据库orbit_test和独立对象前缀，不复用orbit_dev的数据（`pnpm test:e2e` 的具体实现见本节下方「E2E 测试环境隔离」）。
+推荐本地端口：应用3000、PostgreSQL5432、S3 兼容存储9000、Mailpit SMTP 宿主25025→容器1025/Web8025。只绑定localhost。Mailpit SMTP 宿主端口用25025而非1025：Windows 动态/临时端口区间（约1024–15000）会随机占用1025导致bind失败；`.env.local`/`.env.example` 的 SMTP_PORT 须与宿主端口一致（25025），容器内Mailpit始终监听1025（`compose.dev.yml` 映射 `${MAILPIT_SMTP_HOST_PORT:-25025}:1025`）。测试使用独立数据库orbit_test和独立对象前缀，不复用orbit_dev的数据（`pnpm test:e2e` 的具体实现见本节下方「E2E 测试环境隔离」）。
 
 ~~~text
 pnpm install --frozen-lockfile
@@ -103,7 +103,7 @@ pnpm dev
 | MAIL_FROM | 已验证生产发件身份，本地可用orbit.local |
 | STORAGE_ENDPOINT/REGION/BUCKET | S3兼容地址与私有bucket |
 | STORAGE_ACCESS_KEY_ID/SECRET_ACCESS_KEY | 仅限本桶操作的服务端凭证 |
-| STORAGE_FORCE_PATH_STYLE | 本地MinIO需要时true，按生产供应商配置 |
+| STORAGE_FORCE_PATH_STYLE | 本地 SeaweedFS 使用路径风格，需为true；生产按供应商配置 |
 | LOG_LEVEL | 脱敏日志级别，生产默认info |
 | AI_ENABLED | V1默认false；false时不要求AI变量 |
 | AI_PROVIDER/AI_MODEL/AI_API_KEY | M7才使用，凭证仅服务端 |

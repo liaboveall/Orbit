@@ -46,7 +46,7 @@ staging/production 使用 PostgreSQL 原子固定窗口：业务写 60/用户/�
 
 数据库每日备份保留至少 7 天；对象存储开启版本/备份并同样设定保留策略。记录备份时间、迁移版本和对象版本。目标 RPO≤24h/RTO≤2h，必须以生产平台实际配置和演练确认。
 
-`node --conditions=react-server --import tsx scripts/recovery-drill.ts` 在本地 PostgreSQL 容器创建两个随机命名的独立临时库，迁移空库、写合成成员/任务/评论/活动/附件，真实 pg_dump/pg_restore 并恢复 MinIO 对象到独立前缀，验证版本与摘要。仅精确删除本次新建临时数据库和对象，不备份或清空用户库。输出 `artifacts/release/recovery.json`。它不替代生产定时备份配置。
+`node --conditions=react-server --import tsx scripts/recovery-drill.ts` 在本地 PostgreSQL 容器创建两个随机命名的独立临时库，迁移空库、写合成成员/任务/评论/活动/附件，真实 pg_dump/pg_restore 并把本地 S3 兼容存储中的对象恢复到独立前缀，验证版本与摘要。仅精确删除本次新建临时数据库和对象，不备份或清空用户库。输出 `artifacts/release/recovery.json`。它不替代生产定时备份配置。
 
 ## 配置与外部验收待办
 

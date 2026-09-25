@@ -31,7 +31,8 @@
 | ADR-025 | 看板游标绑定已返回前缀摘要而非扩大 boardVersion（2026-09-24） | 筛选集合变化（优先级/标题/负责人/截止日、成员退出）用续页时同快照重算前缀数量与 SHA-256 检测，返回 BOARD_CONFLICT；不为此递增 boardVersion，避免增加并发拖拽冲突，也无需迁移 |
 | ADR-026 | 服务端页面共用读取额度，按完整页面请求计费（2026-09-24） | requirePageUser 以 React cache 在同一请求内只计一次；预取只渲染布局、实测不含页面数据，因此不计费且无需信任请求头；超额跳转无数据库读取的说明页 |
 | ADR-027 | 认证邮件在响应之后投递（2026-09-24） | 通过 Next after() 执行有界投递，匿名入口的状态/正文/耗时不再暴露账号存在或验证状态；代价是进程被强制终止时可能丢失尚未发出的邮件，用户可重新发送；不引入队列服务 |
-| ADR-028 | 本地与 CI 的 MinIO 改用私有 GHCR 镜像（2026-09-25） | MinIO 社区版源码仓库已归档，Docker Hub 镜像已下架，Quay 仓库自 2026-09-24 起要求登录，CI 无法再拉取。改为把原锁定镜像（RELEASE.2025-09-07T16-13-09Z，amd64）逐层原样推到私有 `ghcr.io/liaboveall/orbit-minio`，只加 OCI 标签，按摘要固定；CI 以 `packages: read` 的 GITHUB_TOKEN 登录。测试行为与之前完全一致。代价：本地开发需先登录 GHCR；不再有 MinIO 安全更新（仅用于本地与 CI，生产使用托管 S3 兼容存储）。换用仍在维护的 S3 兼容服务需逐项重验附件与恢复流程，留作后续 |
+| ADR-028 | 本地与 CI 的 MinIO 改用私有 GHCR 镜像（2026-09-25，已被 ADR-029 取代） | MinIO 社区版源码仓库已归档，Docker Hub 镜像已下架，Quay 仓库自 2026-09-24 起要求登录，CI 无法再拉取。改为把原锁定镜像（RELEASE.2025-09-07T16-13-09Z，amd64）逐层原样推到私有 `ghcr.io/liaboveall/orbit-minio`，只加 OCI 标签，按摘要固定；CI 以 `packages: read` 的 GITHUB_TOKEN 登录。测试行为与之前完全一致。代价：本地开发需先登录 GHCR；不再有 MinIO 安全更新（仅用于本地与 CI，生产使用托管 S3 兼容存储）。换用仍在维护的 S3 兼容服务需逐项重验附件与恢复流程，留作后续 |
+| ADR-029 | 本地与 CI 的 S3 兼容存储改用 SeaweedFS（2026-09-25） | 再次匿名核对：Docker Hub 与 Quay 的 MinIO 与 mc 镜像均无法拉取，官方仓库声明社区版只提供源码。候选中 CloudServer 只有 amd64，Garage 每次初始化需命令行配置布局、密钥与桶；对 versitygw 1.8.0、RustFS 1.0.0、SeaweedFS 4.47 实测覆盖 Orbit 用法的兼容性探针（与 MinIO 基线对照）。versitygw 在客户端中途取消上传时保留截断对象；RustFS 与 SeaweedFS 均全部通过，并通过 7 个存储集成测试文件（44 项）与恢复演练。选用 SeaweedFS：Apache-2.0、长期维护、多架构公开镜像、内存约为 RustFS 的一半、可在启动时建桶；RustFS 1.0 刚发布且不能启动时建桶。配置：按摘要固定镜像，`weed mini`，只发布 S3 端口到 127.0.0.1:9000，关闭上传时自动建桶与默认开启的匿名统计上报。服务名改为中性的 `storage`；CI 不再需要 GHCR 登录与 `packages: read` |
 
 如果用户已熟悉独立后端框架，可以将服务层迁至NestJS/FastAPI，但需作为架构变更处理：明确API部署、认证cookie/CORS、类型同步与运维成本。本规划默认不双栈实现相同业务。
 

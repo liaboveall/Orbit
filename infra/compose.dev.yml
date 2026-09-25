@@ -3,7 +3,7 @@
 # 约束（docs/08 §1）：所有端口只绑定 127.0.0.1；测试使用独立数据库 orbit_test，
 # 不复用 orbit_dev 数据。生产 Dockerfile / 部署编排属 M6（ORB-021），此处不含。
 #
-# 端口：PostgreSQL 5432 · MinIO API 9000 / 控制台 9001 · Mailpit SMTP 宿主 25025→容器 1025 / Web 8025
+# 端口：PostgreSQL 5432 · S3 兼容存储（SeaweedFS）9000 · Mailpit SMTP 宿主 25025→容器 1025 / Web 8025
 
 name: orbit-dev
 
@@ -30,25 +30,24 @@ services:
       timeout: 5s
       retries: 12
 
-  minio:
-    # MinIO 社区版已归档，Docker Hub 与 Quay 均不再公开提供镜像（ADR-028）。此为私有 GHCR 镜像：
-    # 基于原锁定的 quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493…（amd64），
-    # 镜像层逐一相同，只加了 OCI 标签；拉取前需 docker login ghcr.io（CI 用 GITHUB_TOKEN）。
-    image: ghcr.io/liaboveall/orbit-minio:RELEASE.2025-09-07T16-13-09Z@sha256:c6d04fbcd947ed7b6c7c6940fe87f383c684d029b547e999f3bd9319188ee6b1
-    container_name: orbit-minio
+  storage:
+    # 本地 S3 兼容存储：SeaweedFS mini（Apache-2.0，ADR-029），取代已归档、公开镜像已下架的 MinIO。
+    # 启动时创建 orbit-dev 桶（与 .env.example 的 STORAGE_BUCKET 一致）；关闭“上传时自动建桶”，
+    # 保持桶不存在即报错的 S3 语义；关闭默认开启的匿名统计上报。只发布 S3 端口。
+    image: chrislusf/seaweedfs:4.47@sha256:ce9e796f1fe6f06968f4c04bdaf8f678dad9c8acdfef3d244133d71bfa6bf882
+    container_name: orbit-storage
     restart: unless-stopped
-    command: ["server", "/data", "--console-address", ":9001"]
+    command: ["mini", "-dir=/data", "-bucket=orbit-dev", "-s3.autoCreateBucket=false", "-master.telemetry=false"]
     ports:
-      - "127.0.0.1:9000:9000"
-      - "127.0.0.1:9001:9001"
+      - "127.0.0.1:9000:8333"
     environment:
       # 与 .env.example 的 STORAGE_ACCESS_KEY_ID / STORAGE_SECRET_ACCESS_KEY 对应（仅本地）
-      MINIO_ROOT_USER: orbit_dev_access
-      MINIO_ROOT_PASSWORD: orbit_dev_secret_change
+      AWS_ACCESS_KEY_ID: orbit_dev_access
+      AWS_SECRET_ACCESS_KEY: orbit_dev_secret_change
     volumes:
-      - orbit_minio:/data
+      - orbit_storage:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8333/healthz"]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -70,4 +69,4 @@ services:
 
 volumes:
   orbit_pgdata:
-  orbit_minio:
+  orbit_storage:
