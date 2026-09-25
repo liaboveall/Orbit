@@ -38,15 +38,14 @@ pnpm install --frozen-lockfile
    node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
    ```
 
-3. Start the local services. MinIO comes from a private GHCR image, so first sign in with a GitHub account that can read it (the `gh` token needs `read:packages`):
+3. Start PostgreSQL, S3-compatible storage (SeaweedFS) and Mailpit. The private attachment bucket `orbit-dev`, matching `STORAGE_BUCKET`, is created when the storage service starts:
 
    ```sh
-   gh auth token | docker login ghcr.io -u <github-username> --password-stdin
    docker compose -f infra/compose.dev.yml up -d
    ```
 
-4. Open the [MinIO console](http://localhost:9001), sign in with the local storage credentials from `.env.example`, and create the private bucket `orbit-dev`, matching `STORAGE_BUCKET`.
-5. Apply committed migrations and start Orbit:
+   When switching from the earlier MinIO setup, run `docker compose -f infra/compose.dev.yml up -d --remove-orphans storage`. It starts only the new storage service and removes the old container without recreating other services; the old `orbit-dev_orbit_minio` volume is left in place.
+4. Apply committed migrations and start Orbit:
 
    ```sh
    pnpm db:migrate:deploy

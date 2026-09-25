@@ -56,7 +56,7 @@ beforeAll(async () => {
   if (
     !["localhost", "127.0.0.1"].includes(new URL(env.STORAGE_ENDPOINT).hostname)
   )
-    throw new Error("M5 storage tests require local MinIO");
+    throw new Error("M5 storage tests require local S3-compatible storage");
   try {
     await storage
       .getStorageClient()
@@ -79,7 +79,7 @@ afterEach(async () => {
   vi.restoreAllMocks();
   if (f) await f.cleanup();
 });
-describe("M5 private attachments: real PostgreSQL and MinIO", () => {
+describe("M5 private attachments: real PostgreSQL and S3-compatible storage", () => {
   it("同 uploadId 并发只保留一份预留，完成后可重放", async () => {
     const data = Buffer.from("same upload identity"), id = randomUUID();
     let entered!: () => void, resume!: () => void;

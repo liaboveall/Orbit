@@ -14,7 +14,7 @@
 
 单元测试覆盖日期、权限决策、排序和输入规则；集成测试用真实 PostgreSQL 验证事务/并发/权限；契约测试验证自有API；E2E覆盖主要用户流程。不要用全部mock的成功响应代替后端测试，也不要为纯样式和复制实现逻辑的代码堆测试。
 
-外部邮件/存储/AI在多数测试中使用受控替身，但M1邮件、M5存储和M7 AI各要实际联调。CI使用本地Mailpit/MinIO及测试数据库，不能连接生产账户。计划文件的静态校验不等于本章应用测试。
+外部邮件/存储/AI在多数测试中使用受控替身，但M1邮件、M5存储和M7 AI各要实际联调。CI使用本地Mailpit/S3 兼容存储（SeaweedFS）及测试数据库，不能连接生产账户。计划文件的静态校验不等于本章应用测试。
 
 ## 2. 测试矩阵
 
@@ -87,7 +87,7 @@ AC-01对应AUTH；AC-02对应PROJECT/TASK；AC-03对应INVITE；AC-04对应PERM�
 
 ## 7. CI与发布验收
 
-每PR：lint → typecheck → unit → contract → integration → production build → E2E smoke。测试数据库隔离，Mailpit/MinIO服务按需要启动。全套E2E在合并前或发布候选运行；不能以“本地通过”替代CI结果。
+每PR：lint → typecheck → unit → contract → integration → production build → E2E smoke。测试数据库隔离，Mailpit/S3 兼容存储服务按需要启动。全套E2E在合并前或发布候选运行；不能以“本地通过”替代CI结果。
 
 关键端到端套件固定3条：单用户完整任务生命周期；双用户邀请协作和移除；私有附件上传下载失败恢复。发布前另跑三种视口、键盘、性能与备份恢复。
 
