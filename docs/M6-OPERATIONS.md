@@ -19,7 +19,7 @@ docker build --target runner -t orbit:<commit> .
 docker build --target operations -t orbit-operations:<commit> .
 ```
 
-在目标平台设置 ORBIT_IMAGE、ORBIT_OPERATIONS_IMAGE 为审核过的同一提交镜像，ORBIT_ENV_FILE 为机器上的绝对环境文件路径。环境文件参照 `.env.example`；APP_ENV=staging/production，APP_URL 与 BETTER_AUTH_URL 完全一致且为 HTTPS，精确 AUTH_TRUSTED_ORIGINS，私有 HTTPS 对象存储，验证过的发件域。SMTP 使用供应商要求的 TLS/STARTTLS；数据库使用验证 CA 的 TLS 连接。TEST_DATABASE_URL 只需提供独立测试库形状，生产运行不会连接它。每实例连接池默认5（DATABASE_POOL_MAX 1–20），连接等待 5 秒，查询 10 秒。
+在目标平台设置 ORBIT_IMAGE、ORBIT_OPERATIONS_IMAGE 为审核过的同一提交镜像，ORBIT_ENV_FILE 为机器上的绝对环境文件路径。环境文件参照 `.env.example`；APP_ENV=staging/production，APP_URL 与 BETTER_AUTH_URL 完全一致且为 HTTPS，精确 AUTH_TRUSTED_ORIGINS，私有 HTTPS 对象存储（例外：同机 compose 内网服务名，如 `http://storage:8333`，见 ADR-030），验证过的发件域。SMTP 使用供应商要求的 TLS/STARTTLS；数据库使用验证 CA 的 TLS 连接。TEST_DATABASE_URL 只需提供独立测试库形状，生产运行不会连接它。每实例连接池默认5（DATABASE_POOL_MAX 1–20），连接等待 5 秒，查询 10 秒。
 
 1. 在 staging 跑完整 CI 与合成数据验收。
 2. 使用平台备份功能创建数据库恢复点，记录对象存储版本/备份恢复点。

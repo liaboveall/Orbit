@@ -8,7 +8,7 @@
    "taskIds": [
     "ORB-021"
    ],
-   "nextAction": "修复提交 5730d69 的完整 CI 已成功且受测树一致；服务器配置完成后选定实际发布版本，核对该 SHA 的完整 CI 与 runner/operations 不可变镜像。",
+   "nextAction": "部署时记录实际提交 SHA（OCI 指南第 6 节的 $sha），核对该提交的完整 CI，并记录 linux/arm64 runner/operations 镜像 ID。",
    "evidence": [
     "docs/CURRENT-STATUS.md"
    ]
@@ -32,9 +32,10 @@
    "taskIds": [
     "ORB-020"
    ],
-   "nextAction": "服务器配置后，测量 1GiB 环境内存/OOM、连接池、认证与业务限流、混合附件流量和 p95，再确定资源预算。",
+   "nextAction": "在 Oracle A1（2 OCPU/12 GB，ARM64）上测量内存、连接池、认证与业务限流、混合附件流量和 p95，再确定资源预算；1 GiB t3.micro 方案已改为备选。",
    "evidence": [
-    "docs/CURRENT-STATUS.md"
+    "docs/CURRENT-STATUS.md",
+    "docs/OCI-DEPLOYMENT.md"
    ]
   },
   {
@@ -44,9 +45,10 @@
    "taskIds": [
     "ORB-021"
    ],
-   "nextAction": "用户暂缓：待服务器就绪验证 HTTPS 双账户、邮件/私有存储、告警、定时维护、异地备份恢复与 RPO/RTO。",
+   "nextAction": "服务器已开通（Oracle ARM），用户按 docs/OCI-DEPLOYMENT.md 执行第一阶段（sslip.io HTTPS、同机 SeaweedFS、暂无邮件）；仍待验证：真实邮件验证/重置与双账户邀请、告警、异地备份自动化、恢复演练与 RPO/RTO。",
    "evidence": [
-    "docs/CURRENT-STATUS.md"
+    "docs/CURRENT-STATUS.md",
+    "docs/OCI-DEPLOYMENT.md"
    ]
   },
   {

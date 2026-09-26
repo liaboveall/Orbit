@@ -16,7 +16,9 @@ M0—M5 已完成：认证与账户设置、项目与邀请、任务列表与看
 
 2026-09-24 依赖更新：react、react-dom、@types/react、@types/react-dom 一起升到 19.3.0，取代只升了 react 与 @types/react 而单元测试失败的 Dependabot #9；并为 React、Prisma、Tailwind 三组必须同版本的依赖加 Dependabot 分组。在基于 `2229ed1` 的冻结工作区上完整门禁 PASS（964 项，指纹一致），之后只加了分组配置与本条记录，见 verification 的 dependencyUpdates。
 
-2026-09-25 依赖更新：合并处理 10 个 Dependabot 提案（#3—#8、#10—#12、#14）。npm：typescript 6.0.3（typescript-eslint 的 peer 限制在 6.0 系列）、@types/node 26.6.2、lucide-react 1.47.0、@axe-core/playwright 4.13.0、tailwind-merge 3.7.0；CI Action：checkout v7.0.1、setup-node v7.0.0、upload-artifact v7.0.1、pnpm/action-setup v4.3.0、trivy-action v0.36.0（不在 GHSA-69fq-xp46-6x23 影响范围内），每个提交号都经 API 核对为官方标签所指提交。在基于 `c4eaa7e` 的冻结工作区上完整门禁 PASS（964 项，指纹一致），之后只加了本条记录；Action 变更只由远端 CI 覆盖。pnpm/action-setup 仍声明 Node 20，迁到支持 Node 24 的版本留作后续。
+2026-09-25 依赖更新：合并处理 10 个 Dependabot 提案（#3—#8、#10—#12、#14）。npm：typescript 6.0.3（typescript-eslint 的 peer 限制在 6.0 系列）、@types/node 26.6.2、lucide-react 1.47.0、@axe-core/playwright 4.13.0、tailwind-merge 3.7.0；CI Action：checkout v7.0.1、setup-node v7.0.0、upload-artifact v7.0.1、pnpm/action-setup v4.3.0、trivy-action v0.36.0（不在 GHSA-69fq-xp46-6x23 影响范围内），每个提交号都经 API 核对为官方标签所指提交。在基于 `c4eaa7e` 的冻结工作区上完整门禁 PASS（964 项，指纹一致），之后只加了本条记录；Action 变更只由远端 CI 覆盖。随后 Dependabot #7 将 pnpm/action-setup 升到支持 Node 24 的 v6.1.0，CI 已无 Node 20 弃用提示。
+
+2026-09-26 部署准备（ADR-030）：目标改为 Oracle Cloud Ampere A1 单机（2 OCPU/12 GB，ARM64），见 [OCI 部署指南](OCI-DEPLOYMENT.md)。Next 升到 16.3.6（官方安全修复 GHSA-vcvr-r3jv-pc5j，`next/og`，本项目未使用）；linux/arm64 镜像模拟构建后 runner 冒烟与 operations 迁移状态均通过；新增同机 SeaweedFS 配置、`infra/backup-local.sh`（在断网容器自测失败路径，并用真实 PostgreSQL/SeaweedFS 完成备份与恢复演练）和 `scripts/storage-check.ts`。证据见 verification 的 ociDeploymentPreparation。
 
 2026-09-22 首轮审查的 925 项基线门禁与 5 个 P2 观察保留在 verification 的 previousAudit 中；本轮新增回归覆盖全部 10 个问题，其中浏览器、看板筛选、认证邮件与上传分类回归已在原实现上确认失败。
 
@@ -24,7 +26,7 @@ M0—M5 已完成：认证与账户设置、项目与邀请、任务列表与看
 
 ## 发布与历史边界
 
-- M6 保持 review，V1 尚未发布。用户服务器未配置，真实部署验收暂缓；M7/AI 尚未开始。
+- M6 保持 review，V1 尚未发布。服务器已开通（Oracle ARM），用户按 OCI 指南自行执行；第一阶段无域名与邮件，邮件验证/重置、邀请协作、告警与异地备份仍待验收；M7/AI 尚未开始。
 - 基线 SHA 的 [完整 CI 成功](https://github.com/liaboveall/Orbit/actions/runs/35671586439)；修复提交 `5730d69` 的[完整 CI 成功](https://github.com/liaboveall/Orbit/actions/runs/35953986961)，受测代码树一致。正式发布仍须绑定实际交付提交与不可变镜像；服务器仍需 HTTPS 双账户、邮件/存储、资源预算、告警、定时维护和备份恢复验证。
 - 其后只更新记录的 `198ec23` 的 [CI 失败](https://github.com/liaboveall/Orbit/actions/runs/35968230138)在 nginx 校验脚本：容器入口尚未启动 nginx 时脚本就发出请求（启动竞态；其余已执行步骤均通过）。本机以延迟启动镜像复现了同一错误，脚本已改为先有上限地等待就绪。
 - 2026-09-24 起 Quay 上的 MinIO 仓库要求登录，CI 在启动服务时失败（[运行 36035562583](https://github.com/liaboveall/Orbit/actions/runs/36035562583)）；MinIO 社区版已归档、Docker Hub 镜像已下架。已把原锁定镜像逐层原样推到私有 `ghcr.io/liaboveall/orbit-minio`（镜像层与启动命令一致，冒烟与版本号核对通过），CI 以只读包权限登录拉取（ADR-028）。2026-09-25 再次匿名核对仍无法拉取，本地与 CI 已改用 SeaweedFS 4.47（ADR-029），不再需要私有镜像与 GHCR 登录；候选对比与验证证据见 verification 的 storageReplacement。

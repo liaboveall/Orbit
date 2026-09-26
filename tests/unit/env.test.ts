@@ -106,6 +106,35 @@ describe("parseEnv · 合法输入", () => {
   });
 });
 
+describe("parseEnv · staging/production 存储地址（ADR-030）", () => {
+  function productionLike(appEnv: string, endpoint: string): Record<string, string> {
+    return {
+      ...validEnv(),
+      APP_ENV: appEnv,
+      APP_URL: "https://orbit.example",
+      BETTER_AUTH_URL: "https://orbit.example",
+      STORAGE_ENDPOINT: endpoint,
+      BETTER_AUTH_SECRET: "x".repeat(48),
+      TRUSTED_PROXY_COUNT: "1",
+    };
+  }
+
+  it.each(["staging", "production"])("%s 接受同机容器服务名的 http 地址", (appEnv) => {
+    expect(() => parseEnv(productionLike(appEnv, "http://storage:8333"))).not.toThrow();
+  });
+
+  it.each([
+    "http://storage.example:8333",
+    "http://10.0.0.5:8333",
+    "http://[::1]:8333",
+    "http://2130706433:8333",
+  ])("production 拒绝会经网络明文传输的地址 %s", (endpoint) => {
+    const { key, expected } = captureIssues(() => parseEnv(productionLike("production", endpoint)));
+    expect(key).toBe("STORAGE_ENDPOINT");
+    expect(expected).toContain("https://");
+  });
+});
+
 describe("parseEnv · 必需项与枚举", () => {
   it("缺失 APP_ENV 时失败，并指出变量名", () => {
     const raw = validEnv();
