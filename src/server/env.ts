@@ -50,7 +50,7 @@ const EXPECTED_FORMAT: Record<string, string> = {
   SMTP_PORT: "必须是 1–65535 的整数",
   SMTP_SECURE: "必须是布尔字符串：true | false | 1 | 0",
   MAIL_FROM: "必须提供发件身份，例如 Orbit <no-reply@orbit.local>",
-  STORAGE_ENDPOINT: "必须是 S3 兼容地址（http:// 或 https://）",
+  STORAGE_ENDPOINT: "必须是 S3 兼容地址（http:// 或 https://）；staging/production 须为 https://，或同机容器服务名（如 http://storage:8333）",
   STORAGE_REGION: "必须提供存储区域",
   STORAGE_BUCKET: "必须提供私有 bucket 名称",
   STORAGE_ACCESS_KEY_ID: "必须提供服务端访问凭证 ID",
@@ -139,7 +139,9 @@ export const envSchema = z
     if (value.BETTER_AUTH_URL !== value.APP_URL) ctx.addIssue({ code: "custom", path: ["BETTER_AUTH_URL"] });
     if (["production", "staging"].includes(value.APP_ENV)) {
       if (!value.APP_URL.startsWith("https://")) ctx.addIssue({ code: "custom", path: ["APP_URL"] });
-      if (!value.STORAGE_ENDPOINT.startsWith("https://")) ctx.addIssue({ code: "custom", path: ["STORAGE_ENDPOINT"] });
+      if (!value.STORAGE_ENDPOINT.startsWith("https://") && !isSameHostServiceUrl(value.STORAGE_ENDPOINT)) {
+        ctx.addIssue({ code: "custom", path: ["STORAGE_ENDPOINT"] });
+      }
     }
 
     // AUTH_TRUSTED_ORIGINS：精确来源列表，拒绝通配符与非法项。
@@ -198,6 +200,20 @@ function isHttpUrl(value: string): boolean {
   try {
     const url = new URL(value);
     return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 同机容器服务地址（ADR-030）：http:// 且主机名为单段名称（如 compose 的 `storage`），
+ * 只能由容器内网 DNS 解析，流量不离开宿主，与 compose 内网直连 postgres 同一信任边界。
+ * IP 与含点域名一律不放行，仍须 https://。
+ */
+function isSameHostServiceUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" && /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/i.test(url.hostname);
   } catch {
     return false;
   }

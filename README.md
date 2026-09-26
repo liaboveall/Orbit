@@ -2,7 +2,7 @@
 
 面向个人与学生小团队的项目协作应用。把课程设计、比赛和开发项目中的任务、讨论与成果放在一起，让每个人知道接下来做什么。
 
-[English](README.en.md) · [开发文档](docs/README.md) · [部署指南](docs/AWS-MICRO-DEPLOYMENT.md)
+[English](README.en.md) · [开发文档](docs/README.md) · [部署指南](docs/OCI-DEPLOYMENT.md)
 
 ## 功能
 
@@ -89,6 +89,6 @@ infra/           本地服务、生产编排与备份工具
 
 ## 部署与状态
 
-支持持续运行的 Node.js 容器部署。参见 [AWS 部署指南](docs/AWS-MICRO-DEPLOYMENT.md) 和 [运行维护手册](docs/M6-OPERATIONS.md)，配置 PostgreSQL、私有对象存储、邮件、HTTPS 与备份。
+支持持续运行的 Node.js 容器部署。当前部署目标见 [Oracle Cloud 部署指南](docs/OCI-DEPLOYMENT.md)（ARM 单机、同机 S3 兼容存储）；[AWS 部署指南](docs/AWS-MICRO-DEPLOYMENT.md) 作为备选；[运行维护手册](docs/M6-OPERATIONS.md) 说明 PostgreSQL、私有对象存储、邮件、HTTPS 与备份。
 
 核心协作功能已实现并完成本地验收；生产部署与外部验收仍在推进，AI 项目拆解助手尚未实现。当前状态、验收证据和待办见 [PROGRESS](PROGRESS.md) 与 [backlog](planning/backlog.json)。
