@@ -18,7 +18,7 @@
 ## 运行与维护
 
 - [环境、CI 与部署](08-ENVIRONMENT-AND-DEPLOYMENT.md)
-- [AWS 部署指南](AWS-MICRO-DEPLOYMENT.md) / [运行手册](M6-OPERATIONS.md)
+- [Oracle Cloud 部署指南](OCI-DEPLOYMENT.md)（当前目标）/ [AWS 部署指南](AWS-MICRO-DEPLOYMENT.md)（备选）/ [运行手册](M6-OPERATIONS.md)
 - [版本记录](versions.md) / [官方资料](12-REFERENCES.md)
 - [决策与风险](11-DECISIONS-AND-RISKS.md)
 

@@ -2,7 +2,7 @@
 
 A project collaboration app for individuals and small student teams. Keep tasks, discussions, and deliverables together for coursework, competitions, and software projects.
 
-[简体中文](README.md) · [Documentation](docs/README.md) · [Deployment](docs/AWS-MICRO-DEPLOYMENT.md)
+[简体中文](README.md) · [Documentation](docs/README.md) · [Deployment](docs/OCI-DEPLOYMENT.md)
 
 ## Features
 
@@ -81,6 +81,6 @@ Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, and Radix UI; Postg
 
 ## Deployment and status
 
-Orbit runs as a persistent Node.js container. The [AWS guide](docs/AWS-MICRO-DEPLOYMENT.md) and [operations manual](docs/M6-OPERATIONS.md) cover PostgreSQL, private storage, email, HTTPS, and backups.
+Orbit runs as a persistent Node.js container. The current target is described in the [Oracle Cloud guide](docs/OCI-DEPLOYMENT.md) (single ARM host with same-host S3-compatible storage); the [AWS guide](docs/AWS-MICRO-DEPLOYMENT.md) remains an alternative, and the [operations manual](docs/M6-OPERATIONS.md) covers PostgreSQL, private storage, email, HTTPS, and backups.
 
 Core collaboration features are implemented and locally verified. Production deployment and external acceptance remain in progress; the AI project planning assistant is not implemented. [PROGRESS](PROGRESS.md) and the [backlog](planning/backlog.json) track current evidence and remaining work. Engineering documentation is primarily in Chinese.

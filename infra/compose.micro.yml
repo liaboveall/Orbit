@@ -1,4 +1,6 @@
-# Single-host EC2 deployment; authoritative configuration for the AWS guide.
+# Single-host deployment; authoritative configuration for docs/AWS-MICRO-DEPLOYMENT.md
+# and docs/OCI-DEPLOYMENT.md. The optional "local-storage" profile runs S3-compatible
+# SeaweedFS on the same host (ADR-030); without it, attachments use external S3.
 name: orbit-showcase
 x-logging: &logging
   driver: json-file
@@ -43,5 +45,26 @@ services:
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
     logging: *logging
+  storage:
+    # Same pinned multi-arch image as local development. Reachable only on the compose
+    # network as http://storage:8333 (no published port). The entrypoint fixes /data
+    # ownership and drops to the "seaweed" user, hence CHOWN/SETUID/SETGID.
+    image: chrislusf/seaweedfs:4.47@sha256:ce9e796f1fe6f06968f4c04bdaf8f678dad9c8acdfef3d244133d71bfa6bf882
+    profiles: [local-storage]
+    restart: unless-stopped
+    command: ["mini", "-dir=/data", "-bucket=orbit-attachments", "-s3.autoCreateBucket=false", "-master.telemetry=false"]
+    env_file: [/opt/orbit/storage.env]
+    volumes:
+      - storagedata:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8333/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID]
+    logging: *logging
 volumes:
   pgdata:
+  storagedata:

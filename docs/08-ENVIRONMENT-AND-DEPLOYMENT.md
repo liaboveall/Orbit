@@ -117,6 +117,8 @@ pnpm dev
 
 首版采用持续运行的Node容器，部署到用户选择的容器托管平台或服务器，配托管PostgreSQL、私有S3兼容存储和邮件服务。供应商最终选择涉及账户/费用，在需要配置时处理；规划不假设已经购买或授权访问任何平台。
 
+当前目标（2026-09-26，ADR-030）：一台 Oracle Cloud Ampere A1（2 OCPU/12 GB，ARM64）单机部署，按 [OCI 部署指南](OCI-DEPLOYMENT.md) 执行。`compose.micro.yml` 的 `local-storage` 配置在同机运行 SeaweedFS；staging/production 的 `STORAGE_ENDPOINT` 仍须为 https://，唯一例外是 compose 内网的单段服务名（`http://storage:8333`），IP 与含点域名一律拒绝。第一阶段没有域名与邮件服务：用 sslip.io 主机名取得 HTTPS，SMTP 指向保留域名 `smtp.invalid`；按上一段规定，这不构成发布完成，邮件验证与重置流程在配置真实邮件后单独验收。
+
 构建：多阶段Dockerfile、锁定Node基础镜像主版本与可复现digest、安装冻结依赖、生成Prisma Client、Next standalone构建、最小运行层、非root用户。浏览器上传流经Node服务，入口限制约12MiB请求体并在应用层对实际文件限制10MiB。
 
 数据库与web尽量同区域，使用可信TLS，设置有限连接池（起点每实例5连接（DATABASE_POOL_MAX 可配置为1–20），结合实际数据库上限调整）。应用水平扩展时会话/幂等/限流来自数据库，不能依赖单机内存保存关键状态。

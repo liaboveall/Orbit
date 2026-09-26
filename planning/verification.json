@@ -669,6 +669,63 @@
    "The private GHCR package liaboveall/orbit-minio from ADR-028 is no longer used and is not deleted"
   ]
  },
+ "ociDeploymentPreparation": {
+  "date": "2026-09-26",
+  "decision": "docs/11-DECISIONS-AND-RISKS.md ADR-030",
+  "guide": "docs/OCI-DEPLOYMENT.md (executed by the user on the server; not yet run there)",
+  "target": "Oracle Cloud Ampere A1, VM.Standard.A1.Flex, 2 OCPU / 12 GB (Always Free: 1,500 OCPU hours and 9,000 GB hours per month since June 2026), Ubuntu 24.04 aarch64",
+  "baseCommit": "49932e1ab2e446efa429a8bc02f764b979b6516a",
+  "changes": [
+   "next and eslint-config-next 16.3.4 -> 16.3.6 (official security release for GHSA-vcvr-r3jv-pc5j in next/og, which Orbit does not use)",
+   "staging/production STORAGE_ENDPOINT: https:// or a single-label compose service name over http:// (tests/unit/env.test.ts; the two acceptance cases fail on the previous rule, the four rejection cases pass on both)",
+   "infra/compose.micro.yml: optional local-storage profile running pinned SeaweedFS with no published port, credentials from /opt/orbit/storage.env, cap_drop ALL plus CHOWN/SETUID/SETGID",
+   "infra/backup-local.sh with failure-path self-tests in scripts/verify-backup.sh",
+   "scripts/storage-check.ts using the application's env validation and S3 client"
+  ],
+  "arm64": {
+   "build": "docker buildx build --platform linux/arm64 (QEMU emulation on Docker Desktop 29.8.0); runner 275 s, operations 21 s with cache",
+   "images": {
+    "runner": "sha256:3f9614b7642e2086d575eb0f7cd5cbcf1b1df5d5a4a1724b0d7f78326db9c568",
+    "operations": "sha256:cfac21ec7ebdc15517c1beea65e4a1744bbd3c4c4bb0c440b9e5c3caf03bb9e7",
+    "note": "local verification images from this tree; the deployed images are built by the user per the guide"
+   },
+   "runnerSmoke": "scripts/container-smoke.mjs with ORBIT_SMOKE_IMAGE set to the arm64 image: ready, database outage detected and recovered, anonymous API, JSON fallback, /demo, non-root, no build environment file; Next 16.3.6 inside the image",
+   "operations": "prisma migrate status against the test database: 16 migrations, schema up to date",
+   "productionStorageCheck": "scripts/storage-check.ts in the arm64 operations image with APP_ENV=production and STORAGE_ENDPOINT=http://storage:8333 on the compose network: storage_check_passed; the same settings with http://storage.example:8333 fail env validation",
+   "feasibilityRunOnMain": "Before the changes, arm64 images of 49932e1 passed the same runner smoke and migrate status"
+  },
+  "backupLocal": {
+   "selfTest": "Disposable network-less Debian container: normal run, failed storage archive (storage restarted, no archive kept) and unreadable dump (rejected before stopping storage); removing the restart from the trap makes the self-test fail",
+   "endToEnd": "Disposable compose project from compose.micro.yml with real PostgreSQL 17 and SeaweedFS, script run from a Linux container: dump and archive created; after deleting the attachment, restore into a new database returned the row and the storage restore returned the original bytes; project removed afterwards"
+  },
+  "storageCheck": "Local dev storage: passed; wrong secret -> put SignatureDoesNotMatch; missing bucket -> NoSuchBucket (upload-time bucket creation is off)",
+  "nginx": "infra/nginx-http.conf in conf.d plus infra/nginx.conf as an included snippet: nginx -t passed with the pinned image",
+  "firewall": "Guide's rules.v4 edit on a sample OCI file: 80/443 inserted after SSH and before REJECT, idempotent, iptables-restore --test passed",
+  "localGate": {
+   "runner": "scripts/verify-remediation.mjs",
+   "directory": "artifacts/oci-prep-20260926",
+   "result": "PASS",
+   "sourceDigest": "6388e09f5b88b2b0cd6d0e5939273652700ae455fd32ca5842af653778038b81",
+   "sourceUnchangedDuringRun": true,
+   "startedAt": "2026-09-26T09:00:32.565Z",
+   "finishedAt": "2026-09-26T09:11:14.848Z",
+   "counts": {
+    "unit": 303,
+    "contract": 172,
+    "integration": 380,
+    "e2e": 102,
+    "ui": 13
+   },
+   "total": 970,
+   "zeroBrowserRetries": true
+  },
+  "postGateChanges": "These handoff records only",
+  "notVerified": [
+   "Nothing has been run on the Oracle instance yet",
+   "Let's Encrypt issuance for an sslip.io host name (rate limits are shared; the guide gives nip.io as fallback)",
+   "Email verification, password reset and invitation flows (no mail service in phase 1; release acceptance stays open per docs/08 section 3)"
+  ]
+ },
  "limitations": [
   "Auth email timing verified with local stalled/rejecting SMTP stubs; real provider latency to be re-checked after deployment",
   "Page read quota verified in production configuration with real session and database bucket; no deployed RSC flood test",
