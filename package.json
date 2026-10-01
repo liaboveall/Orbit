@@ -45,7 +45,7 @@
     "@radix-ui/react-tabs": "1.1.21",
     "@radix-ui/react-toast": "1.2.23",
     "@radix-ui/react-tooltip": "1.2.16",
-    "better-auth": "1.7.3",
+    "better-auth": "1.7.6",
     "busboy": "1.6.0",
     "clsx": "2.1.1",
     "lucide-react": "1.47.0",
