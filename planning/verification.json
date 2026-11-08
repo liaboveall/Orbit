@@ -726,6 +726,48 @@
    "Email verification, password reset and invitation flows (no mail service in phase 1; release acceptance stays open per docs/08 section 3)"
   ]
  },
+ "comprehensiveAuditAndOptimization20261019": {
+  "date": "2026-10-19",
+  "baseCommit": "0928f35110d4db5589a63286f76e70a35b240494",
+  "changes": [
+   "src/server/env.ts: setDefaultResultOrder('ipv4first') so localhost resolves to 127.0.0.1 first on Windows where Docker services bind IPv4-only, eliminating ~338 ms IPv6 SYN fallback latency",
+   "src/app/invite/page.tsx and src/lib/user-timezone.tsx: pass authenticated session user timezone and login status to InviteAccept",
+   "src/app/auth/login/page.tsx and src/app/auth/register/page.tsx: honor sanitized returnTo query parameter when redirecting already-authenticated users",
+   "src/app/app/projects/[id]/invitations/page.tsx: check project.role === OWNER before calling listInvitations so non-owner members see the permission empty state instead of an unhandled 403 error boundary",
+   "src/app/app/projects/[id]/tasks/page.tsx and src/app/app/today/page.tsx: catch cursor/filter VALIDATION_ERROR DomainError and render the graceful invalid-filter prompt; add force-dynamic to standalone task detail page",
+   "src/app/api/v1/tasks/[taskId]/comments/route.ts and subtasks/route.ts: remove redundant verifyRequestOrigin check on GET handlers",
+   "src/server/http/json.ts: release ReadableStreamDefaultReader lock in finally block and swallow cancel rejection on oversized payloads",
+   "src/server/modules/invitation/service.ts, attachments/service.ts, task/read.ts, activity/reader.ts, workbench/service.ts, comments/service.ts: lowercase UUIDs before idempotency hashing, cursor filter fingerprinting, and S3 object key construction; normalize empty creator name in previewInvitation; deterministic tie-breaking order in listMembers",
+   "Frontend UX, mobile 16px input compliance, and accessibility: mobile text-body md:text-label on search/editor/comment/subtask inputs and textareas; Escape key draft discard confirmation in subtask-item, subtask-list, and comment-item; 401/404 handling in task-editor reloadVersion/remove and real-board load/move; mobile focus restoration in task-panel; idempotency key rotation on non-network failures in task-restore-button; >128 char password strength feedback; Unicode code-point initials in avatar; conflict state reset in project-settings-form",
+   "Security dependency updates: next and eslint-config-next 16.3.6 -> 16.3.8 (GHSA-cjq9-62q9-8jv4, GHSA-mcj8-r9mp-w47p, GHSA-f87g-xv8r-7p7x, GHSA-4jqv-mc3x-m676, GHSA-3w37-wq28-93x7, GHSA-39w2-rjm5-chcv); nodemailer 10.0.1 -> 10.0.16 (GHSA-v53p-9fqp-m79j, GHSA-prgh-xp8r-p3m5, GHSA-g57g-f23g-4646, GHSA-6vj9-mwq6-2f5v, GHSA-8vvx-rff5-p5rq); pnpm overrides for sharp 0.35.5, source-map-js 1.2.2, fast-uri 3.1.8, and brace-expansion 1.1.21/5.0.12"
+  ],
+  "localGate": {
+   "runner": "scripts/verify-remediation.mjs",
+   "directory": "artifacts/rework-2026-10-19T10-22-33-368Z",
+   "result": "PASS",
+   "sourceDigest": "680f0b7227936323b0d8016649d74ce46ce2b3131788d855bb7aef73cc74a32c",
+   "sourceUnchangedDuringRun": true,
+   "startedAt": "2026-10-19T10:22:33.606Z",
+   "finishedAt": "2026-10-19T10:34:39.859Z",
+   "counts": {
+    "unit": 304,
+    "contract": 172,
+    "integration": 380,
+    "e2e": 102,
+    "ui": 13
+   },
+   "total": 971,
+   "zeroBrowserRetries": true,
+   "prodAuditVulnerabilities": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0
+   }
+  },
+  "postGateChanges": "These handoff records only"
+ },
  "limitations": [
   "Auth email timing verified with local stalled/rejecting SMTP stubs; real provider latency to be re-checked after deployment",
   "Page read quota verified in production configuration with real session and database bucket; no deployed RSC flood test",

@@ -80,6 +80,7 @@ export async function uploadAttachment(
     throw new DomainError("VALIDATION_ERROR", "上传元信息不合法。");
   const meta = parsed.data;
   validateFileNameType(file.fileName, file.mimeType);
+  taskId = taskId.toLowerCase();
   const projectId = await locateTaskProject(taskId);
   const reservation = await withTransaction(async (tx) => {
     await lockProjectRow(tx, projectId);

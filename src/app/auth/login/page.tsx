@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/server/auth/session";
-import { DEFAULT_RETURN_TO } from "@/lib/return-to";
+import { sanitizeReturnTo } from "@/lib/return-to";
 import { AuthFormFallback, AuthShell } from "@/features/auth/auth-shell";
 import { LoginForm } from "@/features/auth/login-form";
 
@@ -13,8 +13,16 @@ import { LoginForm } from "@/features/auth/login-form";
  */
 export const metadata: Metadata = { title: "登录" };
 
-export default async function LoginPage() {
-  if (await getSessionUser(await headers())) redirect(DEFAULT_RETURN_TO);
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ returnTo?: string | string[] }>;
+} = {}) {
+  if (await getSessionUser(await headers())) {
+    const params = searchParams ? await searchParams : undefined;
+    const rawReturnTo = Array.isArray(params?.returnTo) ? params.returnTo[0] : params?.returnTo;
+    redirect(sanitizeReturnTo(rawReturnTo));
+  }
   return (
     <AuthShell
       title="登录 Orbit"

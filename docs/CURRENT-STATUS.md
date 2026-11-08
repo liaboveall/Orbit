@@ -10,6 +10,8 @@ M0—M5 已完成：认证与账户设置、项目与邀请、任务列表与看
 
 2026-09-24 修复两轮审查确认的 10 个应用问题：任务草稿生命周期（退出/换账号/失去项目访问清理、确认放弃即删除、恢复时字段可见）、无 Navigation API 的后退保护、任务在别处删除后页面与草稿保留、看板筛选集合跨页一致性、服务端页面共用读取额度、认证邮件响应后投递（消除失败状态与耗时差异）、连接池饱和映射 503、上传超时/中断/依赖故障分类；并处理文档冲突、可访问性标题层级、附件文件名方向控制字符、过期认证记录清理与邀请令牌暂存期限。
 
+2026-10-19 全量深度审查与全面优化：启用服务端 `ipv4first` DNS 顺序以消除本机 IPv6 回退延迟；修复邀请预览页用户时区与已登录态注入、登录/注册页已认证重定向 `returnTo` 保留、非 owner 访问项目邀请页的权限只读态、任务列表与工作台游标/筛选异常提示；统一各领域服务的 UUID 大小写归一化与成员稳定排序；补齐移动端 16px 输入规范、子任务/评论 `Escape` 放弃草稿确认、编辑器与看板 401/404 处理、移动端面板关闭焦点恢复、恢复按钮幂等键轮换及密码超长提示；将 `next`/`eslint-config-next` 升至 `16.3.8`、`nodemailer` 升至 `10.0.16` 并通过 `pnpm.overrides` 修复全部新披露传递依赖漏洞。
+
 ## 验证
 
 2026-09-24 在冻结工作区（随后提交为 `5730d69`）上运行完整门禁（scripts/verify-remediation.mjs，PASS，运行前后源码指纹一致）：297 unit、172 contract、380 integration、102 E2E、13 UI，共 **964 项通过**；浏览器零重试，真实开发/测试库前后指纹一致；恢复演练与依赖审计通过。实际结果及证据摘要见 [verification](../planning/verification.json)。
@@ -19,6 +21,8 @@ M0—M5 已完成：认证与账户设置、项目与邀请、任务列表与看
 2026-09-25 依赖更新：合并处理 10 个 Dependabot 提案（#3—#8、#10—#12、#14）。npm：typescript 6.0.3（typescript-eslint 的 peer 限制在 6.0 系列）、@types/node 26.6.2、lucide-react 1.47.0、@axe-core/playwright 4.13.0、tailwind-merge 3.7.0；CI Action：checkout v7.0.1、setup-node v7.0.0、upload-artifact v7.0.1、pnpm/action-setup v4.3.0、trivy-action v0.36.0（不在 GHSA-69fq-xp46-6x23 影响范围内），每个提交号都经 API 核对为官方标签所指提交。在基于 `c4eaa7e` 的冻结工作区上完整门禁 PASS（964 项，指纹一致），之后只加了本条记录；Action 变更只由远端 CI 覆盖。随后 Dependabot #7 将 pnpm/action-setup 升到支持 Node 24 的 v6.1.0，CI 已无 Node 20 弃用提示。
 
 2026-09-26 部署准备（ADR-030）：目标改为 Oracle Cloud Ampere A1 单机（2 OCPU/12 GB，ARM64），见 [OCI 部署指南](OCI-DEPLOYMENT.md)。Next 升到 16.3.6（官方安全修复 GHSA-vcvr-r3jv-pc5j，`next/og`，本项目未使用）；linux/arm64 镜像模拟构建后 runner 冒烟与 operations 迁移状态均通过；新增同机 SeaweedFS 配置、`infra/backup-local.sh`（在断网容器自测失败路径，并用真实 PostgreSQL/SeaweedFS 完成备份与恢复演练）和 `scripts/storage-check.ts`。证据见 verification 的 ociDeploymentPreparation。
+
+2026-10-19 全量深度审查与依赖安全修复后，在冻结工作区上运行 `scripts/verify-remediation.mjs`（输出目录 `artifacts/rework-2026-10-19T10-22-33-368Z`，**PASS**，运行前后源码指纹 `680f0b72...` 一致）：304 unit、172 contract、380 integration、102 E2E、13 UI，共 **971 项通过**；浏览器零重试，生产依赖安全审计 0 漏洞，见 verification 的 comprehensiveAuditAndOptimization20261019。
 
 2026-09-22 首轮审查的 925 项基线门禁与 5 个 P2 观察保留在 verification 的 previousAudit 中；本轮新增回归覆盖全部 10 个问题，其中浏览器、看板筛选、认证邮件与上传分类回归已在原实现上确认失败。
 

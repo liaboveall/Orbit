@@ -162,7 +162,7 @@ export async function listMembers(projectId: string, userId: string): Promise<Me
   });
   const memberRows = await prisma.projectMember.findMany({
     where: { projectId: project.id },
-    orderBy: { joinedAt: "asc" },
+    orderBy: [{ joinedAt: "asc" }, { id: "asc" }],
     include: { user: { select: { id: true, name: true } } },
   });
 

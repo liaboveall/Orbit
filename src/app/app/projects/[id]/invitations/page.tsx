@@ -32,15 +32,14 @@ export default async function ProjectInvitationsPage({ params }: PageProps) {
   const { id } = await params;
   const sessionUser = await requirePageUser();
 
+  let projectId = id;
   let invitations;
   let isOwner;
   try {
-    const [project, list] = await Promise.all([
-      getProject(id, sessionUser.id),
-      listInvitations(id, sessionUser.id),
-    ]);
-    invitations = list;
+    const project = await getProject(id, sessionUser.id);
+    projectId = project.id;
     isOwner = project.role === "OWNER";
+    invitations = isOwner ? await listInvitations(project.id, sessionUser.id) : [];
   } catch (error) {
     if (error instanceof DomainError && error.code === "NOT_FOUND") notFound();
     throw error;
@@ -48,7 +47,7 @@ export default async function ProjectInvitationsPage({ params }: PageProps) {
 
   return (
     <InvitationsList
-      projectId={id}
+      projectId={projectId}
       userIsOwner={isOwner}
       initialInvitations={invitations}
     />

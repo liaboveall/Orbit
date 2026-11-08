@@ -248,6 +248,9 @@ export function SubtaskItem({
                 }
                 if (e.key === "Escape") {
                   e.stopPropagation();
+                  if (draft !== subtask.title && !window.confirm("确定放弃当前子任务修改？")) {
+                    return;
+                  }
                   cancel();
                 } else if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -255,7 +258,7 @@ export function SubtaskItem({
                 }
               }}
               aria-label="编辑子任务标题"
-              className="text-label"
+              className="md:text-label"
               rows={2}
               maxLength={TITLE_MAX}
               autoFocus

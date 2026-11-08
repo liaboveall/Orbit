@@ -52,6 +52,13 @@ export function assessPasswordStrength(value: string): PasswordStrength {
       tone: "text-danger",
     };
   }
+  if (value.length > PASSWORD_MAX) {
+    return {
+      score: 1,
+      label: `不超过 ${PASSWORD_MAX} 个字符`,
+      tone: "text-danger",
+    };
+  }
   let variety = 0;
   if (/[a-z]/.test(value)) variety += 1;
   if (/[A-Z]/.test(value)) variety += 1;

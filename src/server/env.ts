@@ -1,5 +1,10 @@
 import "server-only";
+import { setDefaultResultOrder } from "node:dns";
 import { z } from "zod";
+
+// compose.dev.yml 按 docs/08 §1 仅绑定 127.0.0.1（IPv4），而 .env.example 默认使用 localhost；
+// Node 默认 verbatim 顺序在 Windows 下会先尝试 [::1] 并等待 ~300ms 超时后才回退 127.0.0.1。
+setDefaultResultOrder("ipv4first");
 
 /**
  * Orbit 环境配置校验（M0 / ORB-001）。

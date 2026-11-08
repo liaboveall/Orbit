@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requirePageUser } from "@/server/auth/page-session";
+import { DomainError } from "@/server/http/errors";
 import { getOverview, listMyTasks } from "@/server/modules/workbench/service";
 import { MyTasksQuerySchema, MyTaskBuckets } from "@/contracts";
 import { WorkbenchStats } from "@/features/workbench/workbench-stats";
@@ -47,10 +48,24 @@ export default async function TodayPage({
     );
   const query = parsed.data,
     now = new Date();
-  const [overview, result] = await Promise.all([
-    getOverview(user.id, now),
-    listMyTasks(user.id, query, now),
-  ]);
+  let overview;
+  let result;
+  try {
+    [overview, result] = await Promise.all([
+      getOverview(user.id, now),
+      listMyTasks(user.id, query, now),
+    ]);
+  } catch (error) {
+    if (error instanceof DomainError && error.code === "VALIDATION_ERROR") {
+      return (
+        <div className="p-6">
+          <p role="alert">筛选参数不合法。</p>
+          <Link href="/app/today">清除筛选</Link>
+        </div>
+      );
+    }
+    throw error;
+  }
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-4 sm:p-8">
       <header>
@@ -96,7 +111,7 @@ export default async function TodayPage({
             name="q"
             defaultValue={query.q}
             maxLength={100}
-            className="rounded-control border border-line bg-surface px-3 py-2"
+            className="rounded-control border border-line bg-surface px-3 py-2 text-body md:text-label"
           />
         </label>
         <label className="flex flex-col gap-1 text-caption">
@@ -104,7 +119,7 @@ export default async function TodayPage({
           <select
             name="sort"
             defaultValue={query.sort ?? "updated_desc"}
-            className="rounded-control border border-line bg-surface px-3 py-2"
+            className="rounded-control border border-line bg-surface px-3 py-2 text-body md:text-label"
           >
             <option value="updated_desc">最近更新</option>
             <option value="due_asc">截止日期</option>

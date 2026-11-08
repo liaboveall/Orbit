@@ -56,8 +56,8 @@ export function TaskRestoreButton({
   const { pending } = mutation;
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
-  // 一次逻辑恢复操作始终复用 key；网络失败可能发生在服务端已提交之后。
-  const [idempotencyKey] = useState(() => crypto.randomUUID());
+  // 一次逻辑恢复操作复用 key（网络异常时重试复用同一 key）；若服务端返回明确业务错误（如 409 版本刷新后），则轮换新 key。
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
 
   async function handleRestore(): Promise<void> {
     if (pending) return;
@@ -78,6 +78,7 @@ export function TaskRestoreButton({
         mutation.refresh();
         return;
       }
+      setIdempotencyKey(crypto.randomUUID());
       if (result.status === 401) {
         // 会话失效：硬跳转登录页（服务端重估认证态），带 returnTo 回到本回收站。
         window.location.assign(loginPathWithReturnTo(returnTo));

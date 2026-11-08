@@ -100,6 +100,7 @@ export async function createInvitation(
   idempotencyKey: string,
   expiresInDays: number = DEFAULT_EXPIRY_DAYS,
 ): Promise<CreateInvitationResult> {
+  projectId = projectId.toLowerCase();
   const requestHash = hashRequest({ projectId, expiresInDays });
   const routeKey = createInvitationRouteKey(projectId);
 
@@ -285,7 +286,7 @@ export async function previewInvitation(token: string): Promise<InvitePreviewDTO
 
   return {
     projectName: invitation.project.name,
-    ownerName: invitation.creator.name,
+    ownerName: invitation.creator.name.trim().slice(0, 40) || "未设置姓名",
     expiresAt: invitation.expiresAt.toISOString(),
     role: "MEMBER",
     isArchived: invitation.project.archivedAt !== null,

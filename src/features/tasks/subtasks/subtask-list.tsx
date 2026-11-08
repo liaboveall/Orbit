@@ -214,6 +214,9 @@ export function SubtaskList({
                       }
                       if (e.key === "Escape") {
                         e.stopPropagation();
+                        if (draft.length > 0 && !window.confirm("确定放弃当前子任务草稿？")) {
+                          return;
+                        }
                         setAdding(false);
                         setDraft("");
                         setAddError(null);
