@@ -768,6 +768,132 @@
   },
   "postGateChanges": "These handoff records only"
  },
+ "relaunch20261108": {
+  "date": "2026-11-08",
+  "baseCommit": "0928f35110d4db5589a63286f76e70a35b240494",
+  "deployedCommit": "72ff749ec1cd96659356c567e943448baea77ec2",
+  "changes": [
+   "Committed the 2026-10-19 review fixes that had stayed in the working tree (2f6a6e6).",
+   "pnpm audit --prod had grown from 0 to 23 advisories (3 critical, 4 high). Upgraded next and eslint-config-next 16.3.8 -> 16.4.5, better-auth 1.7.3 -> 1.7.18, zod 4.5.4 -> 4.6.7, nodemailer 10.0.16 -> 10.4.0, vitest 5.0.0 -> 5.1.0, with overrides vite@<8.2.4 -> 8.3.6 and fast-uri@<3.1.9 -> 3.1.9.",
+   "infra/nginx-http.conf: non-capturing groups in the $orbit_route map, because CVE-2026-42533 depends on map regex captures and the shared server runs Nginx 1.28.3.",
+   "infra/compose.micro.yml: per-host memory limits through ORBIT_*_MEM_LIMIT, default no limit.",
+   "docs/OCI-DEPLOYMENT.md: native server builds, no default_server, full-site restore path.",
+   "Dockerfile: Node 24 bookworm-slim base moved to sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 (72ff749), carrying apt 2.6.2 and perl-base 5.36.0-7+deb12u4, after the CI image policy blocked 9 fixable HIGH/CRITICAL findings on 9618903."
+  ],
+  "localGate": {
+   "runner": "scripts/verify-remediation.mjs",
+   "directory": "artifacts/rework-2026-11-08T15-00-48-918Z",
+   "result": "PASS",
+   "head": "9618903e0d85483a25aef31151674966e4216932",
+   "dirty": false,
+   "sourceDigest": "c68c74ca0531f0198022b777774e169f3647e76b151b4738b5a928243d264a21",
+   "sourceUnchangedDuringRun": true,
+   "startedAt": "2026-11-08T15:00:49.059Z",
+   "finishedAt": "2026-11-08T15:09:36.828Z",
+   "counts": {
+    "unit": 304,
+    "contract": 172,
+    "integration": 380,
+    "e2e": 102,
+    "ui": 13
+   },
+   "total": 971,
+   "zeroBrowserRetries": true,
+   "prodAuditVulnerabilities": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0
+   },
+   "invalidatedEarlierRun": "artifacts/rework-2026-11-08T14-49-31-267Z on 259939d: all 14 checks exited 0, but the runner reported FAIL because next dev 16.4 rewrote the AGENTS.md heading during the UI run. The file was committed and the gate re-run."
+  },
+  "configChecks": {
+   "scripts/verify-compose.mjs": 0,
+   "scripts/verify-nginx.mjs": 0
+  },
+  "migrationHistory": "The old development volume was already absent from Docker on 2026-11-08. Development and test databases were created fresh from the 16 migrations; scripts/verify-migration-history.mjs exits 0 with no missing or mismatched entries. No checksum was overwritten.",
+  "imageScan": {
+   "tool": "Trivy 0.69.3 (the CI version) on local amd64 builds of 72ff749",
+   "runner": {
+    "blocked": 0,
+    "acceptedNoFix": 35
+   },
+   "operations": {
+    "blocked": 0,
+    "acceptedNoFix": 35
+   },
+   "policyExit": 0,
+   "summary": "0；无可修复的高危/严重项，两个镜像各有 35 个上游未修复项按策略保留"
+  },
+  "remoteCi": {
+   "gateCommitRun": "https://github.com/liaboveall/Orbit/actions/runs/42492606600",
+   "gateCommitResult": "Every step passed except Enforce image risk policy, fixed by 72ff749.",
+   "headRun": "See the checks on https://github.com/liaboveall/Orbit/pull/26; not finished when this was recorded."
+  },
+  "deployment": {
+   "url": "https://149-118-55-232.sslip.io",
+   "commit": "72ff749ec1cd96659356c567e943448baea77ec2",
+   "images": {
+    "web": "sha256:5f92ec6d0137e3c92aa168f6fa9f4c3e5775da6c686398b3b930b98ca557d90c",
+    "operations": "sha256:1c3eb63717fbb33faa4fa9c09a2b392d090fe85f1a37b048e992004f06884d7a",
+    "architecture": "arm64"
+   },
+   "restoredFrom": "orbit-final-20261012.tar (SHA-256 verified)",
+   "restoredRows": {
+    "migrations": 16,
+    "User": 1,
+    "Project": 1,
+    "Task": 0,
+    "Subtask": 0,
+    "Comment": 0,
+    "Attachment": 0
+   },
+   "memoryLimits": {
+    "postgres": "1g",
+    "web": "1g",
+    "operations": "1g",
+    "storage": "512m"
+   },
+   "idleMemoryAfterStart": {
+    "web": "113 MiB",
+    "postgres": "56 MiB",
+    "storage": "152 MiB"
+   },
+   "checks": {
+    "migrations": "16 applied, none pending",
+    "storageCheck": "storage_check_passed",
+    "maintenanceTargetMatchesAppEnv": true,
+    "publicHttps": {
+     "/": 200,
+     "/demo": 200,
+     "/auth/login": 200,
+     "/health/ready": 200
+    },
+    "httpRedirect": 301,
+    "unauthenticated": {
+     "/app/today": "307 to /auth/login",
+     "/api/v1/projects": 401
+    },
+    "wrongCredentials": 401,
+    "foreignOrigin": 403,
+    "bareIpStillRefused": true,
+    "otherSiteAfterReload": "chatapp.software returned the same status before and after the Nginx reload, and 200 from outside",
+    "certbotRenewDryRun": "success",
+    "backupRestore": "backup-local.sh completed; the dump restored into a throwaway database with matching row counts for 8 tables; the database was dropped",
+    "browser": "/demo and /auth/login rendered with no console errors"
+   },
+   "certificateExpires": "2027-02-06T14:14:58Z",
+   "notVerified": [
+    "Real email verification and password reset (no SMTP configured; SMTP_HOST=smtp.invalid).",
+    "Two-account invitation and collaboration over HTTPS.",
+    "Attachment byte-for-byte restore: the restored data has no attachments.",
+    "Load and capacity; only idle memory was read.",
+    "Alerting and automated off-site backups."
+   ]
+  },
+  "postGateChanges": "The Dockerfile base digest (72ff749), covered by the image scan and CI rather than a new local gate, and these handoff records."
+ },
  "limitations": [
   "Auth email timing verified with local stalled/rejecting SMTP stubs; real provider latency to be re-checked after deployment",
   "Page read quota verified in production configuration with real session and database bucket; no deployed RSC flood test",
