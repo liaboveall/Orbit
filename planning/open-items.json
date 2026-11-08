@@ -8,7 +8,7 @@
    "taskIds": [
     "ORB-021"
    ],
-   "nextAction": "2026-11-08 重新上线绑定提交 72ff749，linux/arm64 镜像 ID 与 CI 结果见 verification 的 relaunch20261108。正式发布 V1 时按同样方式核对最终提交的完整 CI 并记录镜像。",
+   "nextAction": "2026-11-08 重新上线绑定提交 72ff749，linux/arm64 镜像 ID 见 verification 的 relaunch20261108；PR #26 最终提交 106517b 与合并提交 d1cac12 的完整 CI 均成功，它们与 72ff749 只相差测试和记录。正式发布 V1 时按同样方式核对最终提交的完整 CI 并记录镜像。",
    "evidence": [
     "docs/CURRENT-STATUS.md"
    ]
@@ -45,7 +45,7 @@
    "taskIds": [
     "ORB-021"
    ],
-   "nextAction": "2026-11-08 已从最终备份恢复并重新上线第一阶段（https://149-118-55-232.sslip.io，sslip.io HTTPS、同机 SeaweedFS、暂无邮件，与其他网站共用服务器）。仍待验证：自有域名、真实邮件验证/重置与双账户邀请、告警、异地备份自动化、含附件的恢复核对与 RPO/RTO。",
+   "nextAction": "2026-11-08 已从最终备份恢复并重新上线第一阶段（https://149-118-55-232.sslip.io，sslip.io HTTPS、同机 SeaweedFS、暂无邮件，与其他网站共用服务器）；2026-11-09 用合成数据完成线上单账户试用和含附件的备份恢复核对，见 verification 的 productionTrial20261109。仍待验证：自有域名、真实邮件验证/重置与双账户邀请、告警、异地备份自动化与 RPO/RTO。",
    "evidence": [
     "docs/CURRENT-STATUS.md",
     "docs/OCI-DEPLOYMENT.md"
