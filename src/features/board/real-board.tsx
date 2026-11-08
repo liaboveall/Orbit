@@ -178,6 +178,12 @@ export function RealBoard({
             { query: { ...query, status: column.status, cursor, limit: 100 } },
           );
           if (!result.ok) {
+            if (result.status === 401) {
+              window.location.assign(
+                loginPathWithReturnTo(location.pathname + location.search),
+              );
+              return;
+            }
             // 顺序集合或筛选集合在分页之间变化（BOARD_CONFLICT），或过滤指纹随日期失效
             // （INVALID_CURSOR）：旧页不可拼接，整体重新读取。
             if (result.error.code === "BOARD_CONFLICT" || result.error.code === "INVALID_CURSOR") {
@@ -256,6 +262,12 @@ export function RealBoard({
       if (!result.ok) {
         commit(old);
         rollback = false;
+        if (result.status === 401) {
+          window.location.assign(
+            loginPathWithReturnTo(location.pathname + location.search),
+          );
+          return;
+        }
         if (result.status === 409) await fresh();
         throw new Error(result.error.message);
       }
@@ -303,8 +315,8 @@ export function RealBoard({
       data-task-editing={creating || undefined}
     >
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-page font-semibold">{project.name}</h1>
+        <div className="min-w-0">
+          <h1 className="text-page font-semibold [overflow-wrap:anywhere]">{project.name}</h1>
           <p className="text-caption text-foreground-muted">
             {project.key} · {project.memberCount} 名成员
             {!writable && " · 已归档，只读"}

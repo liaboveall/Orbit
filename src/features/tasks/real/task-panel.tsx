@@ -74,9 +74,17 @@ export function TaskPanel({
         }}
         onCloseAutoFocus={(e) => {
           e.preventDefault();
-          const link = shown
-            ? document.querySelector<HTMLElement>(`[data-task-link="${shown.id}"]`)
-            : null;
+          const candidates = shown
+            ? Array.from(
+                document.querySelectorAll<HTMLElement>(
+                  `[data-task-link="${shown.id}"], [data-task-card-link="${shown.id}"]`,
+                ),
+              )
+            : [];
+          const link =
+            candidates.find((el) => el.getClientRects().length > 0) ??
+            candidates[0] ??
+            null;
           (
             link ??
             document.querySelector<HTMLElement>("[data-project-content]")

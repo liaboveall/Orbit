@@ -2,6 +2,7 @@ import { test, expect } from "vitest";
 import { randomUUID } from "node:crypto";
 import { m5Fixture } from "../support/m5-fixture";
 import { createComment, deleteComment, listComments } from "../../src/server/modules/comments/service";
+import { createInvitation } from "../../src/server/modules/invitation/service";
 import { createSubtask } from "../../src/server/modules/subtask/service";
 import { prisma } from "../../src/server/db/prisma";
 import { createAuth } from "../../src/server/auth/options";
@@ -26,19 +27,31 @@ test.each(["owner", "member"] as const)("%s deletion makes comment replay a tomb
   } finally { await f.cleanup(); }
 });
 
-test("UUID casing shares one comment/subtask idempotency namespace", async () => {
+test("UUID casing shares one comment/subtask/invitation idempotency and cursor namespace", async () => {
   const f = await m5Fixture();
   try {
-    const ck = randomUUID(), sk = randomUUID();
+    const ck = randomUUID(), ck2 = randomUUID(), sk = randomUUID(), ik = randomUUID();
     await createComment(f.taskId, f.member, { body: "same operation" }, ck);
     await createComment(f.taskId.toUpperCase(), f.member, { body: "same operation" }, ck);
     await createSubtask(f.taskId, f.member, { title: "same operation" }, sk);
     await createSubtask(f.taskId.toUpperCase(), f.member, { title: "same operation" }, sk);
+    const inv1 = await createInvitation(f.owner, f.projectId, ik, 7);
+    const inv2 = await createInvitation(f.owner, f.projectId.toUpperCase(), ik, 7);
+    expect(inv2.replayed).toBe(true);
+    expect(inv2.data.invitation.id).toBe(inv1.data.invitation.id);
     expect(await prisma.comment.count({ where: { taskId: f.taskId } })).toBe(1);
     expect(await prisma.subtask.count({ where: { taskId: f.taskId } })).toBe(1);
+    expect(await prisma.invitation.count({ where: { projectId: f.projectId } })).toBe(1);
     await expect(createComment(f.taskId.toUpperCase(), f.member, {body:"different"}, ck)).rejects.toMatchObject({code:"IDEMPOTENCY_CONFLICT"});
     await expect(createSubtask(f.taskId.toUpperCase(), f.member, {title:"different"}, sk)).rejects.toMatchObject({code:"IDEMPOTENCY_CONFLICT"});
+    await expect(createInvitation(f.owner, f.projectId.toUpperCase(), ik, 14)).rejects.toMatchObject({code:"IDEMPOTENCY_CONFLICT"});
     expect(await prisma.activityLog.count({where:{projectId:f.projectId,action:{in:["COMMENT_CREATED","SUBTASK_CREATED"]}}})).toBe(2);
+
+    await createComment(f.taskId, f.member, { body: "second comment" }, ck2);
+    const page1 = await listComments(f.taskId.toUpperCase(), f.member, { limit: 1 });
+    expect(page1.hasMore).toBe(true);
+    const page2 = await listComments(f.taskId.toLowerCase(), f.member, { limit: 1, cursor: page1.nextCursor ?? undefined });
+    expect(page2.comments).toHaveLength(1);
   } finally { await f.cleanup(); }
 });
 

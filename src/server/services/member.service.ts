@@ -1,76 +1,26 @@
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
-import { MemberSchema, type MemberDTO, type ActivityAction } from "@/contracts";
+import type { ActivityAction } from "@/contracts";
 import { prisma } from "@/server/db/prisma";
 import { DomainError } from "@/server/http/errors";
 import { lockProjectRow, withTransaction } from "@/server/db/tx";
 import { appendActivity } from "@/server/modules/activity/writer";
 import { resolveProjectAccess } from "@/server/modules/authorization/project-access";
-
-/** 归一化成员显示名（与 UserDTO 一致的容错，避免历史异常资料使 MemberSchema 复校失败）。 */
-function displayName(name: string): string {
-  return name.trim().slice(0, 40) || "未设置姓名";
-}
+export { listMembers } from "@/server/modules/project/read";
 
 /**
  * 成员管理服务（M4 / ORB-014）。
- * 
+ *
  * 职责：
- * - 列出项目成员（含 owner）
+ * - 列出项目成员（含 owner，复用 @/server/modules/project/read）
  * - 移除成员（事务性：清理任务分配 + 写入活动日志）
  * - 验证移除权限
- * 
+ *
  * 安全：
  * - 所有写操作必须在事务内进行
  * - 使用 SELECT ... FOR UPDATE 处理并发
  * - 活动日志走白名单过滤
  */
-
-/**
- * 列表项目成员（含 owner）。
- * 
- * @param projectId 项目 ID
- * @param viewerId 当前查看者 ID（用于访问授权）
- * @returns 成员列表，owner 排首位，其后按 joinedAt 升序
- */
-export async function listMembers(projectId: string, userId: string): Promise<MemberDTO[]> {
-  const { project } = await resolveProjectAccess(prisma, projectId, userId);
-
-  const owner = await prisma.user.findUnique({
-    where: { id: project.ownerId },
-    select: { id: true, name: true },
-  });
-
-  const memberRows = await prisma.projectMember.findMany({
-    where: { projectId: project.id },
-    orderBy: { joinedAt: "asc" },
-    include: { user: { select: { id: true, name: true } } },
-  });
-
-  const members: MemberDTO[] = [];
-  if (owner) {
-    members.push(
-      MemberSchema.parse({
-        userId: owner.id,
-        name: displayName(owner.name),
-        role: "OWNER",
-        joinedAt: project.createdAt.toISOString(),
-      }),
-    );
-  }
-  for (const row of memberRows) {
-    members.push(
-      MemberSchema.parse({
-        userId: row.user.id,
-        name: displayName(row.user.name),
-        role: "MEMBER",
-        joinedAt: row.joinedAt.toISOString(),
-      }),
-    );
-  }
-
-  return members;
-}
 
 /** removeMember 的入参（removedBy 恒等于 requester，故不再单列字段）。 */
 export interface RemoveMemberParams {

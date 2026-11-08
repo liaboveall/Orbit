@@ -109,16 +109,20 @@ export async function readJsonBody(request: Request): Promise<ReadBodyResult> {
   // 3) 增量读取：累计字节数一旦超限立即 cancel 并返回 tooLarge，不把整个超大 body 读入内存。
   const chunks: Uint8Array[] = [];
   let total = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (!value) continue;
-    total += value.byteLength;
-    if (total > MAX_BODY_BYTES) {
-      await reader.cancel();
-      return { ok: false, tooLarge: true };
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      total += value.byteLength;
+      if (total > MAX_BODY_BYTES) {
+        void reader.cancel().catch(() => undefined);
+        return { ok: false, tooLarge: true };
+      }
+      chunks.push(value);
     }
-    chunks.push(value);
+  } finally {
+    reader.releaseLock();
   }
 
   // 4) 合并 chunks 并按 UTF-8 解码（字节数为真实上限，较原先用 text.length 的 UTF-16 近似更准确）。

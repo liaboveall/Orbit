@@ -28,7 +28,7 @@ export type AvatarProps = ComponentProps<typeof AvatarPrimitive.Root> & {
 function initials(name: string): string {
   const trimmed = name.trim();
   if (!trimmed) return "?";
-  return trimmed.charAt(0).toUpperCase();
+  return Array.from(trimmed)[0]?.toUpperCase() ?? "?";
 }
 
 export function Avatar({

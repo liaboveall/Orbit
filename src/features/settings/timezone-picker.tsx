@@ -227,7 +227,7 @@ export function TimezonePicker({
           onClick={openList}
           onChange={(event) => handleQueryChange(event.target.value)}
           onKeyDown={handleKeyDown}
-          className="h-10 min-w-0 flex-1 bg-transparent text-label text-foreground outline-none placeholder:text-foreground-muted"
+          className="h-10 min-w-0 flex-1 bg-transparent text-body text-foreground outline-none placeholder:text-foreground-muted md:text-label"
         />
         {selected?.offsetLabel ? (
           <span className="hidden shrink-0 font-mono text-caption text-foreground-muted sm:inline">

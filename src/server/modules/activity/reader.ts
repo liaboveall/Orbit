@@ -89,12 +89,12 @@ export async function listActivities(
 ): Promise<ActivityListResult> {
   const { projectId, actorId } = options;
   // 成员关系校验：非成员/不存在统一 404，不泄露项目是否存在。
-  await requireProjectMember(prisma, projectId, actorId);
+  const { project } = await requireProjectMember(prisma, projectId, actorId);
 
   const limit = Math.min(options.limit ?? DEFAULT_LIMIT, MAX_LIMIT);
-  const fingerprint = computeFilterFingerprint({ projectId });
+  const fingerprint = computeFilterFingerprint({ projectId: project.id });
 
-  const conditions: Prisma.ActivityLogWhereInput[] = [{ projectId }];
+  const conditions: Prisma.ActivityLogWhereInput[] = [{ projectId: project.id }];
 
   if (options.cursor) {
     const decoded = decodeCursor(options.cursor, fingerprint);

@@ -7,7 +7,7 @@ import type { OrbitEnv } from "@/server/env";
 /**
  * 认证邮件发送（M1 / ORB-005）：用真实 nodemailer + SMTP（本地 Mailpit）替换 ORB-004 的占位日志。
  *
- * 版本纪律（AGENTS.md）：nodemailer@10.0.1，使用其自带的 `createTransport` / `SendMailOptions` 类型，
+ * 版本纪律（AGENTS.md）：nodemailer@10.0.16，使用其自带的 `createTransport` / `SendMailOptions` 类型，
  * 不混用旧版 `@types/nodemailer` 或其它版本示例。
  *
  * 设计要点：

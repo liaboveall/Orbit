@@ -34,20 +34,40 @@
 
 复核更正：首轮报告称本机 MinIO 容器与 compose 锁定版本不一致；核对镜像摘要后确认运行的正是锁定的 RELEASE.2025-09-07T16-13-09Z（同一 sha256），只是本地标签名不同，无需处理。
 
+## 2026-10-19 全量深度审查与全面优化
+
+在 `0928f35110d4db5589a63286f76e70a35b240494` 基线上对服务端运行时、RSC 路由、API 边界、领域服务、前端交互/移动端/可访问性及依赖安全进行了全栈深入排查与修复：
+
+- **本地 IPv4 优先解析**：[env](../src/server/env.ts) 启用 `setDefaultResultOrder("ipv4first")`，消除 Windows 下 `localhost` 先尝试 IPv6 `[::1]` 再回退 `127.0.0.1`（Docker 仅绑定 IPv4）带来的约 338 ms 建连延迟。
+- **RSC 页面与权限/游标容错**：
+  - [邀请预览页](../src/app/invite/page.tsx) 读取当前登录会话并通过 [user-timezone](../src/lib/user-timezone.tsx) 注入用户时区与 `isLoggedIn`，使已登录用户按个人时区查看邀请过期时间且在暂态预览失败时不误判为未登录。
+  - [登录页](../src/app/auth/login/page.tsx) 与 [注册页](../src/app/auth/register/page.tsx) 对已登录用户重定向时保留经 `sanitizeReturnTo` 校验的 `returnTo` 目标。
+  - [项目邀请页](../src/app/app/projects/[id]/invitations/page.tsx) 先校验项目成员身份与 `project.role === "OWNER"`，非 owner 成员直接渲染只读权限提示而非抛出未捕获 403 触发错误边界。
+  - [项目任务列表页](../src/app/app/projects/[id]/tasks/page.tsx) 与 [今日工作台](../src/app/app/today/page.tsx) 捕获游标/筛选签名 `VALIDATION_ERROR` 并渲染条件失效重置提示；[独立任务详情页](../src/app/app/projects/[id]/tasks/[taskId]/page.tsx) 显式声明 `dynamic = "force-dynamic"`。
+- **API 路由与领域服务一致性**：
+  - 移除 [评论路由](../src/app/api/v1/tasks/[taskId]/comments/route.ts) 与 [子任务路由](../src/app/api/v1/tasks/[taskId]/subtasks/route.ts) `GET` 处理器上多余的 `verifyRequestOrigin` 检查。
+  - [JSON 读取器](../src/server/http/json.ts) 在 `finally` 中释放流 `reader` 锁，并在超限 `cancel()` 时吞掉源流异常。
+  - 统一大小写无关 UUID 归一化：[邀请服务](../src/server/modules/invitation/service.ts) `createInvitation`、`previewInvitation` 空姓名兜底、[附件服务](../src/server/modules/attachments/service.ts) `uploadAttachment` 对象键构造，以及 [任务读取](../src/server/modules/task/read.ts)、[活动流](../src/server/modules/activity/reader.ts)、[工作台](../src/server/modules/workbench/service.ts)、[评论服务](../src/server/modules/comments/service.ts) 的游标筛选指纹；[成员列表](../src/server/modules/project/read.ts) 补充 `[{ joinedAt: "asc" }, { id: "asc" }]` 稳定排序并与 [member.service](../src/server/services/member.service.ts) 去重。
+- **前端体验、移动端 16px 输入规范与可访问性**：
+  - [时区选择器](../src/features/settings/timezone-picker.tsx)、[任务编辑器](../src/features/tasks/real/task-editor.tsx)、[今日工作台](../src/app/app/today/page.tsx)、[子任务项](../src/features/tasks/subtasks/subtask-item.tsx)、[子任务列表](../src/features/tasks/subtasks/subtask-list.tsx)、[评论项](../src/features/tasks/comments/comment-item.tsx) 移动端输入字号统一为 `text-body md:text-label`（16px 防 iOS 自动缩放）。
+  - 子任务新建/编辑与评论编辑按 `Escape` 放弃非空修改草稿前弹出确认，与新建评论保持一致。
+  - [任务编辑器](../src/features/tasks/real/task-editor.tsx) `reloadVersion`/`remove` 及 [真实看板](../src/features/board/real-board.tsx) `load`/`move` 补齐 401 登录跳转与 404 状态同步；[任务面板](../src/features/tasks/real/task-panel.tsx) 关闭焦点恢复兼容桌面与移动端可见触发器；[恢复按钮](../src/features/tasks/real/task-restore-button.tsx) 在非网络业务错误后轮换幂等键；[密码强度计算](../src/features/auth/validation.ts) 拒绝超 128 字符显示「很强」；[头像首字](../src/components/ui/avatar.tsx) 按 Unicode 码点切分；[项目设置](../src/features/projects/project-settings-form.tsx) 重置按钮同步清理冲突横幅状态。
+- **依赖安全升级**：`next` 与 `eslint-config-next` 升至 `16.3.8`，`nodemailer` 升至 `10.0.16`，并通过 `pnpm.overrides` 锁定 `sharp@0.35.5`、`source-map-js@1.2.2`、`fast-uri@3.1.8`、`brace-expansion@1.1.21`/`5.0.12`，修复全部新披露的依赖安全公告。
+
 ## 验证
 
 | 命令 | 结果 |
 | --- | --- |
-| `node scripts/verify-remediation.mjs`（输出目录 artifacts/remediation-20260924） | **PASS**；运行前后源码指纹一致 |
+| `node scripts/verify-remediation.mjs`（输出目录 artifacts/rework-2026-10-19T10-22-33-368Z） | **PASS**；运行前后源码指纹一致（`680f0b72...`） |
 | · 规划校验、14 项反例探针、进度同步、镜像策略 | 均为 0 |
 | · lint、typecheck、typecheck:scripts | 均为 0 |
-| · test:unit / test:contract | 0；297 / 172 passed |
+| · test:unit / test:contract | 0；304 / 172 passed |
 | · test:integration（真实 PostgreSQL） | 0；380 passed，开发/测试库指纹不变 |
 | · test:e2e --retries=0（生产构建） | 0；102 passed，指纹不变 |
 | · 客户端包体测量、test:ui --retries=0 | 0；UI 13 passed，指纹不变 |
-| · audit --prod --audit-level=high | 0 |
+| · audit --prod --audit-level=high --json | 0；436 个生产依赖 0 漏洞 |
+| 历史基线门禁（artifacts/remediation-20260924） | **PASS**；964 passed（unit 297 / contract 172 / integration 380 / e2e 102 / ui 13） |
 | `node --conditions=react-server --import tsx scripts/recovery-drill.ts` | 0；一次性数据库中验证过期会话/验证记录清理与备份恢复 |
-| `pnpm audit --json` | 0；761 个依赖，0 个已知公告漏洞 |
 | `node scripts/verify-migration-history.mjs` | **1**；开发库 2 条历史 checksum 不符（既有事项，未改写）；测试库正常，两库结构一致 |
 
 在原实现上确认新回归失败：上传分类 2 个（超时用例需等待原 120 秒时限，未在原实现上运行）、看板筛选 3 个、认证邮件 3 个、浏览器 8 个用例均失败；恢复修复后全部通过。页面读取额度的新测试依赖新增的页面准入模块，原行为由首轮观察复现（API 超额后页面读取仍成功）；连接池饱和原行为由修复前探针复现（P2028 → 500 INTERNAL_ERROR）。修复过程只使用 orbit_test 与一次性数据库中的合成数据，逐次清理。
