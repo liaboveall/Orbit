@@ -2,7 +2,7 @@
  "schemaVersion": 1,
  "project": "Orbit",
  "planVersion": "1.0.0",
- "updatedAt": "2026-10-19",
+ "updatedAt": "2026-11-08",
  "applicationStatus": "V1_RELEASE_ACCEPTANCE_PENDING",
  "stateRules": {
   "allowed": [
@@ -808,11 +808,11 @@
  ],
  "auditRegistry": "planning/open-items.json",
  "latestReview": {
-  "date": "2026-10-19",
+  "date": "2026-11-08",
   "report": "docs/CURRENT-STATUS.md",
   "registry": "planning/open-items.json",
   "evidence": "planning/verification.json",
-  "summary": "两轮审查确认的 10 个应用问题已修复；2026-10-19 完成全栈深度审查与优化（IPv4 优先 DNS、RSC 邀请时区/登录重定向/权限/游标容错、UUID 大小写归一化、移动端 16px 输入与键盘焦点/草稿确认、Next 16.3.8 与 Nodemailer 10.0.16 等安全升级），冻结工作区完整门禁 971 项通过、源码指纹一致、生产依赖审计 0 漏洞。详见 CURRENT-REVIEW.md；M6 保持 review，服务器验收暂缓，7 组外部与历史事项仍开放。",
+  "summary": "两轮审查确认的 10 个应用问题已修复，2026-10-19 全栈审查的修复已提交。2026-11-08 升级 Next 16.4.5、better-auth 1.7.18 等以关闭新披露的依赖漏洞（生产依赖审计 0 漏洞），完整门禁 971 项通过、源码指纹一致；Orbit 从 2026-10-12 的最终备份恢复，并在 Oracle 共用服务器上重新上线（https://149-118-55-232.sslip.io，提交 72ff749，第一阶段无邮件、无自有域名）。详见 CURRENT-REVIEW.md；M6 保持 review，7 组外部与历史事项仍开放。",
   "historicalDataIncident": {
    "historicalRecovery": "missing_original_records_and_backup"
   },

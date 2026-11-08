@@ -72,15 +72,35 @@
 
 在原实现上确认新回归失败：上传分类 2 个（超时用例需等待原 120 秒时限，未在原实现上运行）、看板筛选 3 个、认证邮件 3 个、浏览器 8 个用例均失败；恢复修复后全部通过。页面读取额度的新测试依赖新增的页面准入模块，原行为由首轮观察复现（API 超额后页面读取仍成功）；连接池饱和原行为由修复前探针复现（P2028 → 500 INTERNAL_ERROR）。修复过程只使用 orbit_test 与一次性数据库中的合成数据，逐次清理。
 
+## 2026-11-08 安全升级与重新上线
+
+- **依赖漏洞**：`pnpm audit --prod` 从 2026-10-19 的 0 个增至 23 个（3 个严重、4 个高危），含 Next 图片优化接口的未登录远程执行。`next`/`eslint-config-next` 升至 16.4.5，`better-auth` 1.7.18，`zod` 4.6.7，`nodemailer` 10.4.0，`vitest` 5.1.0，并以 `pnpm.overrides` 锁定 `vite` 8.3.6、`fast-uri` 3.1.9，审计清零。
+- **共用服务器**：[Nginx 路由 map](../infra/nginx-http.conf) 改用非捕获组，避免在未确认带上游修复的 Nginx 1.28.3 上引入 CVE-2026-42533 的触发条件；[单机编排](../infra/compose.micro.yml) 支持按主机设内存上限。
+- **基础镜像**：`9618903` 的 CI 在镜像风险策略拦下基础镜像中 apt、libapt-pkg、perl-base 的 9 个可修复高危/严重项，其余检查全部通过；[Dockerfile](../Dockerfile) 改用已带修复的 Node 24 bookworm-slim 多架构 digest（`72ff749`）。
+- **上线**：从 2026-10-12 的最终备份恢复（16 条迁移、1 个账号、1 个项目，无任务与附件），服务器原生构建提交 `72ff749` 的 ARM64 镜像，第一阶段在 https://149-118-55-232.sslip.io 运行。
+
+| 命令 | 结果 |
+| --- | --- |
+| `node scripts/verify-remediation.mjs`（输出目录 artifacts/rework-2026-11-08T15-00-48-918Z） | **PASS**；干净提交，运行前后源码指纹一致（`c68c74ca...`） |
+| · test:unit / test:contract / test:integration / test:e2e / test:ui | 0；304 / 172 / 380 / 102 / 13 passed |
+| · audit --prod --audit-level=high | 0；0 漏洞 |
+| `node scripts/verify-compose.mjs`、`node scripts/verify-nginx.mjs` | 均为 0 |
+| `node scripts/verify-migration-history.mjs` | 0；开发库与测试库无缺失、无不符 |
+| 本机 Trivy 0.69.3 扫描 `72ff749` 的 runner 与 operations 镜像，`scripts/check-image-scan.mjs` | 0；无可修复的高危/严重项，两个镜像各有 35 个上游未修复项按策略保留 |
+| [`9618903` 的远端 CI](https://github.com/liaboveall/Orbit/actions/runs/42492606600) | 只有镜像风险策略失败，修复见上 |
+| [PR #26](https://github.com/liaboveall/Orbit/pull/26) 最新提交的远端 CI（代码与 `72ff749` 相同，只多本记录） | 记录时尚未完成，结果以 PR 的检查为准 |
+
+本地门禁之后只改了基础镜像 digest 和本记录，基础镜像由上述扫描与 CI 覆盖，未重跑本地门禁。同一天更早的一次门禁（`259939d`）14 项检查全部退出 0，但因 `next dev` 在运行中改写 `AGENTS.md` 被判 FAIL，未作为证据；提交该文件后重跑才得到上述结果。
+
 ## 仍开放的 7 组事项
 
 | ID | 当前事实 | 关闭条件 |
 | --- | --- | --- |
-| RELEASE-CI | 修复提交 CI 成功；正式交付版本/镜像未绑定 | 发布时核对实际交付 SHA 的完整 CI 与不可变镜像 |
-| UPSTREAM | 认证依赖的密码派生值比较仍为普通字符串比较（已在 1.7.3/@better-auth/utils 0.4.2 源码确认） | 跟踪上游修复并升级回归；不自行替换密码哈希体系 |
-| CAPACITY | 只有本机/CI 实验 | 目标小规格服务器的内存、连接池、限流写入与混合附件流量实测 |
-| DEPLOYMENT | 用户暂缓服务器配置 | HTTPS 双账号、真实邮件/私有存储、告警、维护调度、异地恢复与 RPO/RTO |
-| MIGRATION-HISTORY | 开发库两条旧 checksum 不符（本轮复查未变）；测试库正常且两库结构一致 | 找回原始迁移字节或形成有证据的调和方案；禁止直接覆盖 checksum |
+| RELEASE-CI | 2026-11-08 重新上线已绑定提交 `72ff749` 与 ARM64 镜像；正式 V1 版本待定 | 发布时核对实际交付 SHA 的完整 CI 与不可变镜像 |
+| UPSTREAM | 认证依赖的密码派生值比较仍为普通字符串比较（已在 1.7.18/@better-auth/utils 0.5.1 源码复查） | 跟踪上游修复并升级回归；不自行替换密码哈希体系 |
+| CAPACITY | 只有本机/CI 实验与线上空载内存读数 | 目标小规格服务器的内存、连接池、限流写入与混合附件流量实测 |
+| DEPLOYMENT | 第一阶段已重新上线（无自有域名与邮件） | HTTPS 双账号、真实邮件/私有存储、告警、维护调度、异地恢复与 RPO/RTO |
+| MIGRATION-HISTORY | 原不符的开发库卷已不在本机；新建开发库、测试库核对无不符，未覆盖校验和 | 找回原始迁移字节或形成有证据的调和方案；禁止直接覆盖 checksum |
 | DATA-RECOVERY | 历史数据事件缺少原始记录/备份 | 找回独立恢复依据 |
 | NATIVE-DEVICE | 自动浏览器通过 | 真实输入法、原生缩放及辅助技术走查 |
 

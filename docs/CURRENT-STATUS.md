@@ -12,6 +12,8 @@ M0—M5 已完成：认证与账户设置、项目与邀请、任务列表与看
 
 2026-10-19 全量深度审查与全面优化：启用服务端 `ipv4first` DNS 顺序以消除本机 IPv6 回退延迟；修复邀请预览页用户时区与已登录态注入、登录/注册页已认证重定向 `returnTo` 保留、非 owner 访问项目邀请页的权限只读态、任务列表与工作台游标/筛选异常提示；统一各领域服务的 UUID 大小写归一化与成员稳定排序；补齐移动端 16px 输入规范、子任务/评论 `Escape` 放弃草稿确认、编辑器与看板 401/404 处理、移动端面板关闭焦点恢复、恢复按钮幂等键轮换及密码超长提示；将 `next`/`eslint-config-next` 升至 `16.3.8`、`nodemailer` 升至 `10.0.16` 并通过 `pnpm.overrides` 修复全部新披露传递依赖漏洞。
 
+2026-11-08 安全升级与重新上线：依赖审计从 0 个漏洞增至 23 个（3 个严重、4 个高危），升级 Next 16.4.5、better-auth 1.7.18、zod 4.6.7、nodemailer 10.4.0、vitest 5.1.0 并覆盖 vite、fast-uri 后清零；Nginx 路由 map 改用非捕获组（CVE-2026-42533），单机编排支持按主机设内存上限；部署指南改为服务器原生构建、不设 `default_server`。
+
 ## 验证
 
 2026-09-24 在冻结工作区（随后提交为 `5730d69`）上运行完整门禁（scripts/verify-remediation.mjs，PASS，运行前后源码指纹一致）：297 unit、172 contract、380 integration、102 E2E、13 UI，共 **964 项通过**；浏览器零重试，真实开发/测试库前后指纹一致；恢复演练与依赖审计通过。实际结果及证据摘要见 [verification](../planning/verification.json)。
@@ -24,13 +26,15 @@ M0—M5 已完成：认证与账户设置、项目与邀请、任务列表与看
 
 2026-10-19 全量深度审查与依赖安全修复后，在冻结工作区上运行 `scripts/verify-remediation.mjs`（输出目录 `artifacts/rework-2026-10-19T10-22-33-368Z`，**PASS**，运行前后源码指纹 `680f0b72...` 一致）：304 unit、172 contract、380 integration、102 E2E、13 UI，共 **971 项通过**；浏览器零重试，生产依赖安全审计 0 漏洞，见 verification 的 comprehensiveAuditAndOptimization20261019。
 
+2026-11-08 在干净提交 `9618903` 上运行 `scripts/verify-remediation.mjs`（输出目录 `artifacts/rework-2026-11-08T15-00-48-918Z`，**PASS**，运行前后源码指纹 `c68c74ca...` 一致）：304 unit、172 contract、380 integration、102 E2E、13 UI，共 **971 项通过**；浏览器零重试，生产依赖审计 0 漏洞，见 verification 的 relaunch20261108。
+
 2026-09-22 首轮审查的 925 项基线门禁与 5 个 P2 观察保留在 verification 的 previousAudit 中；本轮新增回归覆盖全部 10 个问题，其中浏览器、看板筛选、认证邮件与上传分类回归已在原实现上确认失败。
 
 测试按现有行为维护，不按编写日期删除：带日期的套件已改为功能名；首页冒烟并入公开入口套件，保留原断言。构建、类型、契约、隔离、维护与恢复检查仍用于本地和 CI。
 
 ## 发布与历史边界
 
-- M6 保持 review，V1 尚未发布。服务器已开通（Oracle ARM），用户按 OCI 指南自行执行；第一阶段无域名与邮件，邮件验证/重置、邀请协作、告警与异地备份仍待验收；M7/AI 尚未开始。
+- M6 保持 review，V1 尚未正式发布。2026-11-08 起第一阶段在 https://149-118-55-232.sslip.io 重新上线（Oracle ARM，与其他网站共用服务器，提交 `72ff749`，从 2026-10-12 的最终备份恢复）；暂无自有域名与邮件，邮件验证/重置、邀请协作、告警与异地备份仍待验收；M7/AI 尚未开始。
 - 基线 SHA 的 [完整 CI 成功](https://github.com/liaboveall/Orbit/actions/runs/35671586439)；修复提交 `5730d69` 的[完整 CI 成功](https://github.com/liaboveall/Orbit/actions/runs/35953986961)，受测代码树一致。正式发布仍须绑定实际交付提交与不可变镜像；服务器仍需 HTTPS 双账户、邮件/存储、资源预算、告警、定时维护和备份恢复验证。
 - 其后只更新记录的 `198ec23` 的 [CI 失败](https://github.com/liaboveall/Orbit/actions/runs/35968230138)在 nginx 校验脚本：容器入口尚未启动 nginx 时脚本就发出请求（启动竞态；其余已执行步骤均通过）。本机以延迟启动镜像复现了同一错误，脚本已改为先有上限地等待就绪。
 - 2026-09-24 起 Quay 上的 MinIO 仓库要求登录，CI 在启动服务时失败（[运行 36035562583](https://github.com/liaboveall/Orbit/actions/runs/36035562583)）；MinIO 社区版已归档、Docker Hub 镜像已下架。已把原锁定镜像逐层原样推到私有 `ghcr.io/liaboveall/orbit-minio`（镜像层与启动命令一致，冒烟与版本号核对通过），CI 以只读包权限登录拉取（ADR-028）。2026-09-25 再次匿名核对仍无法拉取，本地与 CI 已改用 SeaweedFS 4.47（ADR-029），不再需要私有镜像与 GHCR 登录；候选对比与验证证据见 verification 的 storageReplacement。
