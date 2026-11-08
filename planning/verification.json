@@ -832,7 +832,12 @@
    "gateCommitResult": "Every step passed except Enforce image risk policy, fixed by 72ff749.",
    "recordsCommitRun": "https://github.com/liaboveall/Orbit/actions/runs/42494624893",
    "recordsCommitResult": "Only m6-quality failed: write p95 512 ms against 500. One batch of ten stalled about 430 ms behind the project row lock, delaying 7 requests; the other three batches peaked at 141 ms. The same application code measured 98 ms on 9618903. The source of the stall was not identified, because no database or runner metrics were kept.",
-   "headRun": "See the checks on https://github.com/liaboveall/Orbit/pull/26; not finished when this was recorded."
+   "finalHeadCommit": "106517b97fbe92b058b1259926f092b011413c89",
+   "finalHeadRun": "https://github.com/liaboveall/Orbit/actions/runs/42496258701",
+   "finalHeadResult": "success",
+   "mergeCommit": "d1cac1207a55f17247e78f5c608db5622d5e680f",
+   "mergeCommitRun": "https://github.com/liaboveall/Orbit/actions/runs/42499091154",
+   "mergeCommitResult": "success"
   },
   "deployment": {
    "url": "https://149-118-55-232.sslip.io",
@@ -896,6 +901,55 @@
    ]
   },
   "postGateChanges": "The Dockerfile base digest (72ff749), the m6-quality CI budget rule, and these handoff records. The base digest is covered by the image scan and CI; the test change by lint, typecheck and that spec in local and CI modes. The full local gate was not re-run."
+ },
+ "productionTrial20261109": {
+  "date": "2026-11-09",
+  "timezone": "Asia/Singapore",
+  "url": "https://149-118-55-232.sslip.io",
+  "deployedCommit": "72ff749ec1cd96659356c567e943448baea77ec2",
+  "mainCommit": "d1cac1207a55f17247e78f5c608db5622d5e680f",
+  "method": "Driven by Claude in the owner's signed-in Microsoft Edge through the Claude in Chrome extension, at the owner's request.",
+  "data": "Synthetic. Task titles start with 试用： and the data was left in the project.",
+  "browserChecks": {
+   "createTasks": "3 created, with priority and due date on the first",
+   "statusMenuMove": "passed",
+   "keyboardDragAcrossColumns": "passed",
+   "assign": "passed",
+   "editDescription": "passed",
+   "subtaskCreateAndComplete": "passed",
+   "comment": "passed",
+   "workbenchCounts": "passed",
+   "survivesReloadAndNavigation": "passed",
+   "consoleErrors": 0
+  },
+  "attachment": {
+   "name": "orbit-trial-attachment.txt",
+   "bytes": 6291523,
+   "sha256": "1176051f8a11fc663d153fe76561e1468fc2022ab28dbeead2e4c253d46905b5",
+   "state": "READY",
+   "downloadThroughApi": "bytes and SHA-256 matched the original"
+  },
+  "webRestart": "After docker compose restart web, /health/ready returned 200, the session stayed valid, and the attachment downloaded with a matching SHA-256.",
+  "productionRows": {
+   "Project": 1,
+   "Task": 3,
+   "Subtask": 1,
+   "Comment": 1,
+   "Attachment": 1
+  },
+  "backupRestore": {
+   "backup": "backup-local.sh completed",
+   "database": "Restored into a throwaway database; row counts matched for 7 tables.",
+   "storage": "Restored into a throwaway SeaweedFS on an isolated network. The object read back through S3 matched the original size and SHA-256 and the restored database row.",
+   "cleanup": "Temporary container, volume, network and database were removed and confirmed absent."
+  },
+  "limitations": [
+   "The browser tool's pointer drag was not recognized by the board, so pointer drag was not exercised on production; it is covered by tests/e2e/m3-workflows.spec.ts.",
+   "The 下载附件 button was not clicked; the page called the same download API so that no file was saved on the owner's computer.",
+   "Signing out and back in was not done, because it needs the owner's password.",
+   "No phone, real IME or assistive technology check.",
+   "One account only: no email and no invitation flow."
+  ]
  },
  "limitations": [
   "Auth email timing verified with local stalled/rejecting SMTP stubs; real provider latency to be re-checked after deployment",
