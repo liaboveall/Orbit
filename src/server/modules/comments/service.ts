@@ -92,10 +92,14 @@ export async function listComments(
 ): Promise<CommentListResult> {
   await resolveReadableTaskSubresource(taskId, userId);
 
+  const normalizedTaskId = taskId.toLowerCase();
   const limit = Math.max(1, Math.min(query.limit ?? DEFAULT_LIMIT, MAX_LIMIT));
-  const fingerprint = computeFilterFingerprint({ taskId, sort: "createdAt_asc" });
+  const fingerprint = computeFilterFingerprint({
+    taskId: normalizedTaskId,
+    sort: "createdAt_asc",
+  });
 
-  const conditions: Prisma.CommentWhereInput[] = [{ taskId }];
+  const conditions: Prisma.CommentWhereInput[] = [{ taskId: normalizedTaskId }];
 
   if (query.cursor) {
     const decoded = decodeCursor(query.cursor, fingerprint);

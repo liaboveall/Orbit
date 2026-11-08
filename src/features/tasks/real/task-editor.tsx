@@ -55,7 +55,7 @@ const api = createApiClient();
 type TextField = "title" | "description";
 const FIELD_LABEL: Record<TextField, string> = { title: "标题", description: "描述" };
 const fieldClass =
-  "w-full rounded-control border border-line bg-surface px-3 py-2 text-label outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50";
+  "w-full rounded-control border border-line bg-surface px-3 py-2 text-body outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50 md:text-label";
 
 export function TaskEditor(props: ComponentProps<typeof TaskEditorContent>) {
   return <UnsavedChangesProvider key={`${props.currentUserId}:${props.task.id}`}><TaskEditorContent {...props} /></UnsavedChangesProvider>;
@@ -211,6 +211,14 @@ function TaskEditorContent({
       const result = await api.get(`/tasks/${task.id}`, TaskSchema);
       if (!result.ok) {
         setError(result.error.message);
+        if (result.status === 401)
+          window.location.assign(
+            loginPathWithReturnTo(location.pathname + location.search),
+          );
+        if (result.status === 404) {
+          onDeleted?.();
+          router.refresh();
+        }
         return;
       }
       if (draft && keepDraft) {
@@ -261,6 +269,16 @@ function TaskEditorContent({
       if (!result.ok) {
         setError(result.error.message);
         setConflict(result.error.code === "VERSION_CONFLICT");
+        if (result.status === 401)
+          window.location.assign(
+            loginPathWithReturnTo(location.pathname + location.search),
+          );
+        if (result.status === 404) {
+          discard();
+          setDeleting(false);
+          onDeleted?.();
+          router.refresh();
+        }
         return;
       }
       discard();

@@ -24,6 +24,7 @@ import { TaskDetailClient } from "@/features/tasks/real/task-detail-client";
 export const metadata: Metadata = {
   title: "任务详情 · Orbit",
 };
+export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string; taskId: string }>;

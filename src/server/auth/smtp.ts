@@ -4,7 +4,7 @@ import { createTransport, type SendMailOptions } from "nodemailer";
 import type { OrbitEnv } from "@/server/env";
 
 /** One cancellable connection per message; closing a non-pooled transporter
- * alone does not close its in-flight SMTP connection in nodemailer 10.0.1. */
+ * alone does not close its in-flight SMTP connection in nodemailer 10.0.16. */
 export async function sendMailWithBudget(env: OrbitEnv, message: SendMailOptions): Promise<void> {
   const controller = new AbortController();
   const transport = createTransport({

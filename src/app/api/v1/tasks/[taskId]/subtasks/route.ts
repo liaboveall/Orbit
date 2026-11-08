@@ -23,9 +23,6 @@ export async function GET(
   const requestId = resolveRequestIdFromRequest(request);
 
   try {
-    const denied = verifyRequestOrigin(request, requestId);
-    if (denied) return denied;
-
     const sessionUser = await requireSessionUser(request);
     const { taskId } = await context.params;
 
