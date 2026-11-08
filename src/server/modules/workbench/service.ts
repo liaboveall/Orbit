@@ -113,7 +113,7 @@ export async function listMyTasks(
     today,
     bucket,
     sort,
-    projectId: query.projectId ?? null,
+    projectId: query.projectId?.toLowerCase() ?? null,
     priority: query.priority ?? null,
     q: query.q ?? "",
   });

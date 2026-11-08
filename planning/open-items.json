@@ -8,7 +8,7 @@
    "taskIds": [
     "ORB-021"
    ],
-   "nextAction": "部署时记录实际提交 SHA（OCI 指南第 6 节的 $sha），核对该提交的完整 CI，并记录 linux/arm64 runner/operations 镜像 ID。",
+   "nextAction": "2026-11-08 重新上线绑定提交 72ff749，linux/arm64 镜像 ID 与 CI 结果见 verification 的 relaunch20261108。正式发布 V1 时按同样方式核对最终提交的完整 CI 并记录镜像。",
    "evidence": [
     "docs/CURRENT-STATUS.md"
    ]
@@ -20,7 +20,7 @@
    "taskIds": [
     "ORB-020"
    ],
-   "nextAction": "锁定依赖内仍使用普通字符串比较；尚无远程可利用证据。跟踪上游修复并通过升级回归，不自行替换密码哈希。",
+   "nextAction": "升级到 better-auth 1.7.18、@better-auth/utils 0.5.1 后复查源码，密码派生值仍为普通字符串比较；尚无远程可利用证据。跟踪上游修复并通过升级回归，不自行替换密码哈希。",
    "evidence": [
     "docs/CURRENT-REVIEW.md"
    ]
@@ -32,7 +32,7 @@
    "taskIds": [
     "ORB-020"
    ],
-   "nextAction": "在 Oracle A1（2 OCPU/12 GB，ARM64）上测量内存、连接池、认证与业务限流、混合附件流量和 p95，再确定资源预算；1 GiB t3.micro 方案已改为备选。",
+   "nextAction": "2026-11-08 重新上线后只有空载内存读数（web 113 MiB、postgres 56 MiB、storage 152 MiB）。仍需在 Oracle A1（2 OCPU/12 GB，ARM64，与其他网站共用）上测量内存、连接池、认证与业务限流、混合附件流量和 p95，再确定资源预算。",
    "evidence": [
     "docs/CURRENT-STATUS.md",
     "docs/OCI-DEPLOYMENT.md"
@@ -45,7 +45,7 @@
    "taskIds": [
     "ORB-021"
    ],
-   "nextAction": "服务器已开通（Oracle ARM），用户按 docs/OCI-DEPLOYMENT.md 执行第一阶段（sslip.io HTTPS、同机 SeaweedFS、暂无邮件）；仍待验证：真实邮件验证/重置与双账户邀请、告警、异地备份自动化、恢复演练与 RPO/RTO。",
+   "nextAction": "2026-11-08 已从最终备份恢复并重新上线第一阶段（https://149-118-55-232.sslip.io，sslip.io HTTPS、同机 SeaweedFS、暂无邮件，与其他网站共用服务器）。仍待验证：自有域名、真实邮件验证/重置与双账户邀请、告警、异地备份自动化、含附件的恢复核对与 RPO/RTO。",
    "evidence": [
     "docs/CURRENT-STATUS.md",
     "docs/OCI-DEPLOYMENT.md"
@@ -59,7 +59,7 @@
     "ORB-020",
     "ORB-021"
    ],
-   "nextAction": "两条旧 checksum 不符，测试库正常且两库结构一致；需原始迁移字节或经证据支持的调和方案。不得覆盖历史校验和。",
+   "nextAction": "原 checksum 不符的开发库卷在 2026-11-08 已不在本机 Docker 中；按 16 份迁移新建的开发库与测试库经 scripts/verify-migration-history.mjs 核对无缺失、无不符，生产库恢复后 16 条迁移完整，未覆盖任何校验和。待用户确认后可关闭。",
    "evidence": [
     "docs/CURRENT-STATUS.md"
    ]

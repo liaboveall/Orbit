@@ -21,7 +21,7 @@ export function UserTimezoneProvider({
   value,
   children,
 }: {
-  value: string;
+  value: string | null;
   children: ReactNode;
 }) {
   return <UserTimezoneContext value={value}>{children}</UserTimezoneContext>;

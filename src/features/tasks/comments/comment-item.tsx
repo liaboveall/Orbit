@@ -221,12 +221,15 @@ export function CommentItem({
                 }
                 if (e.key === "Escape") {
                   e.stopPropagation();
+                  if (draft !== (comment.body ?? "") && !window.confirm("确定放弃当前评论修改？")) {
+                    return;
+                  }
                   cancel();
                 }
                 // Enter 不提交：评论允许多行，避免误触。
               }}
               aria-label="编辑评论内容"
-              className="text-label"
+              className="md:text-label"
               rows={3}
               maxLength={BODY_MAX}
               autoFocus

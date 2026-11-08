@@ -39,6 +39,8 @@ export default async function Page({
     } catch (error) {
       if (error instanceof DomainError && error.code === "NOT_FOUND")
         notFound();
+      if (error instanceof DomainError && error.code === "VALIDATION_ERROR")
+        return null;
       throw error;
     }
   })();

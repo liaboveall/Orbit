@@ -371,6 +371,8 @@ function ProjectSettingsFormContent({ project }: ProjectSettingsFormProps) {
                   setDescription(baseline.description);
                   setProfileError(null);
                   setRemoteConflict(null);
+                  setConflictPending(false);
+                  setRemoteFetchError(null);
                 }}
               >
                 重置

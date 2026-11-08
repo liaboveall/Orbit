@@ -166,11 +166,11 @@ export async function listProjectTasks(
   const today = query.overdue ? dateInTimezone(registrationTimezone(user?.timezone)) : null;
   const fingerprint = computeFilterFingerprint({
     today,
-    projectId,
+    projectId: project.id,
     q: query.q ?? null,
     status: query.status ?? null,
     priority: query.priority ?? null,
-    assigneeId: query.assigneeId ?? null,
+    assigneeId: query.assigneeId?.toLowerCase() ?? null,
     unassigned: query.unassigned === true,
     overdue: query.overdue === true,
     deleted,
