@@ -14,8 +14,8 @@
 
 ## 框架及依赖升级
 
-- 先读目标版本官方迁移资料与本地 next/dist/docs，记录起止版本和对应 API；独立分支更新锁文件，不混用 Prisma 主版本示例。
-- 所有直接依赖精确版本，pnpm-lock.yaml 冻结安装；Dependabot 提案经过正常回归后合入。dotenv 仅脚本/构建使用，operations 镜像保留构建依赖。
+- 先读目标版本官方迁移资料与本地 next/dist/docs，记录起止版本和对应 API；更新锁文件后先跑回归再提交，不混用 Prisma 主版本示例。
+- 所有直接依赖精确版本，pnpm-lock.yaml 冻结安装；依赖升级手动进行，改动前运行 `pnpm audit --prod`，经过正常回归后提交。这几组必须同版本一起升级：react、react-dom、@types/react、@types/react-dom；prisma、@prisma/client、@prisma/adapter-pg；tailwindcss、@tailwindcss/postcss。dotenv 仅脚本/构建使用，operations 镜像保留构建依赖。
 - Next/React：正式构建、RSC/router.refresh、分页窗口保留、loading/error 恢复、无重复内容树、Proxy 请求体限制、headers/params、换账号缓存隔离。
 - Radix：390/768/1440、嵌套 Dialog/Drawer/Menu、焦点恢复、组合 Enter/Escape、tab 方向键；不能仅凭源码猜测删掉兼容处理。
 - Prisma/pg：生成客户端、迁移、真实事务/并发/池耗尽映射、BIGINT 重编号及删除约束。
