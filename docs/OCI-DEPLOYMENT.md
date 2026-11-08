@@ -1,6 +1,6 @@
 # Orbit Oracle Cloud 部署指南：ARM 2 核 12 GB（第一阶段）
 
-更新：2026-09-26。用途：个人全栈作品展示。本文是操作指南，按顺序在你的 Oracle 实例上执行；服务器端尚未有人按本文执行过，遇到与描述不符的输出先停下排查。
+更新：2026-11-08。用途：个人全栈作品展示。本文是操作指南，按顺序在你的 Oracle 实例上执行，遇到与描述不符的输出先停下排查。这台服务器可能同时运行其他网站，操作时不要改动它们的容器、卷和 Nginx 站点。
 
 第一阶段的范围和限制：
 
@@ -12,7 +12,7 @@
 
 浏览器 → HTTPS Nginx（宿主机）→ Orbit web 容器（127.0.0.1:3000）→ PostgreSQL 容器、SeaweedFS 容器（Docker 内网，不对外开放端口）。
 
-镜像在 Windows 电脑上构建为 linux/arm64 后上传；服务器不构建、不跑测试。编排文件是仓库的 [infra/compose.micro.yml](../infra/compose.micro.yml)，通过 `local-storage` 配置启用 SeaweedFS。
+镜像在服务器上原生构建（ARM64，约 3 分钟），源码用 `git archive` 打包上传；服务器不跑测试。编排文件是仓库的 [infra/compose.micro.yml](../infra/compose.micro.yml)，通过 `local-storage` 配置启用 SeaweedFS。
 
 Oracle 的两条规则要记住：
 
@@ -34,7 +34,7 @@ Oracle 的两条规则要记住：
 
 在 Oracle 控制台确认：
 
-1. 实例规格为 `VM.Standard.A1.Flex`，2 OCPU、12 GB 内存；镜像是 Canonical Ubuntu 24.04（aarch64）；已分配公网 IPv4。
+1. 实例规格为 `VM.Standard.A1.Flex`，2 OCPU、12 GB 内存；镜像是 Canonical Ubuntu（实际使用 26.04，aarch64）；已分配公网 IPv4。
 2. 网络 → 虚拟云网络 → 你的 VCN → 实例所在的公共子网 → 安全列表，添加两条入站规则：源 CIDR `0.0.0.0/0`，IP 协议 TCP，目标端口分别为 `80` 和 `443`。SSH 的 22 端口保持原样（能改成只允许你自己的 IP 更好）。数据库、应用和存储端口都不要开放。
 
 **Windows PowerShell：**
@@ -54,7 +54,7 @@ df -h /
 . /etc/os-release && echo "$PRETTY_NAME"
 ```
 
-预期 `aarch64`、内存约 11 Gi、Ubuntu 24.04。
+预期 `aarch64`、内存约 11 Gi、Ubuntu 24.04 或更新版本。
 
 ## 4. 主机防火墙（在安装 Docker 之前）
 
@@ -103,45 +103,50 @@ sudo docker compose version
 
 检查点：在电脑浏览器打开 `http://YOUR_IP`，应看到 Nginx 默认页。打不开就回到第 3、4 节检查安全列表和主机防火墙，不要继续。
 
-## 6. 在 Windows 构建 ARM64 镜像并上传
+## 6. 在服务器上构建 ARM64 镜像
 
-先启动 Docker Desktop。镜像通过模拟构建，runner 约需 6–7 分钟，operations 复用缓存约 1 分钟。
+服务器本身就是 ARM64，原生构建比在 x86 电脑上模拟快得多。`core.autocrlf=false` 保证在 Windows 上打包的脚本仍是 LF 换行。
 
 **Windows PowerShell：**
 
 ```powershell
-Set-Location D:\FullStack\Orbit
+Set-Location D:FullStackOrbit
 git switch main
 git pull --ff-only
 git status --short
 $sha = git rev-parse --short HEAD
-docker buildx build --platform linux/arm64 --target runner -t orbit-web:showcase -t "orbit-web:$sha" --load .
-docker buildx build --platform linux/arm64 --target operations -t orbit-operations:showcase -t "orbit-operations:$sha" --load .
-docker image inspect orbit-web:showcase --format "{{.Architecture}}"
 New-Item -ItemType Directory -Force artifacts | Out-Null
-docker save -o artifacts/orbit-arm64.tar orbit-web:showcase orbit-operations:showcase "orbit-web:$sha" "orbit-operations:$sha"
-scp -i "KEY_PATH" artifacts/orbit-arm64.tar infra/compose.micro.yml infra/nginx-http.conf infra/nginx.conf infra/backup-local.sh ubuntu@YOUR_IP:/home/ubuntu/
+git -c core.autocrlf=false archive --format=tar.gz -o artifacts/orbit-src.tgz HEAD
+ssh -i "KEY_PATH" ubuntu@YOUR_IP "rm -rf orbit-src; mkdir orbit-src"
+scp -i "KEY_PATH" artifacts/orbit-src.tgz ubuntu@YOUR_IP:orbit-src/
 $sha
 ```
 
-`git status --short` 应无输出；架构应显示 `arm64`。记下最后打印的 `$sha`，它是这次发布的提交版本。
+`git status --short` 应无输出。记下最后打印的 `$sha`，它是这次发布的提交版本。
 
-**服务器 Bash：**
+**服务器 Bash：**（`REPLACE_SHA` 换成上面打印的值）
 
 ```bash
-sed -i 's/\r$//' /home/ubuntu/compose.micro.yml /home/ubuntu/nginx-http.conf /home/ubuntu/nginx.conf /home/ubuntu/backup-local.sh
-sudo docker load -i /home/ubuntu/orbit-arm64.tar
+SHA=REPLACE_SHA
+cd ~/orbit-src && tar -xzf orbit-src.tgz && rm orbit-src.tgz
+sudo docker build --target runner -t "orbit-web:$SHA" -t orbit-web:showcase .
+sudo docker build --target operations -t "orbit-operations:$SHA" -t orbit-operations:showcase .
 sudo docker image ls | grep orbit
 sudo install -d -m 700 /opt/orbit /opt/orbit/backups
-sudo install -m 644 /home/ubuntu/compose.micro.yml /opt/orbit/compose.yml
-sudo install -m 700 /home/ubuntu/backup-local.sh /opt/orbit/backup-local.sh
-echo 'COMPOSE_PROFILES=local-storage' | sudo tee /opt/orbit/.env > /dev/null
+sudo install -m 644 infra/compose.micro.yml /opt/orbit/compose.yml
+sudo install -m 700 infra/backup-local.sh /opt/orbit/backup-local.sh
+sudo tee /opt/orbit/.env > /dev/null <<'ENV'
+COMPOSE_PROFILES=local-storage
+ORBIT_POSTGRES_MEM_LIMIT=1g
+ORBIT_WEB_MEM_LIMIT=1g
+ORBIT_OPERATIONS_MEM_LIMIT=1g
+ORBIT_STORAGE_MEM_LIMIT=512m
+ENV
 sudo touch /opt/orbit/db.env /opt/orbit/storage.env /opt/orbit/app.env
 sudo chmod 600 /opt/orbit/db.env /opt/orbit/storage.env /opt/orbit/app.env
-rm /home/ubuntu/orbit-arm64.tar
 ```
 
-第一行把 Windows 检出时的 CRLF 换行转成 LF。`/opt/orbit/.env` 让本目录的所有 compose 命令自动启用 `local-storage`，后续命令无需再加参数。
+`/opt/orbit/.env` 让本目录的所有 compose 命令自动启用 `local-storage`，并给每个容器设内存上限，给同机的其他网站留出余量。上限的实际余量以第 11 节的 `docker stats` 结果为准。`~/orbit-src` 第 10 节还要用，配好 Nginx 后再删除。
 
 ## 7. 生成随机值并填写环境文件
 
@@ -251,12 +256,12 @@ curl -i http://127.0.0.1:3000/health/ready
 
 ```bash
 ORBIT_HOST=YOUR_HOST
-sudo install -m 644 /home/ubuntu/nginx-http.conf /etc/nginx/conf.d/orbit-logging.conf
+sudo install -m 644 ~/orbit-src/infra/nginx-http.conf /etc/nginx/conf.d/orbit-logging.conf
 sudo install -d /etc/nginx/snippets
-sudo install -m 644 /home/ubuntu/nginx.conf /etc/nginx/snippets/orbit.conf
+sudo install -m 644 ~/orbit-src/infra/nginx.conf /etc/nginx/snippets/orbit.conf
 sudo tee /etc/nginx/sites-available/orbit > /dev/null <<EOF
 server {
-    listen 80 default_server;
+    listen 80;
     server_name ${ORBIT_HOST};
     include /etc/nginx/snippets/orbit.conf;
 }
@@ -270,7 +275,7 @@ sudo systemctl reload nginx
 curl -s -o /dev/null -w '%{http_code}\n' -H "Host: ${ORBIT_HOST}" http://127.0.0.1/health/ready
 ```
 
-预期 `200`。再在电脑浏览器打开 `http://YOUR_HOST/health/ready`，确认主机名解析和公网访问都正常（Let's Encrypt 验证需要它），然后申请证书：
+预期 `200`。不要给 Orbit 设 `default_server`：未匹配的主机名由服务器的兜底站点处理，只有这台服务器上没有其他站点时才需要另行考虑。配好后执行 `rm -rf ~/orbit-src`。再在电脑浏览器打开 `http://YOUR_HOST/health/ready`，确认主机名解析和公网访问都正常（Let's Encrypt 验证需要它），然后申请证书：
 
 ```bash
 ORBIT_HOST=YOUR_HOST
@@ -391,6 +396,10 @@ sudo sh -c 'docker compose -f /opt/orbit/compose.yml run --rm --no-deps -T --use
 sudo docker compose -f /opt/orbit/compose.yml start storage
 ```
 
+### 服务器已清空时整站恢复
+
+备份里有 `config.tar.gz`（`/opt/orbit` 下的编排、环境与密钥文件）、数据库 dump 和附件归档时：先把 `opt/orbit` 解压到 `/`，用第 6 节构建镜像（安装最新的 `compose.micro.yml`），`up -d --wait postgres storage`；再按 `app.env` 里的密码创建 `orbit_app` 与 `orbit_prod`，`pg_restore -U postgres -d orbit_prod` 恢复 dump，用上面的命令恢复附件；最后按第 9、10、12 节迁移、启动 web、配置 Nginx 与证书、加回定时任务。Nginx 文件取仓库当前版本，不用备份里的站点文件。
+
 不要运行 `docker compose down -v` 或卷清理命令：`pgdata` 与 `storagedata` 是正式数据。
 
 ## 13. 以后：域名、邮件、对象存储
@@ -401,10 +410,9 @@ sudo docker compose -f /opt/orbit/compose.yml start storage
 
 ## 14. 更新应用
 
-在 Windows 按第 6 节构建并上传新镜像（新的 `$sha` 标签，同时重新打 `showcase` 标签）。服务器上先执行一次 `sudo /opt/orbit/backup-local.sh` 并下载，然后：
+按第 6 节打包上传并在服务器上构建新镜像（新的 `$sha` 标签，同时重新打 `showcase` 标签；`/opt/orbit` 下的文件只在编排或备份脚本变化时才需要重新安装）。服务器上先执行一次 `sudo /opt/orbit/backup-local.sh` 并下载，然后：
 
 ```bash
-sudo docker load -i /home/ubuntu/orbit-arm64.tar
 sudo docker compose -f /opt/orbit/compose.yml stop web
 sudo docker compose -f /opt/orbit/compose.yml run --rm operations node node_modules/prisma/build/index.js migrate deploy
 sudo docker compose -f /opt/orbit/compose.yml up -d web
