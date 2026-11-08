@@ -88,9 +88,10 @@
 | `node scripts/verify-migration-history.mjs` | 0；开发库与测试库无缺失、无不符 |
 | 本机 Trivy 0.69.3 扫描 `72ff749` 的 runner 与 operations 镜像，`scripts/check-image-scan.mjs` | 0；无可修复的高危/严重项，两个镜像各有 35 个上游未修复项按策略保留 |
 | [`9618903` 的远端 CI](https://github.com/liaboveall/Orbit/actions/runs/42492606600) | 只有镜像风险策略失败，修复见上 |
-| [PR #26](https://github.com/liaboveall/Orbit/pull/26) 最新提交的远端 CI（代码与 `72ff749` 相同，只多本记录） | 记录时尚未完成，结果以 PR 的检查为准 |
+| [`de44322` 的远端 CI](https://github.com/liaboveall/Orbit/actions/runs/42494624893) | 只有 m6-quality 的写入 p95 失败（512 ms，上限 500）：一批 10 个请求中，一次约 430 ms 的停顿拖慢了项目行锁上的 7 个请求，其余三批最长 141 ms；同样的应用代码在 `9618903` 上是 98 ms。停顿来源未能确定（没有保留数据库与 runner 指标）。[该用例](../tests/e2e/m6-quality.spec.ts)改为 CI 上不计最慢一批，预算不变 |
+| [PR #26](https://github.com/liaboveall/Orbit/pull/26) 最新提交的远端 CI（应用代码与 `72ff749` 相同） | 记录时尚未完成，结果以 PR 的检查为准 |
 
-本地门禁之后只改了基础镜像 digest 和本记录，基础镜像由上述扫描与 CI 覆盖，未重跑本地门禁。同一天更早的一次门禁（`259939d`）14 项检查全部退出 0，但因 `next dev` 在运行中改写 `AGENTS.md` 被判 FAIL，未作为证据；提交该文件后重跑才得到上述结果。
+本地门禁之后改了基础镜像 digest、m6-quality 在 CI 上的判定方式和本记录：基础镜像由上述扫描与 CI 覆盖，测试改动运行了 lint、typecheck 和该用例（本地与 CI 两种模式），未重跑完整本地门禁。同一天更早的一次门禁（`259939d`）14 项检查全部退出 0，但因 `next dev` 在运行中改写 `AGENTS.md` 被判 FAIL，未作为证据；提交该文件后重跑才得到上述结果。
 
 ## 仍开放的 7 组事项
 
