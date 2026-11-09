@@ -4,7 +4,13 @@
 - postgres/init/01-create-test-db.sql：首次初始化独立测试库。
 - compose.production.yml：生产服务编排。
 - nginx.conf / nginx-http.conf：HTTPS 反向代理 / HTTP 引导配置。
+- nginx-site.conf：OCI 生产的虚拟主机（规范主机、跳转与证书）。
+- compose.micro.yml：单机部署编排。
 - backup-database.sh：数据库备份。
+- backup-local.sh / select-backup.sh：单机本地备份与完整批次选择。
+- backup-offsite.sh：restic 加密异地备份并读回校验。
+- apply-external-config.py：在服务器上写入 Resend 与 R2 凭证，不输出值。
+- monitor.py / systemd/：单机告警程序及其定时器。
 - s3-lifecycle.json / s3-backup-lifecycle.json：对象存储生命周期配置。
 
 启动：`docker compose -f infra/compose.dev.yml up -d`。停止并保留数据卷：`docker compose -f infra/compose.dev.yml down`。

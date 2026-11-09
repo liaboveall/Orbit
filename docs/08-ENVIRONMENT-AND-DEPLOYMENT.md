@@ -117,7 +117,7 @@ pnpm dev
 
 首版采用持续运行的 Node 容器，配 PostgreSQL、私有 S3 兼容存储和邮件服务。数据库/存储可用托管服务，或采用下面已确定的 OCI 同机方案。新增供应商账户与费用仍按实际需要处理；已有部署不等于完成全部发布验收。
 
-当前目标（2026-09-26，ADR-030）：一台 Oracle Cloud Ampere A1（2 OCPU/12 GB，ARM64）单机部署，按 [OCI 部署指南](OCI-DEPLOYMENT.md) 执行。`compose.micro.yml` 的 `local-storage` 配置在同机运行 SeaweedFS；staging/production 的 `STORAGE_ENDPOINT` 仍须为 https://，唯一例外是 compose 内网的单段服务名（`http://storage:8333`），IP 与含点域名一律拒绝。第一阶段没有域名与邮件服务：用 sslip.io 主机名取得 HTTPS，SMTP 指向保留域名 `smtp.invalid`；按上一段规定，这不构成发布完成，邮件验证与重置流程在配置真实邮件后单独验收。
+当前目标（2026-09-26，ADR-030）：一台 Oracle Cloud Ampere A1（2 OCPU/12 GB，ARM64）单机部署，按 [OCI 部署指南](OCI-DEPLOYMENT.md) 执行。`compose.micro.yml` 的 `local-storage` 配置在同机运行 SeaweedFS；staging/production 的 `STORAGE_ENDPOINT` 仍须为 https://，唯一例外是 compose 内网的单段服务名（`http://storage:8333`），IP 与含点域名一律拒绝。第一阶段没有域名与邮件服务：用 sslip.io 主机名取得 HTTPS，SMTP 指向保留域名 `smtp.invalid`；按上一段规定，这不构成发布完成，邮件验证与重置流程在配置真实邮件后单独验收。2026-11-09 起生产已切到 smartorbit.tech 并接入 Resend，见 [OCI 部署指南第 16 节](OCI-DEPLOYMENT.md)。
 
 构建：多阶段Dockerfile、锁定Node基础镜像主版本与可复现digest、安装冻结依赖、生成Prisma Client、Next standalone构建、最小运行层、非root用户。浏览器上传流经Node服务，入口限制约12MiB请求体并在应用层对实际文件限制10MiB。
 

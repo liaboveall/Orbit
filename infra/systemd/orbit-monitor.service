@@ -1,0 +1,9 @@
+[Unit]
+Description=Orbit health, backup and certificate monitoring
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/orbit/monitor.py
+TimeoutStartSec=2min
+UMask=0077

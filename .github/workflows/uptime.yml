@@ -1,0 +1,25 @@
+name: uptime
+# Probes production from outside the server, so a dead host or broken DNS still raises a
+# failed run (and GitHub's failed-workflow notification). The server's own monitor covers
+# everything else but cannot report its own death. Hourly keeps this private repository
+# well inside the free Actions minutes.
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+permissions: {}
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Check the public readiness endpoint
+        run: |
+          code=000
+          for attempt in 1 2 3; do
+            code=$(curl -s -o /dev/null -m 20 -w '%{http_code}' https://smartorbit.tech/health/ready || true)
+            if [ "$code" = 200 ]; then echo "ready on attempt $attempt"; exit 0; fi
+            sleep 30
+          done
+          echo "::error::smartorbit.tech readiness returned $code after 3 attempts"
+          exit 1

@@ -4,7 +4,7 @@
 
 ## 当前修复与验收（2026-11-09）
 
-2026-11-09 新增的 7 组问题已修复并经冻结门禁验收：980 项测试通过（304 unit、172 contract、381 integration、110 E2E、13 UI），源码指纹一致；真实并发备份/成对恢复、故障注入、默认恢复、迁移历史和全依赖审计 0 均通过。仍保留 7 组外部或历史事项；修复尚未提交/部署，M6 review、M7 todo。
+2026-11-09 新增的 7 组问题已修复并经冻结门禁验收：980 项测试通过（304 unit、172 contract、381 integration、110 E2E、13 UI），源码指纹一致；真实并发备份/成对恢复、故障注入、默认恢复、迁移历史和全依赖审计 0 均通过。修复已随 `e199be4` 提交，`237c4f3` 完整 CI 通过并已部署到 https://smartorbit.tech；M6 review、M7 todo。
 
 附件备份现在先冻结存储，完整批次校验后发布清单；代价是整个 dump/归档窗口的附件暂时不可用。详见当前审查顶部与 verification 的 comprehensiveRemediation20261109。
 
@@ -48,7 +48,7 @@ M0—M5 已完成：认证与账户设置、项目与邀请、任务列表与看
 
 ## 发布与历史边界
 
-- M6 保持 review，V1 尚未正式发布。2026-11-08 起第一阶段在 https://149-118-55-232.sslip.io 重新上线（Oracle ARM，与其他网站共用服务器，提交 `72ff749`，从 2026-10-12 的最终备份恢复）；暂无自有域名与邮件；2026-11-09 已用合成数据完成单账户试用和含附件的备份恢复核对；邮件验证/重置、邀请协作、告警与异地备份仍待验收；M7/AI 尚未开始。
+- M6 保持 review，V1 尚未正式发布。2026-11-09 起线上为 https://smartorbit.tech（Oracle ARM，与其他网站共用服务器，提交 `237c4f3`），已接入 Resend、R2 加密异地备份和告警；真实邮件、双账户协作和重置密码待本人验收；M7/AI 尚未开始。
 - 基线 SHA 的 [完整 CI 成功](https://github.com/liaboveall/Orbit/actions/runs/35671586439)；修复提交 `5730d69` 的[完整 CI 成功](https://github.com/liaboveall/Orbit/actions/runs/35953986961)，受测代码树一致。正式发布仍须绑定实际交付提交与不可变镜像；服务器仍需 HTTPS 双账户、邮件/存储、资源预算、告警、定时维护和备份恢复验证。
 - 其后只更新记录的 `198ec23` 的 [CI 失败](https://github.com/liaboveall/Orbit/actions/runs/35968230138)在 nginx 校验脚本：容器入口尚未启动 nginx 时脚本就发出请求（启动竞态；其余已执行步骤均通过）。本机以延迟启动镜像复现了同一错误，脚本已改为先有上限地等待就绪。
 - 2026-09-24 起 Quay 上的 MinIO 仓库要求登录，CI 在启动服务时失败（[运行 36035562583](https://github.com/liaboveall/Orbit/actions/runs/36035562583)）；MinIO 社区版已归档、Docker Hub 镜像已下架。已把原锁定镜像逐层原样推到私有 `ghcr.io/liaboveall/orbit-minio`（镜像层与启动命令一致，冒烟与版本号核对通过），CI 以只读包权限登录拉取（ADR-028）。2026-09-25 再次匿名核对仍无法拉取，本地与 CI 已改用 SeaweedFS 4.47（ADR-029），不再需要私有镜像与 GHCR 登录；候选对比与验证证据见 verification 的 storageReplacement。
@@ -63,6 +63,19 @@ M0—M5 已完成：认证与账户设置、项目与邀请、任务列表与看
 - ChatApp 生产 worker 配有 Resend SMTPS（465）及 `chatapp.software` 下的发件地址，Orbit 仍为占位 SMTP。Orbit 容器已与 Resend 完成经证书校验的 TLS 握手并收到 SMTP 220，未认证或发送邮件。可复用服务账户及其已验证发件域，给 Orbit 单独生成限域发送 Key；网站可用独立站点 `orbit.chatapp.software`，需添加 DNS 并单独签发证书。
 - ChatApp 的异地备份使用 Cloudflare R2，最近一次备份服务返回成功。可复用 R2 账户及备份校验流程，Orbit 单独使用私有桶和单桶凭证，验证加密读回与隔离恢复。ChatApp 的监控 timer 已启用但本次查看时最近一次执行返回非零；复用调度方式后仍需独立验证 Orbit 告警送达。
 - 下一步为当前修复创建发布候选，绑定同一提交的完整 CI 与 ARM64 镜像，保留现有 Orbit 卷和回退点。接入生产邮件和异地备份后，按 AC-12 完成 HTTPS 双账户、权限、容量、告警及恢复验收。本次只读检查生产环境，未执行发布或修改云资源。
+
+### 2026-11-09 · 自有域名上线
+
+用户购买 smartorbit.tech，取代上一节设想的 `orbit.chatapp.software`。
+
+- 发布：`e199be4` 的 CI 因备份测试遗留 root 专属目录失败（Linux 非 root 环境下 `next build` 无法读取，应用代码无关），修正后 `237c4f3` [完整 CI 成功](https://github.com/liaboveall/Orbit/actions/runs/42556658646)；服务器原生构建 ARM64 镜像，部署前备份已拉回本机并校验，无待执行迁移。
+- 站点：`https://smartorbit.tech` 就绪 200，`www`、HTTP 和旧 sslip.io 地址 301 到规范主机，HSTS 一年；登录接口对新域名放行、对外部来源和旧地址返回 403；三张证书续期演练成功；ChatApp 和兜底站点不受影响。
+- 邮件：Resend 域名 Verified，SMTP 登录成功，告警演练的两封邮件显示 Delivered。认证邮件尚未经真实账户验收。
+- 异地备份：restic 加密写入 R2 私有桶，令牌确认只能访问该桶。远端快照恢复到临时数据库和 SeaweedFS，10 张关键表行数一致，6 MB 附件 SHA-256 一致，耗时 19 秒（数据量很小，不代表生产 RTO）。定时任务尚未跑过第一轮。
+- 告警：服务器每 5 分钟检查，演练确认连续两次失败才告警、重复失败不刷屏、恢复时通知；外部探测每小时一次，其失败通知未演练。
+- 容量：独立合成环境（生产同款镜像和内存上限，10 并发、1000 任务）读 p95 282.6 ms、写 p95 176.0 ms；90 秒混合负载 23 req/s 无 OOM、无交换。备份窗口内上传按设计返回 503；窗口外另有 1 次 503 未逐条确认，推测是存储刚重启。未测极限，未经过 Nginx/TLS。
+
+详见 [部署指南第 16 节](OCI-DEPLOYMENT.md) 与 verification 的 `launch20261109`。
 
 上次仓库清理的文件变更与受阻删除记录保留在 Git 历史；本轮验证日志保存在忽略的本地产物目录 artifacts/remediation-20260924，摘要与哈希记入 verification。
 

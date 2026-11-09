@@ -2313,5 +2313,174 @@
    "Original historical records/backup missing",
    "Latest upstream auth still uses ordinary string comparison; no custom password hashing introduced"
   ]
+ },
+ "launch20261109": {
+  "recordedAt": "2026-11-09T04:15:00+00:00",
+  "commit": "237c4f355f632bc9238d8b365e8d484888928cee",
+  "url": "https://smartorbit.tech",
+  "ci": {
+   "run": "https://github.com/liaboveall/Orbit/actions/runs/42556658646",
+   "conclusion": "success",
+   "precedingFailure": {
+    "run": "https://github.com/liaboveall/Orbit/actions/runs/42555643379",
+    "commit": "e199be49bb66260ef8c116f4900801430f13fc40",
+    "cause": "verify-local-backup left a root-only artifacts directory; next build could not read it on the non-root Linux runner. Fixed by removing the directory at the end of the test; application code unchanged."
+   }
+  },
+  "images": {
+   "architecture": "arm64",
+   "web": "sha256:c01ab7dbfe7cd55e077a2dd4d17786834ab3d0107e69ab74e1b2a15e53773b2d",
+   "operations": "sha256:34c9a76b6cb5ea77234a0d96c52712c32d50cda66333f01387c3cf286768b42a",
+   "rollbackTag": "72ff749"
+  },
+  "deployment": {
+   "preDeployBackupCopiedOffHost": true,
+   "pendingMigrations": 0,
+   "readyAfterDeploy": true,
+   "storageCheck": "storage_check_passed",
+   "maintenanceTargetUnchanged": true
+  },
+  "publicChecks": {
+   "healthReady": 200,
+   "demo": 200,
+   "login": 200,
+   "unauthenticatedApi": 401,
+   "www": "301 to canonical host, path and query kept",
+   "http": "301 to https",
+   "oldSslipName": "301 to canonical host",
+   "hsts": "max-age=31536000",
+   "http2": true,
+   "signInOrigins": {
+    "canonical": 401,
+    "foreign": 403,
+    "oldSslipName": 403
+   },
+   "certificateRenewalDryRun": "success for all three Orbit certificates",
+   "otherSitesAfterSwitch": "ChatApp containers healthy, catch-all still rejects requests by IP"
+  },
+  "mail": {
+   "provider": "Resend, Tokyo, SMTPS 465",
+   "domainStatus": "Verified",
+   "smtpLogin": "smtp_verify_ok",
+   "monitorDrillMessages": "2 delivered according to Resend; the owner confirmed receiving the mail",
+   "authFlowAcceptance": "pending the owner's two-account run"
+  },
+  "offsiteBackup": {
+   "tool": "restic 0.19.1 to a private R2 bucket",
+   "tokenScope": {
+    "ownBucketList": 200,
+    "chatappBucketList": 403
+   },
+   "schedule": "daily 03:40 UTC, after the 03:10 local backup",
+   "restoreAcceptance": {
+    "batch": "20261109T034645Z-3402910",
+    "checksums": "dump and attachment archive match the manifest",
+    "rowCountsMatched": [
+     "User",
+     "Project",
+     "ProjectMember",
+     "Task",
+     "Subtask",
+     "Comment",
+     "Attachment",
+     "ActivityLog",
+     "Invitation",
+     "_prisma_migrations"
+    ],
+    "attachments": {
+     "checked": 1,
+     "matched": 1,
+     "bytes": 6291523
+    },
+    "wallClockSeconds": 19
+   }
+  },
+  "monitoring": {
+   "serverMonitor": "orbit-monitor.timer every 5 minutes",
+   "drill": "no mail on first failure, one on the second, none on the third, one on recovery",
+   "externalProbe": ".github/workflows/uptime.yml hourly; failure notification not exercised"
+  },
+  "capacity": {
+   "environment": "Oracle A1 2 OCPU / 12 GB ARM64 shared with live sites; disposable stack with production images and memory limits; generator on the same host; requests bypass Nginx and TLS",
+   "budgetRun": {
+    "concurrency": 10,
+    "dataset": "1000 tasks, 1000 subtasks, 1000 comments",
+    "readMs": {
+     "samples": 100,
+     "p50": 164.7,
+     "p95": 282.6,
+     "p99": 311.5,
+     "budget": 300
+    },
+    "writeMs": {
+     "samples": 40,
+     "p50": 128.2,
+     "p95": 176.0,
+     "p99": 209.9,
+     "budget": 500
+    },
+    "errors": 0,
+    "boardBytes": 85899
+   },
+   "mixedRun": {
+    "seconds": 90,
+    "users": 10,
+    "requestsPerSecond": 23.3,
+    "outsideBackupWindowP95Ms": {
+     "readBoard": 130.4,
+     "readList": 90.6,
+     "readTask": 71.1,
+     "write": 76.3,
+     "upload2MiB": 359.0,
+     "download2MiB": 111.3
+    },
+    "insideBackupWindowP95Ms": {
+     "readBoard": 299.4,
+     "readList": 85.9,
+     "readTask": 120.8,
+     "write": 274.6
+    },
+    "backupWindowSeconds": 7.6,
+    "uploadsDuringBackupWindow": {
+     "503": 3
+    },
+    "uploadsOutsideBackupWindow": {
+     "201": 40,
+     "503": 1
+    },
+    "unattributed": "The single 503 outside the window was not traced; storage restarting just after the window is the likely cause, not confirmed."
+   },
+   "resources": {
+    "peakMemoryMiB": {
+     "web": 219,
+     "storage": 395,
+     "postgres": 94
+    },
+    "memoryLimitsMiB": {
+     "web": 1024,
+     "storage": 512,
+     "postgres": 1024
+    },
+    "hostMinimumAvailableMiB": 8116,
+    "maxSwapUsedMiB": 3,
+    "swapInOut": 0,
+    "peakHostCpuBusyPercent": 87,
+    "ooms": 0,
+    "restarts": 0
+   },
+   "liveSiteDuringTest": {
+    "probes": 20,
+    "status200": 20,
+    "p95Ms": 61.2
+   }
+  },
+  "limits": [
+   "Real authentication mail, two-account collaboration and password reset are not yet accepted by the owner",
+   "No saturation, connection-pool exhaustion or rate-limit measurement",
+   "Capacity generator shared the host and bypassed Nginx/TLS",
+   "Restore time reflects a very small data set",
+   "First scheduled off-site backup has not run yet",
+   "External probe failure notification not exercised"
+  ]
  }
 }
