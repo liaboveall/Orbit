@@ -86,6 +86,7 @@ const checks = [
   ["contract", "pnpm", ["test:contract"]], ["integration", "pnpm", ["test:integration"]],
   ["e2e", "pnpm", ["test:e2e", "--retries=0"]],
   ["bundles", process.execPath, ["scripts/measure-client-bundles.mjs"]],
+  ["local-backup", process.execPath, ["scripts/verify-local-backup.mjs"]],
   ["ui", "pnpm", ["test:ui", "--retries=0"]],
   ["audit", "pnpm", ["audit", "--prod", "--audit-level=high", "--json"]],
 ];

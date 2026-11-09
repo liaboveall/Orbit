@@ -2,7 +2,7 @@
 
 import { useUnsavedChanges } from "../unsaved-changes";
 import { Check, Pencil, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import {
   Button,
@@ -41,6 +41,8 @@ export function SubtaskItem({
   disabled,
   onBusyChange,
   onReload,
+  unavailable = false,
+  onEditingChange,
 }: {
   subtask: SubtaskDTO;
   canEdit: boolean;
@@ -49,6 +51,8 @@ export function SubtaskItem({
   onBusyChange: (busy: boolean) => void;
   /** 重新拉取列表；返回后本行的 subtask prop 会更新为远端最新值。 */
   onReload: () => Promise<void>;
+  unavailable?: boolean;
+  onEditingChange: (id: string, editing: boolean) => void;
 }) {
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
@@ -59,6 +63,10 @@ export function SubtaskItem({
   const [saving, setSaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   useUnsavedChanges(editing, saving);
+  useEffect(() => {
+    onEditingChange(subtask.id, editing);
+    return () => onEditingChange(subtask.id, false);
+  }, [subtask.id, editing, onEditingChange]);
   const lock = useRef(false);
   const { captureFocus, handleCloseAutoFocus } = useFocusReturn();
 
@@ -207,6 +215,7 @@ export function SubtaskItem({
     }
   }
 
+  if (unavailable && !editing) return null;
   return (
     <li className="group/row flex items-start gap-2 rounded-control border border-transparent p-2 transition-colors hover:bg-surface-sunken">
       <button
@@ -234,8 +243,10 @@ export function SubtaskItem({
       <div className="min-w-0 flex-1">
         {editing ? (
           <div className="space-y-2">
+            {!canEdit && <p role="status">内容已不可编辑，草稿保留供复制。</p>}
             <Textarea
               value={draft}
+              readOnly={!canEdit}
               disabled={saving}
               onChange={(e) => {
                 setDraft(e.target.value);
@@ -307,7 +318,7 @@ export function SubtaskItem({
               <Button
                 size="sm"
                 onClick={handleSave}
-                disabled={saving || conflict || !draft.trim()}
+                disabled={saving || !canEdit || conflict || !draft.trim()}
               >
                 {saving ? "保存中…" : "保存"}
               </Button>

@@ -8,7 +8,7 @@
    "taskIds": [
     "ORB-021"
    ],
-   "nextAction": "2026-11-08 重新上线绑定提交 72ff749，linux/arm64 镜像 ID 见 verification 的 relaunch20261108；PR #26 最终提交 106517b 与合并提交 d1cac12 的完整 CI 均成功，它们与 72ff749 只相差测试和记录。正式发布 V1 时按同样方式核对最终提交的完整 CI 并记录镜像。",
+   "nextAction": "旧 HEAD 4c88b1a CI 成功；本轮未提交修复仅有本地冻结完整门禁。后续提交后运行新 SHA 完整 CI，并在部署时绑定不可变 ARM64 镜像。",
    "evidence": [
     "docs/CURRENT-STATUS.md"
    ]
@@ -45,7 +45,7 @@
    "taskIds": [
     "ORB-021"
    ],
-   "nextAction": "2026-11-08 已从最终备份恢复并重新上线第一阶段（https://149-118-55-232.sslip.io，sslip.io HTTPS、同机 SeaweedFS、暂无邮件，与其他网站共用服务器）；2026-11-09 用合成数据完成线上单账户试用和含附件的备份恢复核对，见 verification 的 productionTrial20261109。仍待验证：自有域名、真实邮件验证/重置与双账户邀请、告警、异地备份自动化与 RPO/RTO。",
+   "nextAction": "仓库内备份配对与并发删除窗口已修复并完成真实隔离恢复；尚未部署本轮改动。真实邮件、双账户线上协作、告警、自动异地备份和生产 RPO/RTO 待真实环境验收，不把本地恢复耗时当生产指标。",
    "evidence": [
     "docs/CURRENT-STATUS.md",
     "docs/OCI-DEPLOYMENT.md"
@@ -59,7 +59,7 @@
     "ORB-020",
     "ORB-021"
    ],
-   "nextAction": "原 checksum 不符的开发库卷在 2026-11-08 已不在本机 Docker 中；按 16 份迁移新建的开发库与测试库经 scripts/verify-migration-history.mjs 核对无缺失、无不符，生产库恢复后 16 条迁移完整，未覆盖任何校验和。待用户确认后可关闭。",
+   "nextAction": "2026-11-09 只读检查当前开发库与测试库各 16 条迁移一致，缺失和 checksum 不符均 0、schema 摘要相同；原异常旧卷已不存在。以原始字节或独立证据形成历史事件结论，不覆盖 checksum；当前库通过不能证明旧事件已恢复。",
    "evidence": [
     "docs/CURRENT-STATUS.md"
    ]

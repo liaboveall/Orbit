@@ -22,3 +22,5 @@ E2E 先生产构建，UI 为验证开发专用样例页使用 dev 模式；两�
 连接、环境变量和清理规则见 [环境文档](../docs/08-ENVIRONMENT-AND-DEPLOYMENT.md)。
 
 Mailpit 端口被 Windows 保留时，用 MAILPIT_SMTP_HOST_PORT/MAILPIT_WEB_HOST_PORT 调整 Compose 宿主端口，并同步 SMTP_PORT/MAILPIT_API。auth-flow 使用统一 MAILPIT_API；不需要改测试代码或断言。生产配置回归 production-read.test.ts 使用真实会话和 PostgreSQL，但不替代真实 HTTPS 传输与云部署验收。
+
+备份并发回归：`node scripts/verify-local-backup.mjs` 创建独立 Compose 项目和卷，冻结存储期间验证对象删除失败，恢复快照 READY 记录及原始对象。需要 Docker socket、本地容器和包下载网络；不使用 .env 或现有卷，结束仅删除本次合成资源。冻结门禁和 CI 均执行。

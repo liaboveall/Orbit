@@ -11,7 +11,7 @@
 | Language | TypeScript strict | DTO 显式定义，不泄露 ORM 对象 |
 | UI | Tailwind CSS、Radix primitives、Lucide | 以 tokens 为视觉源；只选一种组件原语体系 |
 | Client data | RSC + createApiClient / API 直调 | 服务器组件直查为数据真源；写操作后 router.refresh()；分页用请求代次绑定防旧响应污染；筛选在 URL；草稿在局部状态，任务标题/描述另按用户在本机持久化以便恢复（生命周期见 §6） |
-| Forms | React Hook Form + Zod | 与 API 校验共享限制，服务端仍重新校验 |
+| Forms | React state + Zod 契约 schema | 当前未引入 React Hook Form；与 API 校验共享限制，服务端仍重新校验 |
 | Drag | @dnd-kit/core + sortable，选兼容版本 | 键盘/菜单替代、失败回滚 |
 | Persistence | PostgreSQL 17 + Prisma 7 + PostgreSQL adapter | SQL 迁移补充 ORM 不支持的约束 |
 | Auth | Better Auth + Prisma adapter | 邮箱密码、验证、重置、数据库会话 |
@@ -126,7 +126,7 @@ staging/production 使用 PostgreSQL 共享原子固定窗口限流：业务写 
 
 连接池饱和时 Prisma 交互式事务在 maxWait（2 秒）内无法开始会抛出特定 P2028，与 pg-pool 等待超时一样映射为 503 SERVICE_UNAVAILABLE；其余 P2028 仍按 500 上报。
 
-已提供 /health/live（进程可服务）和 /health/ready（数据库连接与迁移兼容），实现与测试见 M6 运行手册；不暴露版本、凭证、连接字符串。邮件/存储暂时不可用只影响对应操作，有独立可观测错误，不让整个看板持续 500。
+健康检查 /health/live 验证进程；/health/ready 核对构建时生成的迁移名称/checksum/成功状态及所有业务列的存在、类型和可空性，拒绝失败迁移与不兼容结构。检查范围有界，不读取用户行；不是完整索引/约束审计（发布仍运行迁移历史检查）。邮件/存储故障只影响对应操作，不使整个看板不可用；响应不暴露内部信息。
 
 ## 9. V1.1 的扩展位置
 

@@ -1,6 +1,18 @@
 # 当前实现与交付边界
 
-产品、架构、数据和接口规则分别维护在专题规格中；任务状态见 [backlog](../planning/backlog.json)，开放状态以 [开放清单](../planning/open-items.json) 为准。两轮审查的问题、修复与验收证据见 [当前审查](CURRENT-REVIEW.md)。旧开发日志、历轮报告和已关闭审计项使用 Git 历史追溯。
+产品、架构、数据和接口规则分别维护在专题规格中；任务状态见 [backlog](../planning/backlog.json)，开放状态以 [开放清单](../planning/open-items.json) 为准。最新全项目分析见 [2026-11-09 当前审查](CURRENT-REVIEW.md)。旧开发日志、历轮报告和已关闭审计项使用 Git 历史追溯。
+
+## 当前修复与验收（2026-11-09）
+
+2026-11-09 新增的 7 组问题已修复并经冻结门禁验收：980 项测试通过（304 unit、172 contract、381 integration、110 E2E、13 UI），源码指纹一致；真实并发备份/成对恢复、故障注入、默认恢复、迁移历史和全依赖审计 0 均通过。仍保留 7 组外部或历史事项；修复尚未提交/部署，M6 review、M7 todo。
+
+附件备份现在先冻结存储，完整批次校验后发布清单；代价是整个 dump/归档窗口的附件暂时不可用。详见当前审查顶部与 verification 的 comprehensiveRemediation20261109。
+
+## 修复前审查结论（2026-11-09）
+
+干净提交 `4c88b1a` 完整门禁 **971 项通过**，运行前后源码摘要 `7bb8f2cc...` 一致；当前提交远端完整 CI 亦成功。额外诊断确认 **6 组 P2 + 1 组 P3**：失败备份配对、备份与附件清理交错、保存 404 清除任务草稿、子资源草稿生命周期、ready 对 schema 的假阳性、当前 Windows localhost 迁移/恢复失败、ESLint 传递依赖 minimatch 中危公告。本轮只分析、复现并修正文档，未修复产品代码。
+
+新增 7 组与原有 7 组合计 **14 组开放事项**；M6 保持 review。生产 npm 依赖审计 0 不等于镜像零漏洞：当前 SHA 两个 CI 镜像各有 35 条未修复的高危/严重包记录，按既定策略保留。公网只读入口正常；本轮未做线上写入、邮件、双账户或容量验收。详细触发条件、修复验收和证据见当前审查及 verification 的 `comprehensiveReview20261109`。
 
 ## 已实现
 
@@ -41,9 +53,16 @@ M0—M5 已完成：认证与账户设置、项目与邀请、任务列表与看
 - 其后只更新记录的 `198ec23` 的 [CI 失败](https://github.com/liaboveall/Orbit/actions/runs/35968230138)在 nginx 校验脚本：容器入口尚未启动 nginx 时脚本就发出请求（启动竞态；其余已执行步骤均通过）。本机以延迟启动镜像复现了同一错误，脚本已改为先有上限地等待就绪。
 - 2026-09-24 起 Quay 上的 MinIO 仓库要求登录，CI 在启动服务时失败（[运行 36035562583](https://github.com/liaboveall/Orbit/actions/runs/36035562583)）；MinIO 社区版已归档、Docker Hub 镜像已下架。已把原锁定镜像逐层原样推到私有 `ghcr.io/liaboveall/orbit-minio`（镜像层与启动命令一致，冒烟与版本号核对通过），CI 以只读包权限登录拉取（ADR-028）。2026-09-25 再次匿名核对仍无法拉取，本地与 CI 已改用 SeaweedFS 4.47（ADR-029），不再需要私有镜像与 GHCR 登录；候选对比与验证证据见 verification 的 storageReplacement。
 - 实机输入法、原生缩放和辅助技术验证不能由自动化浏览器结果代替。
-- 开发库迁移 `20260911031124_add_subtask_comment_attachment` 与 `20260911031200_add_m5_check_constraints` 的历史 checksum 不符；后者记录为 `manual_resolve`。2026-09-24 只读复查结果未变：测试库正常、两库结构一致。原始迁移字节仍未找回，未改写数据库历史。
+- 旧开发库迁移 `20260911031124_add_subtask_comment_attachment` 与 `20260911031200_add_m5_check_constraints` 曾有 checksum 不符，后者记录为 `manual_resolve`；该旧卷在 2026-11-08 已不存在。2026-11-09 当前新建开发/测试库各 16 条迁移均一致，未改写 checksum；原始迁移字节仍未找回，历史证据事项保持开放。
 - 先前数据事件缺少原始记录和备份，无法宣称已经恢复；当前测试具有独立数据库、夹具所有权和前后指纹保护。
 - 已知旧临时目录中的 66 份配置文件经只读核查均不存在，清理来源未知，不再作为开放待办。
+
+### 2026-11-09 · 正式上线复用核查
+
+- 通过现有 SSH 访问核实 Orbit 与 ChatApp 共用 OCI ARM64 宿主机、Docker Compose 和 Nginx，各用独立站点与容器。Orbit 的三个服务 healthy，公网首页及 `/health/ready` 返回 200，web 镜像 ID 与 `72ff749` 部署记录相符。Orbit 的维护与本地备份 cron 已安装。现有资源读数是单次快照，容量仍待测。
+- ChatApp 生产 worker 配有 Resend SMTPS（465）及 `chatapp.software` 下的发件地址，Orbit 仍为占位 SMTP。Orbit 容器已与 Resend 完成经证书校验的 TLS 握手并收到 SMTP 220，未认证或发送邮件。可复用服务账户及其已验证发件域，给 Orbit 单独生成限域发送 Key；网站可用独立站点 `orbit.chatapp.software`，需添加 DNS 并单独签发证书。
+- ChatApp 的异地备份使用 Cloudflare R2，最近一次备份服务返回成功。可复用 R2 账户及备份校验流程，Orbit 单独使用私有桶和单桶凭证，验证加密读回与隔离恢复。ChatApp 的监控 timer 已启用但本次查看时最近一次执行返回非零；复用调度方式后仍需独立验证 Orbit 告警送达。
+- 下一步为当前修复创建发布候选，绑定同一提交的完整 CI 与 ARM64 镜像，保留现有 Orbit 卷和回退点。接入生产邮件和异地备份后，按 AC-12 完成 HTTPS 双账户、权限、容量、告警及恢复验收。本次只读检查生产环境，未执行发布或修改云资源。
 
 上次仓库清理的文件变更与受阻删除记录保留在 Git 历史；本轮验证日志保存在忽略的本地产物目录 artifacts/remediation-20260924，摘要与哈希记入 verification。
 

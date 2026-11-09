@@ -1240,5 +1240,1078 @@
    "Local probe files and logs are ignored artifacts; report includes independent reproduction steps"
   ]
  },
- "remediationCommit": "5730d69c064528272faa832c5f612f92cd867389"
+ "remediationCommit": "5730d69c064528272faa832c5f612f92cd867389",
+ "comprehensiveReview20261109": {
+  "scope": "Independent whole-project analysis; no application remediation or deployment",
+  "recordedAt": "2026-11-09T00:49:13.212597+00:00",
+  "head": "4c88b1a757543ee1a529b79dee78bfce11ca07f9",
+  "initialWorkingTreeClean": true,
+  "sourceDigest": "7bb8f2cc668e4d035f957129720f908b466d43cba002b33ac8af5c37fe6ac12a",
+  "sourceUnchangedDuringGate": true,
+  "gateStartedAt": "2026-11-09T00:16:59.256Z",
+  "gateFinishedAt": "2026-11-09T00:26:00.407Z",
+  "gateResult": "PASS",
+  "postSnapshotChanges": "Audit artifacts and documentation/planning handoff only; no src/tests/scripts/infra/dependency/migration changes",
+  "counts": {
+   "unit": 304,
+   "contract": 172,
+   "integration": 380,
+   "e2e": 102,
+   "ui": 13
+  },
+  "total": 971,
+  "checks": [
+   {
+    "name": "planning",
+    "command": [
+     "python",
+     "planning/validate_plan.py",
+     "--check"
+    ],
+    "startedAt": "2026-11-09T00:16:59.316Z",
+    "finishedAt": "2026-11-09T00:17:00.767Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 1451,
+    "logSha256": "acddc1f18e43bd8d7b561a6dd9efd8b08f69b223b69c9f29e9f2229b21bba2da",
+    "sourceDigest": "7bb8f2cc668e4d035f957129720f908b466d43cba002b33ac8af5c37fe6ac12a",
+    "log": "artifacts/full-review-20261109/gate/planning.log"
+   },
+   {
+    "name": "probes",
+    "command": [
+     "python",
+     "planning/validate_plan_probes.py"
+    ],
+    "startedAt": "2026-11-09T00:17:00.768Z",
+    "finishedAt": "2026-11-09T00:17:12.610Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 11842,
+    "logSha256": "ed6f72f3d8c16010f2f98a99a69cef8211ecbb507e6f2b7d9b25c4bb8b47dadd",
+    "sourceDigest": "7bb8f2cc668e4d035f957129720f908b466d43cba002b33ac8af5c37fe6ac12a",
+    "log": "artifacts/full-review-20261109/gate/probes.log"
+   },
+   {
+    "name": "status",
+    "command": [
+     "python",
+     "planning/current_status.py",
+     "--check"
+    ],
+    "startedAt": "2026-11-09T00:17:12.610Z",
+    "finishedAt": "2026-11-09T00:17:12.720Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 110,
+    "logSha256": "8ae12a49c13891923ab9f1959a5f9ea0f94f5a78a3dd02f5c9f347e67d9f01c7",
+    "sourceDigest": "7bb8f2cc668e4d035f957129720f908b466d43cba002b33ac8af5c37fe6ac12a",
+    "log": "artifacts/full-review-20261109/gate/status.log"
+   },
+   {
+    "name": "image-policy",
+    "command": [
+     "C:\\Program Files\\nodejs\\node.exe",
+     "scripts/verify-image-policy.mjs"
+    ],
+    "startedAt": "2026-11-09T00:17:12.721Z",
+    "finishedAt": "2026-11-09T00:17:12.766Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 45,
+    "logSha256": "8908b4c8f00a12789c35ada6957d0c7238b79095587b206404fe3baded7a724d",
+    "sourceDigest": "7bb8f2cc668e4d035f957129720f908b466d43cba002b33ac8af5c37fe6ac12a",
+    "log": "artifacts/full-review-20261109/gate/image-policy.log"
+   },
+   {
+    "name": "lint",
+    "command": [
+     "pnpm",
+     "lint"
+    ],
+    "startedAt": "2026-11-09T00:17:12.766Z",
+    "finishedAt": "2026-11-09T00:17:29.612Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 16846,
+    "logSha256": "7806d2bb6445e87bbee850038349a66497dc9f76d097e3b3e750a1333bdc03f5",
+    "sourceDigest": "7bb8f2cc668e4d035f957129720f908b466d43cba002b33ac8af5c37fe6ac12a",
+    "log": "artifacts/full-review-20261109/gate/lint.log"
+   },
+   {
+    "name": "typecheck",
+    "command": [
+     "pnpm",
+     "typecheck"
+    ],
+    "startedAt": "2026-11-09T00:17:29.612Z",
+    "finishedAt": "2026-11-09T00:17:35.519Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 5907,
+    "logSha256": "2c1861a4b3ace943ffad8e7791cf199b5cb7878a48530ee41c39fbdd6ddaa020",
+    "sourceDigest": "7bb8f2cc668e4d035f957129720f908b466d43cba002b33ac8af5c37fe6ac12a",
+    "log": "artifacts/full-review-20261109/gate/typecheck.log"
+   },
+   {
+    "name": "scripts",
+    "command": [
+     "pnpm",
+     "typecheck:scripts"
+    ],
+    "startedAt": "2026-11-09T00:17:35.520Z",
+    "finishedAt": "2026-11-09T00:17:37.088Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 1569,
+    "logSha256": "bc7d9dc87d7dd29399bbde0d73d2c22503bc3e7493266af4a86eb5bd812c7a29",
+    "sourceDigest": "7bb8f2cc668e4d035f957129720f908b466d43cba002b33ac8af5c37fe6ac12a",
+    "log": "artifacts/full-review-20261109/gate/scripts.log"
+   },
+   {
+    "name": "unit",
+    "command": [
+     "pnpm",
+     "test:unit"
+    ],
+    "startedAt": "2026-11-09T00:17:37.089Z",
+    "finishedAt": "2026-11-09T00:17:39.848Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": 304,
+    "durationMs": 2759,
+    "logSha256": "78c0d8b4bbcac5016ea79d8da449bcd37d02f4427fd2d993907c935578a9e9f4",
+    "sourceDigest": "7bb8f2cc668e4d035f957129720f908b466d43cba002b33ac8af5c37fe6ac12a",
+    "log": "artifacts/full-review-20261109/gate/unit.log"
+   },
+   {
+    "name": "contract",
+    "command": [
+     "pnpm",
+     "test:contract"
+    ],
+    "startedAt": "2026-11-09T00:17:39.849Z",
+    "finishedAt": "2026-11-09T00:17:40.822Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": 172,
+    "durationMs": 973,
+    "logSha256": "11657eafdee952544b222375bb8987967e420004bcad0c2b04c3ac3d9ddd5ac7",
+    "sourceDigest": "7bb8f2cc668e4d035f957129720f908b466d43cba002b33ac8af5c37fe6ac12a",
+    "log": "artifacts/full-review-20261109/gate/contract.log"
+   },
+   {
+    "name": "integration",
+    "command": [
+     "pnpm",
+     "test:integration"
+    ],
+    "startedAt": "2026-11-09T00:17:40.823Z",
+    "finishedAt": "2026-11-09T00:21:45.492Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": 380,
+    "durationMs": 244669,
+    "logSha256": "3c0423ba8bf3438a37e182146a529fe34d0fe0f24181908eb6bfa99f639ce779",
+    "sourceDigest": "7bb8f2cc668e4d035f957129720f908b466d43cba002b33ac8af5c37fe6ac12a",
+    "log": "artifacts/full-review-20261109/gate/integration.log"
+   },
+   {
+    "name": "e2e",
+    "command": [
+     "pnpm",
+     "test:e2e",
+     "--retries=0"
+    ],
+    "startedAt": "2026-11-09T00:21:45.492Z",
+    "finishedAt": "2026-11-09T00:25:31.578Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": 102,
+    "durationMs": 226086,
+    "logSha256": "b54f2ba1e3f86dc75d3fdb55a23eaf0192b335ad02cd02f5b3bfa4b129ec8811",
+    "sourceDigest": "7bb8f2cc668e4d035f957129720f908b466d43cba002b33ac8af5c37fe6ac12a",
+    "log": "artifacts/full-review-20261109/gate/e2e.log"
+   },
+   {
+    "name": "bundles",
+    "command": [
+     "C:\\Program Files\\nodejs\\node.exe",
+     "scripts/measure-client-bundles.mjs"
+    ],
+    "startedAt": "2026-11-09T00:25:31.579Z",
+    "finishedAt": "2026-11-09T00:25:31.652Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 73,
+    "logSha256": "2acd0ca629d921c34bb3c816b530ed932f204ca0033703c01c25c2faf0458d96",
+    "sourceDigest": "7bb8f2cc668e4d035f957129720f908b466d43cba002b33ac8af5c37fe6ac12a",
+    "log": "artifacts/full-review-20261109/gate/bundles.log"
+   },
+   {
+    "name": "ui",
+    "command": [
+     "pnpm",
+     "test:ui",
+     "--retries=0"
+    ],
+    "startedAt": "2026-11-09T00:25:31.652Z",
+    "finishedAt": "2026-11-09T00:25:59.673Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": 13,
+    "durationMs": 28021,
+    "logSha256": "3a834351aa3fb99cafb30d116106083597e4ec338db63042930a712b04705569",
+    "sourceDigest": "7bb8f2cc668e4d035f957129720f908b466d43cba002b33ac8af5c37fe6ac12a",
+    "log": "artifacts/full-review-20261109/gate/ui.log"
+   },
+   {
+    "name": "audit",
+    "command": [
+     "pnpm",
+     "audit",
+     "--prod",
+     "--audit-level=high",
+     "--json"
+    ],
+    "startedAt": "2026-11-09T00:25:59.674Z",
+    "finishedAt": "2026-11-09T00:26:00.284Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 610,
+    "logSha256": "1c690b4cac583a4c58d39de2a4f753bd52d544d1990739fe4b8f7233d579f8be",
+    "sourceDigest": "7bb8f2cc668e4d035f957129720f908b466d43cba002b33ac8af5c37fe6ac12a",
+    "log": "artifacts/full-review-20261109/gate/audit.log"
+   }
+  ],
+  "browserRetries": 0,
+  "existingDatabaseContentFingerprintsUnchanged": true,
+  "diagnosticBrowserObservations": 4,
+  "diagnosticsAreAcceptancePasses": false,
+  "findings": [
+   {
+    "id": "BACKUP-PAIR",
+    "reference": "R1",
+    "priority": "P2",
+    "title": "失败备份的数据库与附件可能被错配",
+    "status": "pending"
+   },
+   {
+    "id": "BACKUP-SNAPSHOT",
+    "reference": "R2",
+    "priority": "P2",
+    "title": "数据库快照与附件物理清理缺少协调",
+    "status": "pending"
+   },
+   {
+    "id": "DRAFT-SAVE404",
+    "reference": "R3",
+    "priority": "P2",
+    "title": "任务保存 404 会清除文本草稿",
+    "status": "pending"
+   },
+   {
+    "id": "SUBRESOURCE-DRAFTS",
+    "reference": "R4",
+    "priority": "P2",
+    "title": "子资源刷新或归档后草稿丢失或不可见",
+    "status": "pending"
+   },
+   {
+    "id": "READINESS-SCHEMA",
+    "reference": "R5",
+    "priority": "P2",
+    "title": "ready 对部分数据库 schema 返回假阳性",
+    "status": "pending"
+   },
+   {
+    "id": "WINDOWS-MIGRATION",
+    "reference": "R6",
+    "priority": "P2",
+    "title": "当前 Windows localhost 迁移和恢复 CLI 失败",
+    "status": "pending"
+   },
+   {
+    "id": "DEV-DEPENDENCY",
+    "reference": "R7",
+    "priority": "P3",
+    "title": "ESLint 传递依赖 minimatch 中危公告",
+    "status": "pending"
+   }
+  ],
+  "openAuditGroupsTotal": 14,
+  "systemObservations": {
+   "readiness": {
+    "expected": 503,
+    "actual": 200,
+    "body": {
+     "status": "ready"
+    },
+    "tables": [
+     "RateLimitBucket"
+    ]
+   },
+   "backupWindow": {
+    "snapshotBefore": {
+     "state": "READY",
+     "sizeBytes": "24"
+    },
+    "snapshotAfter": {
+     "state": "READY",
+     "sizeBytes": "24"
+    },
+    "objectStatus": 404,
+    "cleaned": 1,
+    "simulatedElapsedMs": 181000,
+    "scope": "Real PostgreSQL snapshot plus real SeaweedFS deletion; maintenance clock advanced; not a live production backup"
+   },
+   "disposableDatabaseAndBucketRemoved": true
+  },
+  "backupPairObservation": {
+   "archiveFailureExitWasNonzero": true,
+   "latestDump": "orbit-20261109T020000Z-38.dump",
+   "latestArchive": "storage-20261109T010000Z-12.tar.gz",
+   "selectedDump": "second",
+   "selectedArchiveContainsSecondObject": false,
+   "matchedPair": false,
+   "scope": "Actual backup script with controlled Docker subprocess failure; synthetic container files only"
+  },
+  "migrationHostComparison": [
+   {
+    "hostname": "localhost",
+    "command": "prisma migrate status",
+    "exitCode": 1
+   },
+   {
+    "hostname": "127.0.0.1",
+    "command": "prisma migrate status",
+    "exitCode": 0
+   }
+  ],
+  "defaultRecovery": {
+   "exitCode": 1,
+   "stage": "prepare"
+  },
+  "ipv4Recovery": {
+   "exitCode": 0,
+   "environment": "local Docker PostgreSQL + S3-compatible storage (SeaweedFS); synthetic isolated databases",
+   "restoredMembers": 1,
+   "taskVersion": 3,
+   "comments": 1,
+   "activities": 1,
+   "attachmentSha256Verified": true,
+   "restoreSeconds": 0.32704349999999976,
+   "totalSeconds": 2.8343184,
+   "backupBytes": 50771,
+   "productionRpoVerified": false
+  },
+  "localAndTestMigrations": {
+   "appliedEach": 16,
+   "expectedEach": 16,
+   "missing": 0,
+   "mismatches": 0,
+   "schemaDigest": "31e121f035c28985d0f964a758be43642d1efa62b090890ec60806de8bf076f2"
+  },
+  "dependencyAudit": {
+   "production": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0
+   },
+   "all": {
+    "info": 0,
+    "low": 0,
+    "moderate": 1,
+    "high": 0,
+    "critical": 0
+   },
+   "allExitCode": 1,
+   "newAdvisory": "GHSA-g3hv-75wg-m249"
+  },
+  "remoteCi": {
+   "id": 42502294829,
+   "head_sha": "4c88b1a757543ee1a529b79dee78bfce11ca07f9",
+   "status": "completed",
+   "conclusion": "success",
+   "html_url": "https://github.com/liaboveall/Orbit/actions/runs/42502294829",
+   "created_at": "2026-11-08T16:55:01Z",
+   "updated_at": "2026-11-08T17:11:46Z"
+  },
+  "ciImages": [
+   {
+    "role": "runtime",
+    "artifact": "orbit:4c88b1a757543ee1a529b79dee78bfce11ca07f9",
+    "imageId": "sha256:307ff8f5c6162fd262eadbff3d7d46447e3548e67f64dbf653fe61a2065d88e9",
+    "packageVulnerabilityRecords": 35,
+    "high": 34,
+    "critical": 1,
+    "uniqueCves": 11,
+    "fixable": 0,
+    "policyResult": "PASS",
+    "productionArm64IdentityVerified": false
+   },
+   {
+    "role": "operations",
+    "artifact": "orbit-operations:4c88b1a757543ee1a529b79dee78bfce11ca07f9",
+    "imageId": "sha256:9428556c5b73bd2f2c4aa06baf30f26bdf69d845778a38e2a56494f07adf57a2",
+    "packageVulnerabilityRecords": 35,
+    "high": 34,
+    "critical": 1,
+    "uniqueCves": 11,
+    "fixable": 0,
+    "policyResult": "PASS",
+    "productionArm64IdentityVerified": false
+   }
+  ],
+  "publicReadonly": [
+   {
+    "path": "/",
+    "status": 200,
+    "cache": "s-maxage=31536000",
+    "csp": "frame-ancestors 'none', frame-ancestors 'none'",
+    "referrer": "no-referrer, no-referrer",
+    "redirect": null
+   },
+   {
+    "path": "/demo",
+    "status": 200,
+    "cache": "s-maxage=31536000",
+    "csp": "frame-ancestors 'none', frame-ancestors 'none'",
+    "referrer": "no-referrer, no-referrer",
+    "redirect": null
+   },
+   {
+    "path": "/auth/login",
+    "status": 200,
+    "cache": "private, no-cache, no-store, max-age=0, must-revalidate",
+    "csp": "frame-ancestors 'none', frame-ancestors 'none'",
+    "referrer": "no-referrer, no-referrer",
+    "redirect": null
+   },
+   {
+    "path": "/health/ready",
+    "status": 200,
+    "cache": "no-store",
+    "csp": "frame-ancestors 'none', frame-ancestors 'none'",
+    "referrer": "no-referrer, no-referrer",
+    "redirect": null,
+    "body": "{\"status\":\"ready\"}"
+   },
+   {
+    "path": "/app/today",
+    "status": 307,
+    "cache": null,
+    "csp": "frame-ancestors 'none', frame-ancestors 'none'",
+    "referrer": "no-referrer, no-referrer",
+    "redirect": "/auth/login?returnTo=%2Fapp%2Ftoday"
+   },
+   {
+    "path": "/api/v1/projects",
+    "status": 401,
+    "cache": "private, no-store",
+    "csp": "frame-ancestors 'none', frame-ancestors 'none'",
+    "referrer": "no-referrer, no-referrer",
+    "redirect": null
+   }
+  ],
+  "limits": [
+   "Local Node 26/Windows differs from CI Node 24/Linux and deployed ARM64",
+   "No production writes, login, email, multi-account collaboration, load test, SSH or deployed-image identity check in this review",
+   "Backup pairing uses real script plus controlled Docker subprocess substitutes; not a real pg_restore",
+   "Backup deletion window uses real database/storage/services and simulated maintenance time +181 seconds; not full production backup",
+   "Static isolated recovery and CI performance do not prove production RPO/RTO or capacity",
+   "Historical missing database/data evidence remains unresolved"
+  ],
+  "artifactHashes": [
+   {
+    "path": "artifacts/full-review-20261109/gate/summary.json",
+    "sha256": "38f45275abc6d9cf9ca6bf693fa5d966b68bf035e3452c8871f9d33ea5f27d1e"
+   },
+   {
+    "path": "artifacts/full-review-20261109/gate/source-hashes.json",
+    "sha256": "7b7110a1e4c288ed71b9024ccc1c9ced7cb17f3b8f09f6e550ac68268b5c233a"
+   },
+   {
+    "path": "artifacts/full-review-20261109/browser/review.spec.ts",
+    "sha256": "73126c480a38d12b339ed2d7e39d498edb759cc175df34c6654734a5caf530d0"
+   },
+   {
+    "path": "artifacts/full-review-20261109/playwright.review.config.ts",
+    "sha256": "395330c9c94a78fb4cd47a7bc8c1a3db0a764747cadf6a142a206cd385100867"
+   },
+   {
+    "path": "artifacts/full-review-20261109/browser.log",
+    "sha256": "89b9768a3252f8db9edac94fa9f1674fe7b9cacf7875196a2fe5630f4ae72fef"
+   },
+   {
+    "path": "artifacts/full-review-20261109/browser-report.json",
+    "sha256": "3571406cc862bca4a388458695059b077fbd9a4d8ffbba2175c3dfc25f1ee604"
+   },
+   {
+    "path": "artifacts/full-review-20261109/system-probes.ts",
+    "sha256": "00e884fd1ed54fea18c84ca8856be822828958170a2bfc8beb16c19fae0ce01f"
+   },
+   {
+    "path": "artifacts/full-review-20261109/system-observations.json",
+    "sha256": "1aab6a44a6a67d23dc0f90ee434b59a197005c03bbf5b8b5ee68900c8f7c9966"
+   },
+   {
+    "path": "artifacts/full-review-20261109/backup-pair-probe.sh",
+    "sha256": "b56dec0c12431ed4a8a35cca683e72a6689e64d812fa4ba4445f1b8306588dcc"
+   },
+   {
+    "path": "artifacts/full-review-20261109/backup-pair-observation.json",
+    "sha256": "e98f1059b3a289f79528f44b04c788a5257bfe43023d5a005e0e1af7af7728db"
+   },
+   {
+    "path": "artifacts/full-review-20261109/migration-host-probe.mjs",
+    "sha256": "bca2746a0541ca44a1f19dbaf13365dd0bbfb5b951ace61e50b147becdc28dc3"
+   },
+   {
+    "path": "artifacts/full-review-20261109/migration-host-observations.json",
+    "sha256": "a2dd6b749099723c3fe2b1c057f8636df1b80cd551ea510239b44efb0c908f19"
+   },
+   {
+    "path": "artifacts/full-review-20261109/recovery-default.log",
+    "sha256": "742b06e4740c174c41fea62b8336bc2165439cb07fdfba03800d2ed77bd6fd52"
+   },
+   {
+    "path": "artifacts/full-review-20261109/run-recovery-ipv4.mjs",
+    "sha256": "25d3a62752731e873498cf16c6feb7884a4065885a2cdec5d610feb8c8f568d6"
+   },
+   {
+    "path": "artifacts/full-review-20261109/recovery-ipv4.log",
+    "sha256": "846a7e92df8278c90714086c70b95012325a22a4f09da5633895363bd75c70b1"
+   },
+   {
+    "path": "artifacts/full-review-20261109/recovery.json",
+    "sha256": "a8e159676386f4490c7ee2aa1f8142f57447f8ab3c498efb2eb82a0594ab4b40"
+   },
+   {
+    "path": "artifacts/full-review-20261109/migration-history.log",
+    "sha256": "22fde4f7ef9f1a90cfcd9c68aa3214107984a750ec3f3f142f6c7604d1f161c8"
+   },
+   {
+    "path": "artifacts/full-review-20261109/nginx-summary.json",
+    "sha256": "34a70094f3d868044734b196a9fd87526d8362b0bd9771b0ce56a942877f3903"
+   },
+   {
+    "path": "artifacts/full-review-20261109/client-bundles.json",
+    "sha256": "5aa6cd84a091a320453a4e9cae4d1a511f6621227425e7b368f8048a84724fca"
+   },
+   {
+    "path": "artifacts/full-review-20261109/audit-all.json",
+    "sha256": "20e7d46bf095338c1b2e3c584ab1853a57a06ad7baf8a4f3bf36564839e27797"
+   },
+   {
+    "path": "artifacts/full-review-20261109/audit-all-outcome.json",
+    "sha256": "03ff8c4a8c74bc4044e6037f368eeef9f55e5acb32218c808a4f8f314e52e325"
+   },
+   {
+    "path": "artifacts/full-review-20261109/performance-local.json",
+    "sha256": "3852525eb4bac88052a02ca1afb4e2cead036461e6c8131d40a0d30925c216f1"
+   },
+   {
+    "path": "artifacts/full-review-20261109/public-readonly.json",
+    "sha256": "4852aa693383d70caa743161f8568cb21a7d3e64122e1ee0fecf28400cb921c9"
+   },
+   {
+    "path": "artifacts/full-review-20261109/remote-ci-run.json",
+    "sha256": "ccf016cdfb520553ddb98372e980e81e2625b0e53f850ca02454b98aeced7cb0"
+   },
+   {
+    "path": "artifacts/full-review-20261109/remote-ci-jobs.json",
+    "sha256": "16350cf368eea31e6bbf596ddf0f37464d452cde3a97b01ead81712d0077d0e4"
+   },
+   {
+    "path": "artifacts/full-review-20261109/remote-ci/artifacts/release/trivy-runtime.json",
+    "sha256": "88752555f9458c78cc21cbe8d5658706a1b5c55c924dcacc1b2b740678a10549"
+   },
+   {
+    "path": "artifacts/full-review-20261109/remote-ci/artifacts/release/trivy-operations.json",
+    "sha256": "8515e14f1c975716498de7d67d0994ca23775d89bdba2c0a9dd057be4ec5704c"
+   },
+   {
+    "path": "artifacts/full-review-20261109/handoff-checks.json",
+    "sha256": "908bf11e92c30abb5ed0f5e66a2939e18743ed9444ab11d69ede11b816addb59"
+   }
+  ],
+  "postAuditRecordValidation": {
+   "applicationAndInfrastructureInputsUnchanged": true,
+   "checks": [
+    {
+     "command": [
+      "python",
+      "planning/validate_plan.py",
+      "--check"
+     ],
+     "exitCode": 0,
+     "output": "{\n  \"result\": \"PASS\",\n  \"markdownFiles\": 39,\n  \"localLinks\": 123,\n  \"operations\": 37,\n  \"tasks\": 25,\n  \"auditEntries\": 14,\n  \"errors\": []\n}",
+     "stderr": ""
+    },
+    {
+     "command": [
+      "python",
+      "planning/current_status.py",
+      "--check"
+     ],
+     "exitCode": 0,
+     "output": "Current summary matches backlog.",
+     "stderr": ""
+    },
+    {
+     "command": [
+      "git",
+      "diff",
+      "--check"
+     ],
+     "exitCode": 0,
+     "output": "",
+     "stderr": "warning: in the working copy of 'docs/CURRENT-REVIEW.md', LF will be replaced by CRLF the next time Git touches it"
+    }
+   ],
+   "governanceProbes": {
+    "command": [
+     "python",
+     "planning/validate_plan_probes.py"
+    ],
+    "exitCode": 0,
+    "negativeControlsRejected": 14,
+    "positiveControlPassed": true
+   }
+  }
+ },
+ "comprehensiveRemediation20261109": {
+  "recordedAt": "2026-11-09T01:21:47.739005+00:00",
+  "baseHead": "4c88b1a757543ee1a529b79dee78bfce11ca07f9",
+  "uncommitted": true,
+  "deployed": false,
+  "result": "PASS",
+  "sourceDigest": "76410f0592964a32c929ab7aebe0595581f88df2c27adae023a9514e3c319b1e",
+  "sourceUnchangedDuringGate": true,
+  "counts": {
+   "unit": 304,
+   "contract": 172,
+   "integration": 381,
+   "e2e": 110,
+   "ui": 13
+  },
+  "total": 980,
+  "gateDirectory": "artifacts/remediation-20261109/gate",
+  "checks": [
+   {
+    "name": "planning",
+    "command": [
+     "python",
+     "planning/validate_plan.py",
+     "--check"
+    ],
+    "startedAt": "2026-11-09T01:11:49.843Z",
+    "finishedAt": "2026-11-09T01:11:51.147Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 1304,
+    "logSha256": "b777243b052e126705db08f5293f5ef8cf8c0ed58967238864d21ddb92b44103",
+    "sourceDigest": "76410f0592964a32c929ab7aebe0595581f88df2c27adae023a9514e3c319b1e"
+   },
+   {
+    "name": "probes",
+    "command": [
+     "python",
+     "planning/validate_plan_probes.py"
+    ],
+    "startedAt": "2026-11-09T01:11:51.147Z",
+    "finishedAt": "2026-11-09T01:11:59.294Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 8147,
+    "logSha256": "ed6f72f3d8c16010f2f98a99a69cef8211ecbb507e6f2b7d9b25c4bb8b47dadd",
+    "sourceDigest": "76410f0592964a32c929ab7aebe0595581f88df2c27adae023a9514e3c319b1e"
+   },
+   {
+    "name": "status",
+    "command": [
+     "python",
+     "planning/current_status.py",
+     "--check"
+    ],
+    "startedAt": "2026-11-09T01:11:59.294Z",
+    "finishedAt": "2026-11-09T01:11:59.408Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 114,
+    "logSha256": "8ae12a49c13891923ab9f1959a5f9ea0f94f5a78a3dd02f5c9f347e67d9f01c7",
+    "sourceDigest": "76410f0592964a32c929ab7aebe0595581f88df2c27adae023a9514e3c319b1e"
+   },
+   {
+    "name": "image-policy",
+    "command": [
+     "C:\\Program Files\\nodejs\\node.exe",
+     "scripts/verify-image-policy.mjs"
+    ],
+    "startedAt": "2026-11-09T01:11:59.409Z",
+    "finishedAt": "2026-11-09T01:11:59.459Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 50,
+    "logSha256": "8908b4c8f00a12789c35ada6957d0c7238b79095587b206404fe3baded7a724d",
+    "sourceDigest": "76410f0592964a32c929ab7aebe0595581f88df2c27adae023a9514e3c319b1e"
+   },
+   {
+    "name": "lint",
+    "command": [
+     "pnpm",
+     "lint"
+    ],
+    "startedAt": "2026-11-09T01:11:59.460Z",
+    "finishedAt": "2026-11-09T01:12:07.343Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 7883,
+    "logSha256": "7806d2bb6445e87bbee850038349a66497dc9f76d097e3b3e750a1333bdc03f5",
+    "sourceDigest": "76410f0592964a32c929ab7aebe0595581f88df2c27adae023a9514e3c319b1e"
+   },
+   {
+    "name": "typecheck",
+    "command": [
+     "pnpm",
+     "typecheck"
+    ],
+    "startedAt": "2026-11-09T01:12:07.343Z",
+    "finishedAt": "2026-11-09T01:12:11.915Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 4572,
+    "logSha256": "065468e059cacd2e6cc314b8fa901986e78bcb70af6de3ee9df62205adc638a1",
+    "sourceDigest": "76410f0592964a32c929ab7aebe0595581f88df2c27adae023a9514e3c319b1e"
+   },
+   {
+    "name": "scripts",
+    "command": [
+     "pnpm",
+     "typecheck:scripts"
+    ],
+    "startedAt": "2026-11-09T01:12:11.915Z",
+    "finishedAt": "2026-11-09T01:12:13.407Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 1492,
+    "logSha256": "bc7d9dc87d7dd29399bbde0d73d2c22503bc3e7493266af4a86eb5bd812c7a29",
+    "sourceDigest": "76410f0592964a32c929ab7aebe0595581f88df2c27adae023a9514e3c319b1e"
+   },
+   {
+    "name": "unit",
+    "command": [
+     "pnpm",
+     "test:unit"
+    ],
+    "startedAt": "2026-11-09T01:12:13.407Z",
+    "finishedAt": "2026-11-09T01:12:15.520Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": 304,
+    "durationMs": 2113,
+    "logSha256": "36fe57be66626abb8df776c5cab879ac8daee490300ef08c31f986e0efa2c459",
+    "sourceDigest": "76410f0592964a32c929ab7aebe0595581f88df2c27adae023a9514e3c319b1e"
+   },
+   {
+    "name": "contract",
+    "command": [
+     "pnpm",
+     "test:contract"
+    ],
+    "startedAt": "2026-11-09T01:12:15.520Z",
+    "finishedAt": "2026-11-09T01:12:16.477Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": 172,
+    "durationMs": 957,
+    "logSha256": "98eccadc2637bc1c10beab200c3660f8dd9042feb7f9f272bdb4ee1cc7b086f6",
+    "sourceDigest": "76410f0592964a32c929ab7aebe0595581f88df2c27adae023a9514e3c319b1e"
+   },
+   {
+    "name": "integration",
+    "command": [
+     "pnpm",
+     "test:integration"
+    ],
+    "startedAt": "2026-11-09T01:12:16.477Z",
+    "finishedAt": "2026-11-09T01:16:20.775Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": 381,
+    "durationMs": 244298,
+    "logSha256": "bbdaa73ac64006339172170f8362c0348b7304f9a3063124cbf5b1345c7ddd0d",
+    "sourceDigest": "76410f0592964a32c929ab7aebe0595581f88df2c27adae023a9514e3c319b1e"
+   },
+   {
+    "name": "e2e",
+    "command": [
+     "pnpm",
+     "test:e2e",
+     "--retries=0"
+    ],
+    "startedAt": "2026-11-09T01:16:20.775Z",
+    "finishedAt": "2026-11-09T01:20:32.594Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": 110,
+    "durationMs": 251819,
+    "logSha256": "3ed98c0333a819db3f09ccc23570aa8815c4f8b881020cf505d31af5e06b55b4",
+    "sourceDigest": "76410f0592964a32c929ab7aebe0595581f88df2c27adae023a9514e3c319b1e"
+   },
+   {
+    "name": "bundles",
+    "command": [
+     "C:\\Program Files\\nodejs\\node.exe",
+     "scripts/measure-client-bundles.mjs"
+    ],
+    "startedAt": "2026-11-09T01:20:32.594Z",
+    "finishedAt": "2026-11-09T01:20:32.684Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 90,
+    "logSha256": "2acd0ca629d921c34bb3c816b530ed932f204ca0033703c01c25c2faf0458d96",
+    "sourceDigest": "76410f0592964a32c929ab7aebe0595581f88df2c27adae023a9514e3c319b1e"
+   },
+   {
+    "name": "local-backup",
+    "command": [
+     "C:\\Program Files\\nodejs\\node.exe",
+     "scripts/verify-local-backup.mjs"
+    ],
+    "startedAt": "2026-11-09T01:20:32.685Z",
+    "finishedAt": "2026-11-09T01:21:03.506Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 30821,
+    "logSha256": "5eefb5c0f920948f834ec75ebb7f1e50d08966fdb34eaca20e0a636a6e37eb1a",
+    "sourceDigest": "76410f0592964a32c929ab7aebe0595581f88df2c27adae023a9514e3c319b1e"
+   },
+   {
+    "name": "ui",
+    "command": [
+     "pnpm",
+     "test:ui",
+     "--retries=0"
+    ],
+    "startedAt": "2026-11-09T01:21:03.506Z",
+    "finishedAt": "2026-11-09T01:21:31.410Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": 13,
+    "durationMs": 27904,
+    "logSha256": "964268fa86aa2f91073b3cf542095963173bba5bb5cf88eb5b406c0f69d336a4",
+    "sourceDigest": "76410f0592964a32c929ab7aebe0595581f88df2c27adae023a9514e3c319b1e"
+   },
+   {
+    "name": "audit",
+    "command": [
+     "pnpm",
+     "audit",
+     "--prod",
+     "--audit-level=high",
+     "--json"
+    ],
+    "startedAt": "2026-11-09T01:21:31.410Z",
+    "finishedAt": "2026-11-09T01:21:32.281Z",
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "failed": false,
+    "passed": null,
+    "durationMs": 871,
+    "logSha256": "1c690b4cac583a4c58d39de2a4f753bd52d544d1990739fe4b8f7233d579f8be",
+    "sourceDigest": "76410f0592964a32c929ab7aebe0595581f88df2c27adae023a9514e3c319b1e"
+   }
+  ],
+  "closedFindings": [
+   {
+    "id": "BACKUP-PAIR",
+    "status": "fixed",
+    "closureEvidence": [
+     "docs/CURRENT-REVIEW.md",
+     "artifacts/remediation-20261109/gate/summary.json"
+    ]
+   },
+   {
+    "id": "BACKUP-SNAPSHOT",
+    "status": "fixed",
+    "closureEvidence": [
+     "docs/CURRENT-REVIEW.md",
+     "artifacts/remediation-20261109/gate/summary.json"
+    ]
+   },
+   {
+    "id": "DRAFT-SAVE404",
+    "status": "fixed",
+    "closureEvidence": [
+     "docs/CURRENT-REVIEW.md",
+     "artifacts/remediation-20261109/gate/summary.json"
+    ]
+   },
+   {
+    "id": "SUBRESOURCE-DRAFTS",
+    "status": "fixed",
+    "closureEvidence": [
+     "docs/CURRENT-REVIEW.md",
+     "artifacts/remediation-20261109/gate/summary.json"
+    ]
+   },
+   {
+    "id": "READINESS-SCHEMA",
+    "status": "fixed",
+    "closureEvidence": [
+     "docs/CURRENT-REVIEW.md",
+     "artifacts/remediation-20261109/gate/summary.json"
+    ]
+   },
+   {
+    "id": "WINDOWS-MIGRATION",
+    "status": "fixed",
+    "closureEvidence": [
+     "docs/CURRENT-REVIEW.md",
+     "artifacts/remediation-20261109/gate/summary.json"
+    ]
+   },
+   {
+    "id": "DEV-DEPENDENCY",
+    "status": "fixed",
+    "closureEvidence": [
+     "docs/CURRENT-REVIEW.md",
+     "artifacts/remediation-20261109/gate/summary.json"
+    ]
+   }
+  ],
+  "openExternalGroups": [
+   "RELEASE-CI",
+   "UPSTREAM",
+   "CAPACITY",
+   "DEPLOYMENT",
+   "MIGRATION-HISTORY",
+   "DATA-RECOVERY",
+   "NATIVE-DEVICE"
+  ],
+  "additionalChecks": {
+   "fullDependencyAudit": "0 vulnerabilities, exit 0",
+   "defaultRecovery": "PASS",
+   "migrationHistory": "16/16 both databases, identical schema, no mismatches",
+   "backupFailureInjection": "PASS",
+   "realConcurrentBackup": "PASS, snapshot READY, later DELETED, frozen storage rejects deletion, restored object bytes match"
+  },
+  "postSnapshotChanges": "Documentation and planning closure only",
+  "artifactHashes": [
+   {
+    "path": "artifacts/remediation-20261109/gate/summary.json",
+    "sha256": "6e56113438bbedc064bf9df52cde0750a7d8628c01ac1b41e7aa636362bfb167"
+   },
+   {
+    "path": "artifacts/remediation-20261109/gate/source-hashes.json",
+    "sha256": "27f31b45db7bb2ca4db89cada3dd59f26a5a6670a4dec1f0329912ef1a56208d"
+   },
+   {
+    "path": "artifacts/remediation-20261109/local-backup.log",
+    "sha256": "63e714276ec68e0680bb9cc1a5c6fc73bd60fa617fdf357ebb40ea9d50da1f7b"
+   },
+   {
+    "path": "artifacts/remediation-20261109/backup-failure.log",
+    "sha256": "f7b9d286278d2b91acad0f22ff9369d8f68cb080da6e2c91b5137bd1923809cb"
+   },
+   {
+    "path": "artifacts/remediation-20261109/recovery.log",
+    "sha256": "9d51e3bbb1b1ca142276f767a524ade603ea3e23ec345e799d309c1ba0699145"
+   },
+   {
+    "path": "artifacts/remediation-20261109/migration-history.json",
+    "sha256": "3e87e6ee7f6f14ff0baaeb4ff443829c486cdc148668dcc20ee7d65221997f53"
+   },
+   {
+    "path": "artifacts/remediation-20261109/audit-all.json",
+    "sha256": "e80ef6c91f3a50fe1e2bcd50ede9ad3284efc624fe4dca0fb1fcbdbb6d01934c"
+   }
+  ],
+  "limits": [
+   "No new commit/remote CI/deployment",
+   "Mail credentials not supplied; no live mail verification",
+   "No live shared-host load test, offsite restore or native-device acceptance",
+   "Original historical records/backup missing",
+   "Latest upstream auth still uses ordinary string comparison; no custom password hashing introduced"
+  ]
+ }
 }
