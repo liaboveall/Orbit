@@ -24,7 +24,7 @@
 
 ## Run locally
 
-Use **Node.js 24+**, **pnpm 10.34.5**, and **Docker Compose**. Clone the repository and run these commands from its root:
+Use **Node.js 24+**, **pnpm 10.34.5**, and **Docker Compose**. Clone the repository, then install dependencies and generate a local secret from the repository root.
 
 ~~~sh
 pnpm install --frozen-lockfile
@@ -32,7 +32,7 @@ cp .env.example .env.local
 node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 ~~~
 
-On Windows PowerShell, use `Copy-Item .env.example .env.local`. Set `BETTER_AUTH_SECRET` in `.env.local` to the generated value, then run:
+On Windows PowerShell, use `Copy-Item .env.example .env.local`. Set `BETTER_AUTH_SECRET` in `.env.local` to the generated value before starting the local services and app.
 
 ~~~sh
 docker compose -f infra/compose.dev.yml up -d --wait

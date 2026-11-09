@@ -24,7 +24,7 @@
 
 ## 本地运行
 
-需要 **Node.js 24+**、**pnpm 10.34.5** 和 **Docker Compose**。克隆仓库后在项目根目录运行：
+需要 **Node.js 24+**、**pnpm 10.34.5** 和 **Docker Compose**。克隆仓库后，在项目根目录安装依赖并生成本地密钥。
 
 ~~~sh
 pnpm install --frozen-lockfile
@@ -32,7 +32,7 @@ cp .env.example .env.local
 node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 ~~~
 
-Windows PowerShell 用 `Copy-Item .env.example .env.local`。将生成的值填入 `.env.local` 的 `BETTER_AUTH_SECRET`，然后启动：
+Windows PowerShell 用 `Copy-Item .env.example .env.local`。将生成的值填入 `.env.local` 的 `BETTER_AUTH_SECRET`，再启动本地服务和应用。
 
 ~~~sh
 docker compose -f infra/compose.dev.yml up -d --wait
