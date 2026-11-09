@@ -1,5 +1,5 @@
 import type { TaskSummaryDTO } from "@/contracts";
-import { BOARD_TASKS } from "@/features/board/fixtures";
+import { BOARD_TASKS } from "./board-data";
 export const DEMO_PROJECTS = [
   { key: "CAMP", name: "校园活动报名系统", count: 24 },
   { key: "PORT", name: "个人作品集", count: 12 },

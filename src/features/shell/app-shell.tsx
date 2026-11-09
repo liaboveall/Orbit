@@ -23,66 +23,7 @@ import { useGuardedNavigate } from "@/features/tasks/unsaved-changes";
 import { pruneDrafts } from "@/features/tasks/draft-storage";
 import { UserTimezoneProvider } from "@/lib/user-timezone";
 
-/**
- * AppShell（ORB-002 布局，ORB-006 接入真实会话）：响应式应用外壳。
- *
- * docs/02 §4：
- *  - 桌面 ≥1280(xl)：左侧栏 224px（w-56），顶栏 64px，内容内边距 32px(px-8)。
- *  - 平板 768–1279(md)：侧栏收窄 72px，图标 + tooltip 保留完整标签，内边距 24px(px-6)。
- *  - 手机 <768(base)：侧栏隐藏，顶栏汉堡按钮打开 Drawer 导航，内边距 16px(px-4)。
- *  - 外壳尺寸稳定（fixed 侧栏 + 固定顶栏高度），加载时不整屏 spinner；内容区骨架由各页负责。
- *  - 长项目名截断 + tooltip，不推挤主操作。页面主标题只出现一次（由各页在内容区渲染）。
- *
- * ORB-006 变更：当前用户由 `user` prop 传入（layout 用 getSessionUser 取得真实会话），
- * 不再引用 fixture 的 CURRENT_USER；侧栏底部与个人菜单直达 `/app/settings`。
- *
- * M2 Phase 6 变更：「全部项目」按钮导航到真实项目列表 `/app/projects`；
- * 样例横幅改为白名单判定（isRealDataPage）：设置页/项目/任务/回收站/真实工作台
- * today 不挂横幅；/app/samples/* 与 /app/ui-samples 仍是 fixture 样例、继续显示。
- * 侧栏按当前会话读取最近六个未归档项目，路由切换/聚焦/定时重取，不共享用户缓存。
- */
-
-/** NODE_ENV 是构建期常量：生产构建把开发分支作为死代码消除。 */
-const isDev = process.env.NODE_ENV === "development";
-
-/**
- * 真实数据页判定（M2 Phase 6；B1 修复改为**正向样例路由判定**的反向描述——
- * 真实数据路由显式枚举，避免每接一个真实页就漏改白名单）：白名单内的路由展示
- * 真实私有数据，不挂「使用 fixture 合成数据」样例横幅。/app/today 自 M5（ORB-019）
- * 起是真实工作台数据，与设置/项目/任务一样属于白名单；仅 /app/samples/*、
- * /app/ui-samples 是 M0 样例，必须继续显示横幅（docs/13：样例内容必须明确标识）。
- * 项目 id 为 UUID（不含 `/`），[^/]+ 即精确匹配单层动态段。
- */
-const PROJECT_TASKS_PATH = /^\/app\/projects\/[^/]+\/tasks$/;
-const PROJECT_TASK_DETAIL_PATH = /^\/app\/projects\/[^/]+\/tasks\/[^/]+$/;
-const PROJECT_TRASH_PATH = /^\/app\/projects\/[^/]+\/trash$/;
-const PROJECT_BOARD_PATH = /^\/app\/projects\/[^/]+\/board$/;
-// M4 真实数据分区页（成员 / 邀请 / 活动 / 设置）同样展示真实私有数据，不挂样例横幅。
-const PROJECT_MEMBERS_PATH = /^\/app\/projects\/[^/]+\/members$/;
-const PROJECT_INVITATIONS_PATH = /^\/app\/projects\/[^/]+\/invitations$/;
-const PROJECT_ACTIVITY_PATH = /^\/app\/projects\/[^/]+\/activity$/;
-const PROJECT_SETTINGS_PATH = /^\/app\/projects\/[^/]+\/settings$/;
-
-function isRealDataPath(pathname: string): boolean {
-  return (
-    pathname.startsWith("/app/settings") ||
-    // B1 修复：/app/today 是真实工作台（ORB-019），不挂 fixture 横幅。
-    pathname.startsWith("/app/today") ||
-    pathname === "/app/projects" ||
-    PROJECT_TASKS_PATH.test(pathname) ||
-    // 真实任务详情独立页（ORB-010，M3 已接真实数据）不挂 fixture 横幅。
-    PROJECT_TASK_DETAIL_PATH.test(pathname) ||
-    PROJECT_TRASH_PATH.test(pathname) ||
-    PROJECT_BOARD_PATH.test(pathname) ||
-    PROJECT_MEMBERS_PATH.test(pathname) ||
-    PROJECT_INVITATIONS_PATH.test(pathname) ||
-    PROJECT_ACTIVITY_PATH.test(pathname) ||
-    PROJECT_SETTINGS_PATH.test(pathname)
-    // 注意：/app/samples/* 与 /app/ui-samples 仍为 fixture 样例页，必须继续显示横幅
-    // （docs/13）。样例路由在生产由服务端门禁关闭（见 samples 页面的 dev gate）。
-  );
-}
-
+// Responsive navigation shares recent projects only within the signed-in session.
 type NavMode = "rail" | "drawer";
 
 const itemBase =
@@ -334,10 +275,6 @@ export function AppShell({ user, children }: { user: UserDTO; children: ReactNod
   const { captureFocus, handleCloseAutoFocus } =
     useFocusReturn<HTMLButtonElement>();
 
-  // 真实数据页（工作台 / 设置 / 项目 / 任务 / 回收站 / 成员 / 邀请 / 活动）不挂样例横幅；
-  // fixture 样例页（samples/ui-samples）继续显示（白名单见 isRealDataPath）。
-  const isRealDataPage = isRealDataPath(pathname);
-
   return (
     // F23 修复：会话用户的时区作为事件时间展示的统一来源（详情见 lib/user-timezone）。
     <UserTimezoneProvider value={user.timezone}>
@@ -405,29 +342,10 @@ export function AppShell({ user, children }: { user: UserDTO; children: ReactNod
         </header>
 
         <main id="app-main" className="flex-1 px-4 py-6 md:px-6 xl:px-8">
-          {isRealDataPage ? null : <SampleBanner showStateHint={isDev} />}
           {children}
         </main>
       </div>
     </div>
     </UserTimezoneProvider>
-  );
-}
-
-/**
- * 样例横幅：明确 today/board/task 仍是 M0 布局样例、使用 fixture、未连接后端
- * （docs/13：样例内容必须明确标识，不能与真实私有数据混淆）。
- * `?state=` 六态切换提示仅在开发环境出现（切换面板也只在开发环境渲染）。
- */
-function SampleBanner({ showStateHint }: { showStateHint: boolean }) {
-  return (
-    <p className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-control border border-brand/30 bg-brand-soft px-3 py-2 text-caption text-brand">
-      <span className="font-semibold">M0 布局样例</span>
-      <span className="text-foreground-secondary">
-        {showStateHint
-          ? "使用 fixture 合成数据，未连接真实后端 · 用 URL 的 ?state= 切换六态（见右下角面板）"
-          : "使用 fixture 合成数据，未连接真实后端"}
-      </span>
-    </p>
   );
 }

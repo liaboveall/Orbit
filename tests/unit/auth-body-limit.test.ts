@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { AUTH_BODY_LIMIT_BYTES, withAuthGuards } from "@/server/auth/body-limit";
 
 /**
- * 认证请求体预算（D4 修复验收，docs/08 §3）。
+ * 认证请求体预算。
  *
  * 覆盖：声明 Content-Length 超限 → 不调用 handler 直接 413；无 Content-Length 的
  * chunked 超限 → 计数流按真实字节数拒绝；伪造（声明偏小）同样被真实字节数拦截；

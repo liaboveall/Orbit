@@ -26,9 +26,9 @@ src/generated
 .kiro
 .workbuddy
 logs
-prompts
+docs
 next-env.d.ts
-# OI-17：根目录临时探针输出与 planning 运行缓存不进构建上下文。
+# Ignore local probe output and Python bytecode.
 /_*.txt
 __pycache__
 *.pyc

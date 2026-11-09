@@ -3,7 +3,7 @@ import nextTypescript from "eslint-config-next/typescript";
 
 /**
  * ESLint 独立 CLI 配置（flat config）。
- * 命令契约 `pnpm lint` 使用 `eslint .`，不使用已废弃的 `next lint`（见 docs/08 §2）。
+ * 命令契约 `pnpm lint` 使用 `eslint .`，不使用已废弃的 `next lint`。
  *
  * eslint-config-next 16 原生导出 flat config 预设（数组），直接展开即可，
  * 无需 @eslint/eslintrc 的 FlatCompat（那是给旧式 eslintrc 预设用的）。

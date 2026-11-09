@@ -1,94 +1,56 @@
-# 有序 Orbit
+<div align="center">
+  <img src="src/app/icon.svg" width="72" height="72" alt="">
+  <h1>有序 Orbit</h1>
+  <p><strong>让小团队知道谁在做什么，下一步该做什么。</strong></p>
+  <p>为课程设计、比赛和小型开发项目打造的协作空间。<br>把任务、讨论和交付成果放在一起。</p>
+  <p>
+    <a href="https://smartorbit.tech/demo"><strong>体验在线 Demo ↗</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://smartorbit.tech">访问 Orbit</a>
+    &nbsp;·&nbsp;
+    <a href="README.en.md">English</a>
+  </p>
+</div>
 
-面向个人与学生小团队的项目协作应用。把课程设计、比赛和开发项目中的任务、讨论与成果放在一起，让每个人知道接下来做什么。
+[![Orbit 的桌面看板和移动端任务详情，展示合成的校园活动项目](docs/media/orbit-showcase.png)](https://smartorbit.tech/demo)
 
-[English](README.en.md) · [开发文档](docs/README.md) · [部署指南](docs/OCI-DEPLOYMENT.md)
+<p align="center"><sub>截图来自 Orbit 公开演示。无需注册，点开即可浏览。</sub></p>
 
-## 功能
+## 从分工到交付
 
-- **项目协作**：创建项目、生成一次性邀请链接、管理成员、归档项目。
-- **任务与看板**：列表与三列看板、搜索筛选、负责人、优先级、截止日，支持拖拽与菜单操作。
-- **讨论与成果**：Markdown 描述、子任务、评论、私有附件和项目动态。
-- **个人工作台**：集中查看分配给自己的任务与进度。
-- **工作保护**：任务回收站、编辑冲突提示、未保存草稿保护和账户时区设置。
-
-中文界面，支持桌面与手机核心操作。账户支持邮箱注册、验证和密码找回；项目区分所有者与成员，服务端校验访问权限。
-
-## 体验
-
-启动后访问 [只读演示](http://localhost:3000/demo)，无需登录即可浏览合成项目的看板、列表和任务详情，不读写私人项目。
-
-真实协作流程：注册并验证邮箱 → 创建项目 → 复制邀请链接给队友 → 创建和分配任务 → 讨论、上传成果并完成任务。本地验证邮件在 [Mailpit](http://localhost:8025) 查看。
+- **看清进度。** 用看板或列表查看任务，按负责人、优先级和截止日分工。拖拽和键盘菜单都能移动卡片。
+- **围绕任务协作。** 用一次性链接邀请队友，在任务下写 Markdown、拆子任务、评论和上传私有附件。
+- **专注自己的下一步。** 工作台汇集跨项目的待办和到期事项。编辑冲突时保留草稿，误删的任务可从回收站恢复。
 
 ## 本地运行
 
-需要 Node.js 24+、pnpm 10.34.5 和已启动的 Docker Compose。
+需要 **Node.js 24+**、**pnpm 10.34.5** 和 **Docker Compose**。克隆仓库后，在项目根目录安装依赖并生成本地密钥。
 
-```sh
-git clone https://github.com/liaboveall/Orbit.git
-cd Orbit
-npm install -g pnpm@10.34.5
+~~~sh
 pnpm install --frozen-lockfile
-```
+cp .env.example .env.local
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+~~~
 
-1. 将 `.env.example` 复制为 `.env.local`（PowerShell：`Copy-Item .env.example .env.local`；macOS/Linux：`cp .env.example .env.local`）。
-2. 运行以下命令生成随机值，填入 `.env.local` 的 `BETTER_AUTH_SECRET`；其余默认值用于本地 Compose。
+Windows PowerShell 用 `Copy-Item .env.example .env.local`。将生成的值填入 `.env.local` 的 `BETTER_AUTH_SECRET`，再启动本地服务和应用。
 
-   ```sh
-   node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
-   ```
+~~~sh
+docker compose -f infra/compose.dev.yml up -d --wait
+pnpm db:migrate:deploy
+pnpm dev
+~~~
 
-3. 启动本地 PostgreSQL、S3 兼容存储（SeaweedFS）和 Mailpit。附件用的私有桶 `orbit-dev`（与 `STORAGE_BUCKET` 一致）会在存储服务启动时自动创建：
+打开 [localhost:3000](http://localhost:3000)。注册验证邮件可在 [Mailpit](http://localhost:8025) 查看。只读 [/demo](http://localhost:3000/demo) 可直接体验。
 
-   ```sh
-   docker compose -f infra/compose.dev.yml up -d
-   ```
+## 项目结构
 
-   从旧版（MinIO）切换过来时，运行 `docker compose -f infra/compose.dev.yml up -d --remove-orphans storage`：只启动新的存储服务并移除旧容器，不重建其他服务；旧数据卷 `orbit-dev_orbit_minio` 不会自动删除。
-4. 应用现有迁移并启动：
-
-   ```sh
-   pnpm db:migrate:deploy
-   pnpm dev
-   ```
-
-访问 [Orbit](http://localhost:3000)，注册自己的账户。可选的 `pnpm db:seed` 仅创建开发数据，不提供可登录的演示账户；只读 `/demo` 无需 seed。
-
-端口冲突、测试库初始化和完整变量说明见 [环境文档](docs/08-ENVIRONMENT-AND-DEPLOYMENT.md)。本地配置与凭证不提交到 Git。
-
-## 开发与检查
-
-| 命令 | 用途 |
+| 目录 | 内容 |
 | --- | --- |
-| `pnpm dev` | 开发服务器 |
-| `pnpm build` / `pnpm start` | 构建 / 启动生产应用 |
-| `pnpm check` | ESLint、应用类型检查、单元和契约测试 |
-| `pnpm typecheck:scripts` | 工具脚本类型检查 |
-| `pnpm test:integration` | 真实 PostgreSQL 集成测试 |
-| `pnpm test:e2e` / `pnpm test:ui` | 业务流程 / 界面与键盘操作测试 |
-| `pnpm db:migrate:dev` | 开发新功能时创建迁移 |
-| `pnpm db:migrate:deploy` | 应用已提交的迁移 |
+| `src/` | Next.js 页面和 API、功能组件、权限与业务服务 |
+| `prisma/` · `contracts/` | PostgreSQL 数据模型、迁移和 OpenAPI 契约 |
+| `infra/` · `scripts/` | 容器、反向代理、维护和备份 |
+| `tests/` | 单元、契约、集成和浏览器回归 |
 
-数据库和浏览器测试使用独立的 `orbit_test`，顺序执行。准备步骤见 [测试说明](tests/README.md)。
+**技术栈**　Next.js · React · TypeScript · Tailwind CSS · PostgreSQL · Prisma · Better Auth · S3
 
-## 技术栈
-
-Next.js 16 App Router、React 19、TypeScript、Tailwind CSS 4、Radix UI；PostgreSQL 17、Prisma 7、Better Auth 和私有 S3 兼容存储。具体版本以 [package.json](package.json) 和锁文件为准。
-
-```text
-src/app/         页面与 API 路由
-src/features/    项目、任务、看板等前端功能
-src/server/      认证、权限、数据库与业务服务
-src/contracts/   运行时校验、DTO 与 API 客户端
-src/components/  通用界面组件
-prisma/          数据模型、迁移与开发种子
-contracts/       OpenAPI 契约
-tests/           单元、契约、集成与浏览器测试
-infra/           本地服务、生产编排与备份工具
-```
-
-## 部署与状态
-
-支持持续运行的 Node.js 容器部署。当前部署目标见 [Oracle Cloud 部署指南](docs/OCI-DEPLOYMENT.md)（ARM 单机、同机 S3 兼容存储）；[AWS 部署指南](docs/AWS-MICRO-DEPLOYMENT.md) 作为备选；[运行维护手册](docs/M6-OPERATIONS.md) 说明 PostgreSQL、私有对象存储、邮件、HTTPS 与备份。
-
-核心协作功能已实现并完成本地验收；生产部署与外部验收仍在推进，AI 项目拆解助手尚未实现。当前状态、验收证据和待办见 [PROGRESS](PROGRESS.md) 与 [backlog](planning/backlog.json)。
+[架构与接口](docs/README.md) · [部署与恢复](docs/OCI-DEPLOYMENT.md) · [运行测试](tests/README.md)

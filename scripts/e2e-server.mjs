@@ -5,7 +5,7 @@ import pg from "pg";
 import { killProcessTree } from "./process-tree.mjs";
 
 /**
- * scripts/e2e-server.mjs —— E2E 专用应用服务启动器（A10 修复，docs/08 §1：
+ * scripts/e2e-server.mjs —— E2E 专用应用服务启动器（见 tests/README.md：
  * 「测试使用独立数据库orbit_test和独立对象前缀，不复用orbit_dev的数据」）。
  *
  * 背景：`playwright.config.ts` 此前直接 `pnpm run build && pnpm run start`，Next.js
@@ -234,7 +234,7 @@ async function main() {
 
   console.log(`[e2e-server] 启动测试专用服务：${baseURL}（DATABASE_URL -> ${testTarget.dbName}）`);
 
-  const child = spawn("pnpm", ["exec", "next", process.env.E2E_SERVER_MODE === "dev" ? "dev" : "start", "--hostname", "localhost", "-p", String(E2E_PORT)], {
+  const child = spawn("pnpm", ["exec", "next", "start", "--hostname", "localhost", "-p", String(E2E_PORT)], {
     env: childEnv,
     stdio: "inherit",
     shell: true,

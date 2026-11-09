@@ -9,7 +9,7 @@ import { parseEnv } from "@/server/env";
  * 集成测试（M0 最小真实断言）：验证「独立测试库可连接」。
  *
  * - 显式加载约定环境文件（.env.local，回退 .env），与 Prisma CLI / Next 一致。
- * - 连接前经 parseEnv 校验：TEST_DATABASE_URL 指向开发/生产库名会被直接拒绝（docs/08 §7）。
+ * - 连接前经 parseEnv 校验：TEST_DATABASE_URL 指向开发/生产库名会被直接拒绝（tests/README.md）。
  * - 运行前需 `docker compose -f infra/compose.dev.yml up -d` 起库并创建 orbit_test。
  * - 这不是 exit 0 空脚本：它真实连库并断言查询结果与库名。
  */

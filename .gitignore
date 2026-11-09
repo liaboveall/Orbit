@@ -59,10 +59,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# --- Artifacts: keep the folder + README, ignore large generated reports ---
-artifacts/*
-!artifacts/README.md
-!artifacts/**/.gitkeep
+# --- Generated evidence ---
+/artifacts/
 
 # --- OS / editor ---
 .DS_Store

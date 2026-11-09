@@ -154,7 +154,7 @@ fixture 的 now 是可注入基准时间，日期相对基准生成，以便覆�
 
 - 变更 1：`Invitation.acceptedById` 外键改 `ON DELETE RESTRICT`。该列是接受行为的审计身份，与 `acceptedAt` 受成对 CHECK（`checked_accepted_at_and_by_id`）约束；原 CASCADE 置空既违反该 CHECK 也会抹掉审计记录。删除曾接受邀请的用户必须先显式处理邀请记录，与移除成员业务路径的显式清理一致。
 - 变更 2：删除 `Project_bytes_non_negative_check` 复合 CHECK。它已被 M5 迁移 `20260911033000_add_project_quota_checks` 的 `non_negative_reserved` / `non_negative_used` 两条独立约束完全覆盖；删除只为对齐 schema 与运行库约束清单，防护语义不变，不修改任何数据行。
-- 回滚口径：本项目迁移只向前。应用回滚=从备份恢复（docs/M6-OPERATIONS.md）；需修正时编写新的后续迁移，不得改写已应用文件（其字节与 `_prisma_migrations.checksum` 绑定）。
+- 回滚口径：本项目迁移只向前。应用回滚要求旧镜像与现有 schema 兼容，数据恢复见 [部署手册](OCI-DEPLOYMENT.md)；需修正时编写新的后续迁移，不得改写已应用文件（其字节与 `_prisma_migrations.checksum` 绑定）。
 
 
 ## 2026-09-11 · M5 协议冲突关闭

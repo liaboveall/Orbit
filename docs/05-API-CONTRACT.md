@@ -2,7 +2,7 @@
 
 ## 1. 范围与维护
 
-机器可读的 V1 业务协议见 [openapi.json](../contracts/openapi.json)，OpenAPI 3.1，基路径 /api/v1。认证库挂在 /api/auth/*，遵循锁定 Better Auth 版本的协议，不伪造业务包装。注册、重发验证邮件、找回密码等匿名入口的响应状态、正文与耗时不依赖账户是否存在或是否已验证：认证邮件在响应之后投递，投递失败不改变响应（见架构 §8）。健康检查 /health/live、/health/ready 也不使用业务包装。AI 扩展单独见09，V1 不暴露未实现 AI 路由。
+机器可读的 V1 业务协议见 [openapi.json](../contracts/openapi.json)，OpenAPI 3.1，基路径 /api/v1。认证库挂在 /api/auth/*，遵循锁定 Better Auth 版本的协议，不伪造业务包装。注册、重发验证邮件、找回密码等匿名入口的响应状态、正文与耗时不依赖账户是否存在或是否已验证：认证邮件在响应之后投递，投递失败不改变响应（见架构 §8）。健康检查 /health/live、/health/ready 也不使用业务包装。
 
 开发时将契约实现为 src/contracts 的 Zod schemas/DTO，并添加契约测试。OpenAPI、运行时 schema 和业务规则必须同步；禁止只有类型声明而没有服务端校验。
 

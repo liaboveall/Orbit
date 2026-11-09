@@ -54,8 +54,8 @@ it("1000-task sorting under ten concurrent readers is measured against the uncha
   const projects = await listProjects(f.member, { scope: "joined", limit: 6 });
   expect(projects.projects.map(project => project.id)).toContain(f.projectId);
   expect((await listProjects(f.outsider, { scope: "all", limit: 6 })).projects).toHaveLength(0);
-  await mkdir("artifacts/comprehensive-20260913", { recursive: true });
-  await writeFile("artifacts/comprehensive-20260913/database-performance.json", JSON.stringify({
+  await mkdir("artifacts/release", { recursive: true });
+  await writeFile("artifacts/release/database-performance.json", JSON.stringify({
     environment: "local PostgreSQL; synthetic single project; not micro production capacity", poolMax: process.env.DATABASE_POOL_MAX ?? 5,
     measurements, plans: { due, priority },
   }, null, 2));

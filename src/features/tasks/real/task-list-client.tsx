@@ -31,7 +31,6 @@ import { TaskStatusSelect } from "./task-status-select";
 /**
  * 项目任务列表客户端（M2 Phase 6，`/app/projects/[id]/tasks`）。
  *
- * 与 fixture 组件（../task-detail.tsx、../fixtures.ts）物理隔离于 real/ 子目录。
  *
  * 数据流：首屏由 Server Component 经领域服务读取后 props 传入；行内状态切换 /
  * 创建 / 删除都走契约层 API（PATCH /tasks/{id}、POST /projects/{id}/tasks、

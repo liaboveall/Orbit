@@ -1,481 +1,56 @@
-# Orbit Oracle Cloud 部署指南：ARM 2 核 12 GB（第一阶段）
+# 部署与恢复
 
-更新：2026-11-09。当前生产已切到自有域名并接入邮件、异地备份和告警，现状见[第 16 节](#16-当前生产域名邮件异地备份与告警)；第 3—12 节仍是从零搭建的步骤。用途：个人全栈作品展示。本文是操作指南，按顺序在你的 Oracle 实例上执行，遇到与描述不符的输出先停下排查。这台服务器可能同时运行其他网站，操作时不要改动它们的容器、卷和 Nginx 站点。
+Orbit 以两个 OCI 镜像运行。Dockerfile 的 runner 目标提供 Web 服务，operations 目标运行迁移与维护。公网入口通过 Nginx 提供 HTTPS。生产 PostgreSQL 和附件存储位于 Compose 内网，备份以加密快照写入私有 R2 桶。
 
-第一阶段的范围和限制：
+## 配置生产环境
 
-- **没有域名**：用 [sslip.io](https://sslip.io) 的“IP 即域名”主机名加 Let's Encrypt 证书提供 HTTPS。以后有了域名按第 13 节切换。
-- **没有邮件服务**：认证邮件全部发送失败（只记日志）。Orbit 要求邮箱验证后才能登录，所以任何人注册后都无法自行登录；你自己的账户按第 11 节手动标记为已验证。公开的 `/demo` 不受影响，适合作为简历入口。
-- **附件存在同一台服务器的 SeaweedFS**（ADR-030），与数据库同机。备份每天在服务器上生成，但**必须定期下载到你的电脑**，服务器上的备份扛不住整机故障或账户被停用。
+- [单机编排](../infra/compose.micro.yml) 使用同机 PostgreSQL，可启用 local-storage 配置运行 SeaweedFS。[外部数据库编排](../infra/compose.production.yml) 适用于托管 PostgreSQL。
+- 单机编排安装为 /opt/orbit/compose.yml。app.env 包含应用配置，db.env 包含 PostgreSQL 配置，storage.env 为 SeaweedFS 注入 AWS_ACCESS_KEY_ID 和 AWS_SECRET_ACCESS_KEY。首次启动时创建专用的应用角色和数据库。应用使用该角色连接 postgres:5432。
+- 参照 [.env.example](../.env.example) 设置 APP_ENV=production、APP_URL、BETTER_AUTH_URL、AUTH_TRUSTED_ORIGINS、BETTER_AUTH_SECRET、DATABASE_URL 和 STORAGE_*。HTTPS 域名在三个地址字段中一致，数据库和存储密钥单独生成。配置文件权限设为 0600。
+- 附件使用私有 S3 桶。单机编排使用 STORAGE_ENDPOINT=http://storage:8333、STORAGE_BUCKET=orbit-attachments 与路径式访问。外部对象存储使用 HTTPS。TEST_DATABASE_URL 按配置校验提供独立测试目标，生产应用使用 DATABASE_URL。
+- 配置已验证的发件域、MAIL_FROM 和 SMTP_*。使用 SMTPS 或受强制校验的 STARTTLS。生产使用 Resend。[凭证更新脚本](../infra/apply-external-config.py) 从标准输入读取邮件或 R2 凭证，并将原配置保存在服务器受限目录中。
+- 使用 [Nginx 虚拟主机](../infra/nginx-site.conf)、[HTTPS 代理片段](../infra/nginx.conf) 和 [HTTP 配置](../infra/nginx-http.conf)。新主机配置域名 DNS 和证书后运行 nginx -t，再重载。单层可信代理使用 TRUSTED_PROXY_COUNT=1，Web 容器端口仅绑定 127.0.0.1。证书续期后重载 Nginx。
 
-## 1. 方案
+## 构建与更新
 
-浏览器 → HTTPS Nginx（宿主机）→ Orbit web 容器（127.0.0.1:3000）→ PostgreSQL 容器、SeaweedFS 容器（Docker 内网，不对外开放端口）。
+使用通过 CI 的提交，在目标架构上构建 runner 和 operations。对单机编排，在切换 showcase 标签前保存旧镜像的提交标签作为回退点。已有生产数据先完成成对备份。
 
-镜像在服务器上原生构建（ARM64，约 3 分钟），源码用 `git archive` 打包上传；服务器不跑测试。编排文件是仓库的 [infra/compose.micro.yml](../infra/compose.micro.yml)，通过 `local-storage` 配置启用 SeaweedFS。
+~~~sh
+sha=$(git rev-parse --short=12 HEAD)
+docker build --target runner -t "orbit-web:$sha" .
+docker build --target operations -t "orbit-operations:$sha" .
+docker tag "orbit-web:$sha" orbit-web:showcase
+docker tag "orbit-operations:$sha" orbit-operations:showcase
 
-Oracle 的两条规则要记住：
-
-- **闲置回收**：Always Free 实例在 7 天内 CPU（95 百分位）、网络、内存（A1）使用率都低于 20% 时可能被回收。低访问量的展示站点很可能被判为闲置。可以把账户升级为按量付费（Pay As You Go）并设置预算提醒，官方说明只对超出免费额度的部分收费，但官方文档没有写明升级后免于回收。无论如何都要保持备份下载习惯。
-- **免费额度会变**：A1 免费额度在 2026 年 6 月从 4 核 24 GB 降到 2 核 12 GB，事先没有公告。以 [Always Free Resources](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm) 为准。
-
-## 2. 需要替换的占位符
-
-| 示例 | 替换为 |
-|---|---|
-| `YOUR_IP` | 实例公网 IPv4 |
-| `YOUR_HOST` | 把 `YOUR_IP` 的点换成短横线再加 `.sslip.io`，例如 `203.0.113.5` → `203-0-113-5.sslip.io` |
-| `KEY_PATH` | 创建实例时下载的 SSH 私钥，例如 `C:\Users\Mars\.ssh\oci-orbit.key` |
-| `REPLACE_...` | 在服务器上生成的随机值，只填进服务器上的环境文件 |
-
-**Windows PowerShell** 命令在电脑上执行；**服务器 Bash** 命令在 SSH 登录后执行。不要混用。密码和密钥不要发到聊天、不要提交到 Git。
-
-## 3. 检查实例并开放 80/443
-
-在 Oracle 控制台确认：
-
-1. 实例规格为 `VM.Standard.A1.Flex`，2 OCPU、12 GB 内存；镜像是 Canonical Ubuntu（实际使用 26.04，aarch64）；已分配公网 IPv4。
-2. 网络 → 虚拟云网络 → 你的 VCN → 实例所在的公共子网 → 安全列表，添加两条入站规则：源 CIDR `0.0.0.0/0`，IP 协议 TCP，目标端口分别为 `80` 和 `443`。SSH 的 22 端口保持原样（能改成只允许你自己的 IP 更好）。数据库、应用和存储端口都不要开放。
-
-**Windows PowerShell：**
-
-```powershell
-ssh -i "KEY_PATH" ubuntu@YOUR_IP
-```
-
-首次连接核对后接受主机指纹。若提示私钥权限过宽（UNPROTECTED PRIVATE KEY FILE），先执行 `icacls "KEY_PATH" /inheritance:r /grant:r "$($env:USERNAME):(R)"` 再连接。
-
-**服务器 Bash：**
-
-```bash
-uname -m
-free -h
-df -h /
-. /etc/os-release && echo "$PRETTY_NAME"
-```
-
-预期 `aarch64`、内存约 11 Gi、Ubuntu 24.04 或更新版本。
-
-## 4. 主机防火墙（在安装 Docker 之前）
-
-Oracle 的 Ubuntu 镜像自带 iptables 规则，默认只放行 SSH，安全列表放行后还要在主机上放行（参见 [Oracle 开发者博客](https://blogs.oracle.com/developers/enabling-network-traffic-to-ubuntu-images-in-oracle-cloud-infrastructure)）。新规则必须在 REJECT 之前，且保留 22 端口那一行。
-
-**服务器 Bash：**
-
-```bash
-[ -f /etc/iptables/rules.v4.bak-orbit ] || sudo cp /etc/iptables/rules.v4 /etc/iptables/rules.v4.bak-orbit
-grep -q -- '--dport 80 -j ACCEPT' /etc/iptables/rules.v4 || sudo sed -i '/--dport 22 -j ACCEPT/a -A INPUT -p tcp -m state --state NEW -m tcp --dport 80 -j ACCEPT\n-A INPUT -p tcp -m state --state NEW -m tcp --dport 443 -j ACCEPT' /etc/iptables/rules.v4
-grep -n -E 'dport|REJECT' /etc/iptables/rules.v4
-sudo iptables-restore < /etc/iptables/rules.v4
-sudo iptables -L INPUT -n --line-numbers
-```
-
-预期顺序：22、80、443 三条 ACCEPT，然后才是 REJECT。重复执行不会插入重复规则。该文件开机时自动加载。
-
-安装 Docker 之后如果还要改这个文件，执行 `iptables-restore` 后必须再执行 `sudo systemctl restart docker`，否则会冲掉 Docker 自己的规则。
-
-## 5. 安装 Docker 与 Nginx
-
-依据 [Docker Ubuntu 官方文档](https://docs.docker.com/engine/install/ubuntu/)，架构取本机值（arm64）。已有 Docker 时先运行 `docker --version`，不要重复安装。
-
-**服务器 Bash：**
-
-```bash
-sudo apt update
-sudo apt install -y ca-certificates curl nginx
-sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-sudo tee /etc/apt/sources.list.d/docker.sources > /dev/null <<EOF
-Types: deb
-URIs: https://download.docker.com/linux/ubuntu
-Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
-Components: stable
-Architectures: $(dpkg --print-architecture)
-Signed-By: /etc/apt/keyrings/docker.asc
-EOF
-sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-sudo systemctl enable --now docker nginx
-sudo docker run --rm hello-world
-sudo docker compose version
-```
-
-检查点：在电脑浏览器打开 `http://YOUR_IP`，应看到 Nginx 默认页。打不开就回到第 3、4 节检查安全列表和主机防火墙，不要继续。
-
-## 6. 在服务器上构建 ARM64 镜像
-
-服务器本身就是 ARM64，原生构建比在 x86 电脑上模拟快得多。`core.autocrlf=false` 保证在 Windows 上打包的脚本仍是 LF 换行。
-
-**Windows PowerShell：**
-
-```powershell
-Set-Location D:FullStackOrbit
-git switch main
-git pull --ff-only
-git status --short
-$sha = git rev-parse --short HEAD
-New-Item -ItemType Directory -Force artifacts | Out-Null
-git -c core.autocrlf=false archive --format=tar.gz -o artifacts/orbit-src.tgz HEAD
-ssh -i "KEY_PATH" ubuntu@YOUR_IP "rm -rf orbit-src; mkdir orbit-src"
-scp -i "KEY_PATH" artifacts/orbit-src.tgz ubuntu@YOUR_IP:orbit-src/
-$sha
-```
-
-`git status --short` 应无输出。记下最后打印的 `$sha`，它是这次发布的提交版本。
-
-**服务器 Bash：**（`REPLACE_SHA` 换成上面打印的值）
-
-```bash
-SHA=REPLACE_SHA
-cd ~/orbit-src && tar -xzf orbit-src.tgz && rm orbit-src.tgz
-sudo docker build --target runner -t "orbit-web:$SHA" -t orbit-web:showcase .
-sudo docker build --target operations -t "orbit-operations:$SHA" -t orbit-operations:showcase .
-sudo docker image ls | grep orbit
-sudo install -d -m 700 /opt/orbit /opt/orbit/backups
-sudo install -m 644 infra/compose.micro.yml /opt/orbit/compose.yml
-sudo install -m 700 infra/backup-local.sh /opt/orbit/backup-local.sh
-sudo install -m 700 infra/select-backup.sh /opt/orbit/select-backup.sh
-sudo tee /opt/orbit/.env > /dev/null <<'ENV'
-COMPOSE_PROFILES=local-storage
-ORBIT_POSTGRES_MEM_LIMIT=1g
-ORBIT_WEB_MEM_LIMIT=1g
-ORBIT_OPERATIONS_MEM_LIMIT=1g
-ORBIT_STORAGE_MEM_LIMIT=512m
-ENV
-sudo touch /opt/orbit/db.env /opt/orbit/storage.env /opt/orbit/app.env
-sudo chmod 600 /opt/orbit/db.env /opt/orbit/storage.env /opt/orbit/app.env
-```
-
-`/opt/orbit/.env` 让本目录的所有 compose 命令自动启用 `local-storage`，并给每个容器设内存上限，给同机的其他网站留出余量。上限的实际余量以第 11 节的 `docker stats` 结果为准。`~/orbit-src` 第 10 节还要用，配好 Nginx 后再删除。
-
-## 7. 生成随机值并填写环境文件
-
-**服务器 Bash：** 执行四次，把输出分别存进你的密码管理器：
-
-```bash
-openssl rand -hex 24
-openssl rand -hex 24
-openssl rand -hex 24
-openssl rand -hex 32
-```
-
-依次作为：数据库管理员密码、应用数据库密码、存储密钥、`BETTER_AUTH_SECRET`。用 `sudo nano /opt/orbit/db.env` 填写（nano 保存 Ctrl+O、回车，退出 Ctrl+X）：
-
-```dotenv
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=REPLACE_DB_ADMIN_PASSWORD
-POSTGRES_DB=postgres
-```
-
-`sudo nano /opt/orbit/storage.env`：
-
-```dotenv
-AWS_ACCESS_KEY_ID=orbit_storage
-AWS_SECRET_ACCESS_KEY=REPLACE_STORAGE_SECRET
-```
-
-`sudo nano /opt/orbit/app.env`（三个地址完全一致、无尾部斜杠）：
-
-```dotenv
-APP_ENV=production
-APP_URL=https://YOUR_HOST
-BETTER_AUTH_URL=https://YOUR_HOST
-AUTH_TRUSTED_ORIGINS=https://YOUR_HOST
-BETTER_AUTH_SECRET=REPLACE_AUTH_SECRET
-DATABASE_URL=postgresql://orbit_app:REPLACE_APP_DB_PASSWORD@postgres:5432/orbit_prod
-TEST_DATABASE_URL=postgresql://unused:unused@127.0.0.1:5432/orbit_test
-# 第一阶段不配邮件：smtp.invalid 是保留域名，保证解析失败，认证邮件只记失败日志。
-SMTP_HOST=smtp.invalid
-SMTP_PORT=587
-SMTP_USER=
-SMTP_PASSWORD=
-SMTP_SECURE=false
-MAIL_FROM="Orbit <no-reply@YOUR_HOST>"
-# 同机 SeaweedFS（ADR-030）：容器内网地址，不经过公网。
-STORAGE_ENDPOINT=http://storage:8333
-STORAGE_REGION=us-east-1
-STORAGE_BUCKET=orbit-attachments
-STORAGE_ACCESS_KEY_ID=orbit_storage
-STORAGE_SECRET_ACCESS_KEY=REPLACE_STORAGE_SECRET
-STORAGE_FORCE_PATH_STYLE=true
-TRUSTED_PROXY_COUNT=1
-LOG_LEVEL=info
-AI_ENABLED=false
-ORBIT_MAINTENANCE_TARGET=
-```
-
-`STORAGE_SECRET_ACCESS_KEY` 与 storage.env 的 `AWS_SECRET_ACCESS_KEY` 是同一个值；`STORAGE_BUCKET` 必须是 `orbit-attachments`，存储服务启动时会创建这个桶。`TEST_DATABASE_URL` 只为通过配置校验，正式服务不会连接它。
-
-## 8. 启动数据库与存储
-
-**服务器 Bash：**
-
-```bash
-sudo docker compose -f /opt/orbit/compose.yml config --quiet
-sudo docker compose -f /opt/orbit/compose.yml up -d postgres storage
-sudo docker compose -f /opt/orbit/compose.yml ps
-sudo docker compose -f /opt/orbit/compose.yml logs storage | grep 'created bucket'
-```
-
-两个服务都应为 healthy，日志里有 `created bucket orbit-attachments`。然后创建应用数据库账户：
-
-```bash
-sudo docker compose -f /opt/orbit/compose.yml exec postgres psql -U postgres
-```
-
-在 psql 中逐条执行，`\password` 输入两次应用数据库密码：
-
-```sql
-CREATE ROLE orbit_app LOGIN;
-\password orbit_app
-CREATE DATABASE orbit_prod OWNER orbit_app;
-\q
-```
-
-以上只执行一次；已有数据库时不要重建。应用不使用 postgres 超级用户。
-
-## 9. 迁移、检查存储并启动 web
-
-**服务器 Bash：**
-
-```bash
-sudo docker compose -f /opt/orbit/compose.yml run --rm operations node node_modules/prisma/build/index.js migrate deploy
-sudo docker compose -f /opt/orbit/compose.yml run --rm operations node --conditions=react-server --import tsx scripts/storage-check.ts
-sudo docker compose -f /opt/orbit/compose.yml up -d web
-sudo docker compose -f /opt/orbit/compose.yml ps
-curl -i http://127.0.0.1:3000/health/ready
-```
-
-迁移应应用 16 个迁移；存储检查输出 `storage_check_passed`（它用应用自己的配置写入、读回并删除一个探针对象）；健康检查返回 HTTP 200。存储检查失败时按输出的 `stage` 和 `error` 排查：`SignatureDoesNotMatch` 表示两个文件里的存储密钥不一致，`NoSuchBucket` 表示桶名不是 `orbit-attachments`。503 表示数据库或迁移不可用，查看 `sudo docker compose -f /opt/orbit/compose.yml logs --tail=100 web postgres`。
-
-## 10. Nginx 与 HTTPS
-
-仓库的 [nginx-http.conf](../infra/nginx-http.conf)（http 上下文：限流区与脱敏日志格式）和 [nginx.conf](../infra/nginx.conf)（站点片段：安全头、请求体上限、认证限流与反向代理）直接使用，不在本文复制。
-
-**服务器 Bash：**
-
-```bash
-ORBIT_HOST=YOUR_HOST
-sudo install -m 644 ~/orbit-src/infra/nginx-http.conf /etc/nginx/conf.d/orbit-logging.conf
-sudo install -d /etc/nginx/snippets
-sudo install -m 644 ~/orbit-src/infra/nginx.conf /etc/nginx/snippets/orbit.conf
-sudo tee /etc/nginx/sites-available/orbit > /dev/null <<EOF
-server {
-    listen 80;
-    server_name ${ORBIT_HOST};
-    include /etc/nginx/snippets/orbit.conf;
-}
-EOF
-if [ "$(readlink -f /etc/nginx/sites-enabled/default)" = /etc/nginx/sites-available/default ]; then
-  sudo unlink /etc/nginx/sites-enabled/default
-fi
-sudo ln -sf /etc/nginx/sites-available/orbit /etc/nginx/sites-enabled/orbit
-sudo nginx -t
-sudo systemctl reload nginx
-curl -s -o /dev/null -w '%{http_code}\n' -H "Host: ${ORBIT_HOST}" http://127.0.0.1/health/ready
-```
-
-预期 `200`。不要给 Orbit 设 `default_server`：未匹配的主机名由服务器的兜底站点处理，只有这台服务器上没有其他站点时才需要另行考虑。配好后执行 `rm -rf ~/orbit-src`。再在电脑浏览器打开 `http://YOUR_HOST/health/ready`，确认主机名解析和公网访问都正常（Let's Encrypt 验证需要它），然后申请证书：
-
-```bash
-ORBIT_HOST=YOUR_HOST
-sudo snap install --classic certbot
-sudo /snap/bin/certbot --nginx -d "${ORBIT_HOST}"
-sudo /snap/bin/certbot renew --dry-run
-```
-
-Certbot 按提示填写邮箱、接受条款，询问时选择把 HTTP 重定向到 HTTPS。它会把原站点改为监听 443 并保留 `include` 的全部设置。依据 [Certbot Nginx 说明](https://certbot.eff.org/instructions?os=snap&ws=nginx)。
-
-sslip.io 由很多人共用，若 Let's Encrypt 报频率限制，可改用同一服务的 `nip.io` 形式（`203-0-113-5.nip.io`）：把 `ORBIT_HOST` 和 app.env 里的三个地址都换掉，执行 `sudo docker compose -f /opt/orbit/compose.yml up -d --force-recreate web` 后重新申请证书。
-
-HSTS 在 sslip.io 阶段不开启，切到自有域名后才开启（第 16 节）。
-
-## 11. 验收与你自己的账户
-
-1. 电脑浏览器打开 `https://YOUR_HOST/demo`，再用手机宽度看一次。
-2. 在 `https://YOUR_HOST/auth/register` 注册你自己的账户。验证邮件不会到达（第一阶段预期如此），把这个邮箱手动标记为已验证：
-
-```bash
-sudo docker compose -f /opt/orbit/compose.yml exec -T postgres psql -U postgres -d orbit_prod -c "UPDATE \"User\" SET \"emailVerified\" = true WHERE email = 'YOUR_EMAIL';"
-```
-
-预期输出 `UPDATE 1`。只对你自己控制的邮箱这样做；配好邮件服务后不再需要。
-
-3. 登录后创建项目和任务，切换列表/看板，写评论，上传并下载一份接近 10 MiB 的测试附件。
-4. 执行 `sudo docker compose -f /opt/orbit/compose.yml restart web`，确认任务和附件仍在。
-5. 查看资源和日志：
-
-```bash
-free -h
-sudo docker stats --no-stream
-sudo docker compose -f /opt/orbit/compose.yml logs --tail=100 web
-```
-
-注册后日志里出现 `auth_email_failed` 是第一阶段的预期现象。邀请第二个账户需要邮件，协作流程等配好邮件后再验收。
-
-## 12. 维护与备份
-
-### 定时维护
-
-先只读预览：
-
-```bash
-sudo docker compose -f /opt/orbit/compose.yml run --rm operations
-```
-
-输出中 `maintenance_preview` 那一行的 `target` 是 64 位指纹。核对 `environment` 为 `production` 后，把它填进 app.env 的 `ORBIT_MAINTENANCE_TARGET=`。然后 `sudo crontab -e` 加入：
-
-```cron
-20 * * * * /usr/bin/flock -n /run/orbit-maintenance.lock /usr/bin/docker compose -f /opt/orbit/compose.yml run --rm operations node --conditions=react-server --import tsx scripts/maintenance-cleanup.ts --execute >> /var/log/orbit-maintenance.log 2>&1
-```
-
-数据库或存储配置变了，指纹也会变，需要重新预览并更新。
-
-### 每日备份
-
-[backup-local.sh](../infra/backup-local.sh) 在内部 flock 互斥下先停止存储，再导出数据库和归档附件，最后重启存储。附件在整个 dump/归档期间暂时不可用，web 其余功能继续运行；冻结存储确保维护程序不能删除快照引用的对象。失败时尝试重启存储并清除本批未完成文件。两文件均校验后才原子发布 `backup-<批次>.sha256`，保留 7 天。
-
-下载/恢复必须通过 [select-backup.sh](../infra/select-backup.sh) 选择摘要匹配的同一完整批次。旧备份没有清单，不能自动标为完整；保留原文件并按既有来源和隔离恢复结果人工核验。新脚本需要和新选择器一起安装，不修改旧备份。
-
-```bash
-sudo /opt/orbit/backup-local.sh
-sudo ls -lh /opt/orbit/backups
-```
-
-输出 `local_backup_complete` 后，`sudo crontab -e` 加入：
-
-```cron
-10 3 * * * /usr/bin/flock -n /run/orbit-backup.lock /opt/orbit/backup-local.sh >> /var/log/orbit-backup.log 2>&1
-```
-
-日志轮换：`sudo nano /etc/logrotate.d/orbit`：
-
-```text
-/var/log/orbit-maintenance.log /var/log/orbit-backup.log {
-    weekly
-    rotate 4
-    compress
-    missingok
-    notifempty
-    copytruncate
-}
-```
-
-### 下载到电脑（每周一次，以及每次更新前）
-
-**服务器 Bash：**
-
-```bash
-batch=$(sudo /opt/orbit/select-backup.sh)
-sudo install -o ubuntu -g ubuntu -m 600 "/opt/orbit/backups/orbit-$batch.dump" /home/ubuntu/orbit-latest.dump
-sudo install -o ubuntu -g ubuntu -m 600 "/opt/orbit/backups/storage-$batch.tar.gz" /home/ubuntu/storage-latest.tar.gz
-```
-
-**Windows PowerShell：**
-
-```powershell
-$d = Get-Date -Format yyyyMMdd
-New-Item -ItemType Directory -Force "$env:USERPROFILE\OrbitBackups" | Out-Null
-scp -i "KEY_PATH" ubuntu@YOUR_IP:/home/ubuntu/orbit-latest.dump "$env:USERPROFILE\OrbitBackups\orbit-$d.dump"
-scp -i "KEY_PATH" ubuntu@YOUR_IP:/home/ubuntu/storage-latest.tar.gz "$env:USERPROFILE\OrbitBackups\storage-$d.tar.gz"
-```
-
-下载完成后在服务器执行 `rm /home/ubuntu/orbit-latest.dump /home/ubuntu/storage-latest.tar.gz`。备份含用户数据，妥善保管。另外可以在 Oracle 控制台为启动卷手动创建卷备份（免费额度共 5 个），作为整机层面的补充，但它和实例在同一个账户里，不能代替下载到电脑。
-
-### 恢复
-
-上线后用合成数据做一次恢复演练。以下命令已在本地用同一编排验证过。数据库恢复到独立的检查库，不影响正式库：
-
-```bash
-sudo docker compose -f /opt/orbit/compose.yml exec -T postgres createdb -U postgres orbit_restore_check
-batch=$(sudo /opt/orbit/select-backup.sh)
-sudo bash -c 'docker compose -f /opt/orbit/compose.yml exec -T postgres pg_restore -U postgres -d orbit_restore_check < "$1"' _ "/opt/orbit/backups/orbit-$batch.dump"
-```
-
-核对后用 `dropdb -U postgres orbit_restore_check`（同样经 `exec -T postgres`）删除检查库。附件恢复会**用备份覆盖当前全部附件数据**，只在确实需要回滚时执行：
-
-```bash
-sudo docker compose -f /opt/orbit/compose.yml stop storage
-sudo bash -c 'docker compose -f /opt/orbit/compose.yml run --rm --no-deps -T --user seaweed --entrypoint sh storage -c "find /data -mindepth 1 -delete && tar -xzf - -C /data" < "$1"' _ "/opt/orbit/backups/storage-$batch.tar.gz"
-sudo docker compose -f /opt/orbit/compose.yml start storage
-```
-
-### 服务器已清空时整站恢复
-
-备份里有 `config.tar.gz`（`/opt/orbit` 下的编排、环境与密钥文件）、数据库 dump 和附件归档时：先把 `opt/orbit` 解压到 `/`，用第 6 节构建镜像（安装最新的 `compose.micro.yml`），`up -d --wait postgres storage`；再按 `app.env` 里的密码创建 `orbit_app` 与 `orbit_prod`，`pg_restore -U postgres -d orbit_prod` 恢复 dump，用上面的命令恢复附件；最后按第 9、10、12 节迁移、启动 web、配置 Nginx 与证书、加回定时任务。Nginx 文件取仓库当前版本，不用备份里的站点文件。
-
-不要运行 `docker compose down -v` 或卷清理命令：`pgdata` 与 `storagedata` 是正式数据。
-
-## 13. 以后：域名、邮件、对象存储
-
-域名和邮件已按第 16 节完成，当前用 Resend 而不是下面的 Oracle Email Delivery；这里保留作备选。
-
-- **域名**：DNS 添加 A 记录指向 `YOUR_IP`；把 Nginx 站点的 `server_name` 改为新域名，`sudo /snap/bin/certbot --nginx -d 新域名`；更新 app.env 的三个地址，执行 `sudo docker compose -f /opt/orbit/compose.yml up -d --force-recreate web`。已登录会话会失效。
-- **邮件**：有了域名后可用 Oracle Email Delivery（Always Free 每月 3,000 封），按其文档验证发件域（SPF/DKIM）、登记发件地址、生成 SMTP 凭证，填入 app.env 的 `SMTP_*`（587 端口、`SMTP_SECURE=false`，应用会强制 STARTTLS），并重建 web 容器。
-- **对象存储**：可迁到 Oracle Object Storage 的 S3 兼容接口（Always Free 20 GB、每月 5 万次请求）。先用兼容性探针实测，再按对象键原样复制现有附件，最后切换 `STORAGE_*` 并去掉 `local-storage` 配置；确认无误前保留 SeaweedFS 数据。
-
-## 14. 更新应用
-
-按第 6 节打包上传并在服务器上构建新镜像（新的 `$sha` 标签，同时重新打 `showcase` 标签；`/opt/orbit` 下的文件只在编排或备份脚本变化时才需要重新安装）。服务器上先执行一次 `sudo /opt/orbit/backup-local.sh` 并下载，然后：
-
-```bash
+sudo docker compose -f /opt/orbit/compose.yml --profile local-storage up -d --wait postgres storage
 sudo docker compose -f /opt/orbit/compose.yml stop web
 sudo docker compose -f /opt/orbit/compose.yml run --rm operations node node_modules/prisma/build/index.js migrate deploy
-sudo docker compose -f /opt/orbit/compose.yml up -d web
-curl -i http://127.0.0.1:3000/health/ready
-```
+sudo docker compose -f /opt/orbit/compose.yml run --rm operations node --conditions=react-server --import tsx scripts/storage-check.ts
+sudo docker compose -f /opt/orbit/compose.yml up -d --wait web
+curl --fail https://smartorbit.tech/health/ready
+~~~
 
-迁移失败时先排查，不要删除数据卷重试。回滚应用时用旧的 `$sha` 镜像重新打 `showcase` 标签，前提是它兼容当前数据库结构。
+就绪检查核对迁移与必需列。上线后核对登录、任务和附件流程。迁移失败时排查状态与数据，已应用的迁移文件不可改写。应用回滚使用与当前 schema 兼容的旧镜像。
 
-## 15. 常见问题
+## 定时维护
 
-| 现象 | 优先检查 |
-|---|---|
-| SSH 超时 | 实例状态、公网 IP、安全列表的 22 端口 |
-| 浏览器打不开 `http://YOUR_IP` | 安全列表的 80/443 入站规则、主机 iptables 顺序（第 4 节） |
-| Certbot 失败 | 80 端口可达、`YOUR_HOST` 与公网 IP 对应、Let's Encrypt 频率限制（换 nip.io） |
-| Nginx 502 | web 是否运行、`curl http://127.0.0.1:3000/health/ready`、容器日志 |
-| ready 503 | PostgreSQL healthy、应用数据库密码、迁移是否完成 |
-| 登录跳转到错误地址 | app.env 三个地址，修改后 `up -d --force-recreate web` |
-| 附件失败 | `storage-check.ts` 输出、storage 是否 healthy、两份存储密钥是否一致 |
-| 实例被停止 | Oracle 控制台通知与闲置回收规则（第 1 节）、从备份恢复 |
+operations 默认执行只读预览。核对目标环境并将 maintenance_preview 打印的 target 设置为 ORBIT_MAINTENANCE_TARGET，之后才执行写入。数据库或存储目标变化后重新预览。
 
-修改 app.env 后用 `sudo docker compose -f /opt/orbit/compose.yml up -d --force-recreate web` 生效；单纯 restart 不会更新容器环境变量。部署完成后把 `$sha`、访问地址、验收结果告诉维护者，记入发布报告。
+~~~cron
+20 * * * * /usr/bin/flock -n /run/orbit-maintenance.lock /usr/bin/docker compose -f /opt/orbit/compose.yml run --rm operations node --conditions=react-server --import tsx scripts/maintenance-cleanup.ts --execute >> /var/log/orbit-maintenance.log 2>&1
+10 3 * * * /usr/bin/flock -n /run/orbit-backup.lock /opt/orbit/backup-local.sh >> /var/log/orbit-backup.log 2>&1
+40 3 * * * /opt/orbit/backup-offsite.sh >> /var/log/orbit-backup.log 2>&1
+~~~
 
-## 16. 当前生产：域名、邮件、异地备份与告警
+将 [本地备份](../infra/backup-local.sh)、[批次选择](../infra/select-backup.sh) 和 [异地备份](../infra/backup-offsite.sh) 安装到 /opt/orbit，并配置日志轮换。上例为 UTC。异地备份使用 backup.env、私有 R2 桶和 restic-password，完成后按清单读回校验。restic 密码和恢复所需的 R2 访问方式须保存于独立位置。
 
-线上地址 https://smartorbit.tech，运行提交与镜像见 [verification](../planning/verification.json) 的 `launch20261109`。
+服务器告警由 [monitor.py](../infra/monitor.py) 和 [systemd timer](../infra/systemd/orbit-monitor.timer) 调度，收件人与 SMTP 配置保存在服务器的 monitor.env。[GitHub 外部探测](../.github/workflows/uptime.yml) 检查公网就绪端点。
 
-### 域名与证书
+## 恢复
 
-- DNS 在 namify.get.tech 管理：`@` 和 `www` 的 A 记录指向服务器，另有 Resend 的 `resend._domainkey`、`rsend`、`send` 和 `_dmarc`。没有根域名 MX，这个域名只发信不收信。
-- [nginx-site.conf](../infra/nginx-site.conf) 安装到 `/etc/nginx/sites-available/orbit`，[nginx.conf](../infra/nginx.conf) 安装到 `/etc/nginx/snippets/orbit.conf`。`smartorbit.tech` 是规范主机，`www` 和旧 sslip.io 地址 301 跳转过来。
-- 每个主机名一张证书，用 webroot `/var/www/orbit-acme` 验证，续期后由 `/etc/letsencrypt/renewal-hooks/deploy/orbit-nginx-reload` 重载 Nginx。
-- HSTS 为一年、不含子域名。开启后证书必须持续有效，否则浏览器无法回退到 HTTP。
+1. 用 select-backup.sh 确定数据库 dump 和 SeaweedFS 归档属于同一完整批次。整机不可用时，从 R2 用 restic 恢复快照到隔离目录，对照 backup-批次.sha256 校验，获取编排和环境文件。快照包含受限配置，按凭证文件管理。
+2. 在隔离目标启动兼容的 PostgreSQL 与 SeaweedFS。数据库使用 pg_restore 恢复到新库，附件归档解压到对应 SeaweedFS 镜像的空数据卷。保持目录所有权、桶和对象键，避免连接线上卷。
+3. 核对迁移状态、项目成员、任务、评论和样例附件哈希。使用对应版本启动应用，核对 ready、登录与下载。
+4. 确需恢复生产时先保存现状，再切换到验证过的恢复目标。整机重建还需恢复 Nginx、HTTPS、cron 和 systemd 调度。正式数据卷保留独立恢复点。
 
-### 外部凭证
-
-[apply-external-config.py](../infra/apply-external-config.py) 已安装到 `/opt/orbit/`，轮换 Resend Key 或 R2 令牌时使用。值在本机填写（`RESEND_API_KEY`、`R2_ENDPOINT`、`R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`），从标准输入传入，脚本校验后原子写入、先存旧值到 `/opt/orbit/config-history/`，不输出任何值。留空的一组不会改动：
-
-```bash
-ssh HOST 'sudo python3 /opt/orbit/apply-external-config.py' < 填好的文件
-```
-
-修改邮件配置后执行 `sudo docker compose -f /opt/orbit/compose.yml up -d --force-recreate web`。Resend 免费版每天 100 封、每月 3000 封，由同账户下的网站共用。
-
-### 异地备份
-
-[backup-offsite.sh](../infra/backup-offsite.sh) 每天 03:40 UTC 把最新完整批次和配置文件用 restic 加密传到 R2 私有桶 `orbit-backup-prod`，再读回并按清单校验，最后清理旧快照（保留 7 日、4 周、6 月）。日志在 `/var/log/orbit-backup.log`。
-
-**restic 密码必须保存在服务器之外**，服务器上在 `/opt/orbit/restic-password`。整机丢失时的恢复：安装 Docker，用 restic 从 R2 取回最新快照（需要密码和一个有该桶读权限的令牌），得到配置文件、数据库 dump 和附件归档，再按第 12 节“服务器已清空时整站恢复”继续。
-
-### 告警
-
-- [monitor.py](../infra/monitor.py) 由 `orbit-monitor.timer` 每 5 分钟运行，收件地址在 `/opt/orbit/monitor.env`。检查网站就绪、容器、本地和异地备份、定时维护、证书、磁盘、内存、认证邮件失败和 5xx。条件类连续两次失败才告警，持续故障每 6 小时提醒一次，恢复时再发一封。
-- 演练：`sudo ORBIT_MONITOR_DRILL=1 ORBIT_MONITOR_STATE=/tmp/orbit-drill.json python3 /opt/orbit/monitor.py --simulate site`，运行两次收到故障邮件，去掉 `--simulate` 再运行一次收到恢复邮件。
-- [uptime.yml](../.github/workflows/uptime.yml) 每小时从 GitHub 探测一次，覆盖整机宕机这种服务器自己报不出来的情况，失败时由 GitHub 按账户通知设置提醒。
-
-### 容量
-
-[capacity-test.sh](../scripts/capacity-test.sh) 在服务器上启动独立的临时环境，用合成数据重复 10 并发预算并叠加混合负载、备份和维护，结束后全部删除，不接触线上数据。2026-11-09 的结果见 `launch20261109`：读 p95 282.6 ms、写 p95 176.0 ms，无 OOM 和交换，SeaweedFS 峰值 395 MiB、上限 512 MiB，是余量最小的容器。这不是极限容量，也没有经过 Nginx 和 TLS；出现真实流量后再按 [变更清单](14-CHANGE-AND-UPGRADE-CHECKLIST.md) 复测。
+本地备份会暂停 SeaweedFS 以保证数据库快照和附件配对。暂停期间附件不可用。可用 [容量脚本](../scripts/capacity-test.sh) 在一次性合成环境检查备份与业务负载重叠时的影响。
