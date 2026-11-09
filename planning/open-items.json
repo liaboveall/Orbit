@@ -2,18 +2,6 @@
  "scope": "Only currently open work; resolved historical entries live in Git history",
  "entries": [
   {
-   "id": "RELEASE-CI",
-   "title": "发布版本与镜像绑定",
-   "status": "blocked_external",
-   "taskIds": [
-    "ORB-021"
-   ],
-   "nextAction": "旧 HEAD 4c88b1a CI 成功；本轮未提交修复仅有本地冻结完整门禁。后续提交后运行新 SHA 完整 CI，并在部署时绑定不可变 ARM64 镜像。",
-   "evidence": [
-    "docs/CURRENT-STATUS.md"
-   ]
-  },
-  {
    "id": "UPSTREAM",
    "title": "认证依赖的密码比较实现",
    "status": "blocked_external",
@@ -32,7 +20,7 @@
    "taskIds": [
     "ORB-020"
    ],
-   "nextAction": "2026-11-08 重新上线后只有空载内存读数（web 113 MiB、postgres 56 MiB、storage 152 MiB）。仍需在 Oracle A1（2 OCPU/12 GB，ARM64，与其他网站共用）上测量内存、连接池、认证与业务限流、混合附件流量和 p95，再确定资源预算。",
+   "nextAction": "2026-11-09 在 A1 上用独立合成环境实测（生产同款镜像与内存上限，10 并发、1000 任务）：读 p95 282.6ms、写 p95 176.0ms；混合负载 23 req/s 下无 OOM、无交换，web 峰值 219MiB、SeaweedFS 395MiB（上限 512MiB）。未测极限并发、连接池饱和与限流触发，请求未经过 Nginx/TLS；出现真实流量后按 docs/14 复测再调整上限。",
    "evidence": [
     "docs/CURRENT-STATUS.md",
     "docs/OCI-DEPLOYMENT.md"
@@ -45,7 +33,7 @@
    "taskIds": [
     "ORB-021"
    ],
-   "nextAction": "仓库内备份配对与并发删除窗口已修复并完成真实隔离恢复；尚未部署本轮改动。真实邮件、双账户线上协作、告警、自动异地备份和生产 RPO/RTO 待真实环境验收，不把本地恢复耗时当生产指标。",
+   "nextAction": "已部署 237c4f3 并接入域名、Resend、R2 异地备份与告警；远端快照已隔离恢复，行数和附件 SHA-256 一致（当前数据量很小，19 秒不代表生产 RTO）。待本人完成真实邮件、双账户协作和重置密码验收，并确认首轮定时异地备份成功。",
    "evidence": [
     "docs/CURRENT-STATUS.md",
     "docs/OCI-DEPLOYMENT.md"

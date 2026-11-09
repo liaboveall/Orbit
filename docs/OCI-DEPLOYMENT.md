@@ -1,6 +1,6 @@
 # Orbit Oracle Cloud 部署指南：ARM 2 核 12 GB（第一阶段）
 
-更新：2026-11-08。用途：个人全栈作品展示。本文是操作指南，按顺序在你的 Oracle 实例上执行，遇到与描述不符的输出先停下排查。这台服务器可能同时运行其他网站，操作时不要改动它们的容器、卷和 Nginx 站点。
+更新：2026-11-09。当前生产已切到自有域名并接入邮件、异地备份和告警，现状见[第 16 节](#16-当前生产域名邮件异地备份与告警)；第 3—12 节仍是从零搭建的步骤。用途：个人全栈作品展示。本文是操作指南，按顺序在你的 Oracle 实例上执行，遇到与描述不符的输出先停下排查。这台服务器可能同时运行其他网站，操作时不要改动它们的容器、卷和 Nginx 站点。
 
 第一阶段的范围和限制：
 
@@ -289,7 +289,7 @@ Certbot 按提示填写邮箱、接受条款，询问时选择把 HTTP 重定向
 
 sslip.io 由很多人共用，若 Let's Encrypt 报频率限制，可改用同一服务的 `nip.io` 形式（`203-0-113-5.nip.io`）：把 `ORBIT_HOST` 和 app.env 里的三个地址都换掉，执行 `sudo docker compose -f /opt/orbit/compose.yml up -d --force-recreate web` 后重新申请证书。
 
-HSTS 暂不开启；有了自己的域名、确认整站 HTTPS 稳定后再加。
+HSTS 在 sslip.io 阶段不开启，切到自有域名后才开启（第 16 节）。
 
 ## 11. 验收与你自己的账户
 
@@ -409,6 +409,8 @@ sudo docker compose -f /opt/orbit/compose.yml start storage
 
 ## 13. 以后：域名、邮件、对象存储
 
+域名和邮件已按第 16 节完成，当前用 Resend 而不是下面的 Oracle Email Delivery；这里保留作备选。
+
 - **域名**：DNS 添加 A 记录指向 `YOUR_IP`；把 Nginx 站点的 `server_name` 改为新域名，`sudo /snap/bin/certbot --nginx -d 新域名`；更新 app.env 的三个地址，执行 `sudo docker compose -f /opt/orbit/compose.yml up -d --force-recreate web`。已登录会话会失效。
 - **邮件**：有了域名后可用 Oracle Email Delivery（Always Free 每月 3,000 封），按其文档验证发件域（SPF/DKIM）、登记发件地址、生成 SMTP 凭证，填入 app.env 的 `SMTP_*`（587 端口、`SMTP_SECURE=false`，应用会强制 STARTTLS），并重建 web 容器。
 - **对象存储**：可迁到 Oracle Object Storage 的 S3 兼容接口（Always Free 20 GB、每月 5 万次请求）。先用兼容性探针实测，再按对象键原样复制现有附件，最后切换 `STORAGE_*` 并去掉 `local-storage` 配置；确认无误前保留 SeaweedFS 数据。
@@ -440,3 +442,40 @@ curl -i http://127.0.0.1:3000/health/ready
 | 实例被停止 | Oracle 控制台通知与闲置回收规则（第 1 节）、从备份恢复 |
 
 修改 app.env 后用 `sudo docker compose -f /opt/orbit/compose.yml up -d --force-recreate web` 生效；单纯 restart 不会更新容器环境变量。部署完成后把 `$sha`、访问地址、验收结果告诉维护者，记入发布报告。
+
+## 16. 当前生产：域名、邮件、异地备份与告警
+
+线上地址 https://smartorbit.tech，运行提交与镜像见 [verification](../planning/verification.json) 的 `launch20261109`。
+
+### 域名与证书
+
+- DNS 在 namify.get.tech 管理：`@` 和 `www` 的 A 记录指向服务器，另有 Resend 的 `resend._domainkey`、`rsend`、`send` 和 `_dmarc`。没有根域名 MX，这个域名只发信不收信。
+- [nginx-site.conf](../infra/nginx-site.conf) 安装到 `/etc/nginx/sites-available/orbit`，[nginx.conf](../infra/nginx.conf) 安装到 `/etc/nginx/snippets/orbit.conf`。`smartorbit.tech` 是规范主机，`www` 和旧 sslip.io 地址 301 跳转过来。
+- 每个主机名一张证书，用 webroot `/var/www/orbit-acme` 验证，续期后由 `/etc/letsencrypt/renewal-hooks/deploy/orbit-nginx-reload` 重载 Nginx。
+- HSTS 为一年、不含子域名。开启后证书必须持续有效，否则浏览器无法回退到 HTTP。
+
+### 外部凭证
+
+[apply-external-config.py](../infra/apply-external-config.py) 已安装到 `/opt/orbit/`，轮换 Resend Key 或 R2 令牌时使用。值在本机填写（`RESEND_API_KEY`、`R2_ENDPOINT`、`R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`），从标准输入传入，脚本校验后原子写入、先存旧值到 `/opt/orbit/config-history/`，不输出任何值。留空的一组不会改动：
+
+```bash
+ssh HOST 'sudo python3 /opt/orbit/apply-external-config.py' < 填好的文件
+```
+
+修改邮件配置后执行 `sudo docker compose -f /opt/orbit/compose.yml up -d --force-recreate web`。Resend 免费版每天 100 封、每月 3000 封，由同账户下的网站共用。
+
+### 异地备份
+
+[backup-offsite.sh](../infra/backup-offsite.sh) 每天 03:40 UTC 把最新完整批次和配置文件用 restic 加密传到 R2 私有桶 `orbit-backup-prod`，再读回并按清单校验，最后清理旧快照（保留 7 日、4 周、6 月）。日志在 `/var/log/orbit-backup.log`。
+
+**restic 密码必须保存在服务器之外**，服务器上在 `/opt/orbit/restic-password`。整机丢失时的恢复：安装 Docker，用 restic 从 R2 取回最新快照（需要密码和一个有该桶读权限的令牌），得到配置文件、数据库 dump 和附件归档，再按第 12 节“服务器已清空时整站恢复”继续。
+
+### 告警
+
+- [monitor.py](../infra/monitor.py) 由 `orbit-monitor.timer` 每 5 分钟运行，收件地址在 `/opt/orbit/monitor.env`。检查网站就绪、容器、本地和异地备份、定时维护、证书、磁盘、内存、认证邮件失败和 5xx。条件类连续两次失败才告警，持续故障每 6 小时提醒一次，恢复时再发一封。
+- 演练：`sudo ORBIT_MONITOR_DRILL=1 ORBIT_MONITOR_STATE=/tmp/orbit-drill.json python3 /opt/orbit/monitor.py --simulate site`，运行两次收到故障邮件，去掉 `--simulate` 再运行一次收到恢复邮件。
+- [uptime.yml](../.github/workflows/uptime.yml) 每小时从 GitHub 探测一次，覆盖整机宕机这种服务器自己报不出来的情况，失败时由 GitHub 按账户通知设置提醒。
+
+### 容量
+
+[capacity-test.sh](../scripts/capacity-test.sh) 在服务器上启动独立的临时环境，用合成数据重复 10 并发预算并叠加混合负载、备份和维护，结束后全部删除，不接触线上数据。2026-11-09 的结果见 `launch20261109`：读 p95 282.6 ms、写 p95 176.0 ms，无 OOM 和交换，SeaweedFS 峰值 395 MiB、上限 512 MiB，是余量最小的容器。这不是极限容量，也没有经过 Nginx 和 TLS；出现真实流量后再按 [变更清单](14-CHANGE-AND-UPGRADE-CHECKLIST.md) 复测。
