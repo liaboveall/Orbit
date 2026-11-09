@@ -812,7 +812,7 @@
   "report": "docs/CURRENT-STATUS.md",
   "registry": "planning/open-items.json",
   "evidence": "planning/verification.json",
-  "summary": "2026-11-09 候选版本 237c4f3 已部署到 https://smartorbit.tech（完整 CI 通过，服务器原生 ARM64 镜像）：自有域名与 HTTPS、Resend 发信域、R2 加密异地备份和服务器告警均已接入并实测，合成数据容量在 10 并发下达到预算。仍待本人完成真实邮件与 HTTPS 双账户验收；M6 review、M7 todo。",
+  "summary": "2026-11-09 候选版本 237c4f3 已部署到 https://smartorbit.tech（完整 CI 通过，服务器原生 ARM64 镜像）：自有域名与 HTTPS、Resend 发信域、R2 加密异地备份和服务器告警均已接入并实测，合成数据容量在 10 并发下达到预算；验证邮件、重置密码、邀请、双账户协作和移除成员后的权限回收已在线上验收，真实输入法和手机由本人确认。仍待首轮定时异地备份和原生缩放、辅助技术走查；M6 review、M7 todo。",
   "historicalDataIncident": {
    "historicalRecovery": "missing_original_records_and_backup"
   },

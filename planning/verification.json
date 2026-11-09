@@ -2363,7 +2363,7 @@
    "domainStatus": "Verified",
    "smtpLogin": "smtp_verify_ok",
    "monitorDrillMessages": "2 delivered according to Resend; the owner confirmed receiving the mail",
-   "authFlowAcceptance": "pending the owner's two-account run"
+   "authFlowAcceptance": "Verification and password reset mail delivered; both new accounts verified and the reset was completed by the owner."
   },
   "offsiteBackup": {
    "tool": "restic 0.19.1 to a private R2 bucket",
@@ -2475,12 +2475,75 @@
    }
   },
   "limits": [
-   "Real authentication mail, two-account collaboration and password reset are not yet accepted by the owner",
+   "Native 200% zoom and assistive technology not checked",
    "No saturation, connection-pool exhaustion or rate-limit measurement",
    "Capacity generator shared the host and bypassed Nginx/TLS",
    "Restore time reflects a very small data set",
    "First scheduled off-site backup has not run yet",
    "External probe failure notification not exercised"
-  ]
+  ],
+  "twoAccountAcceptance": {
+   "recordedAt": "2026-11-09T05:35:00+00:00",
+   "method": "Two accounts the owner registered and signed in to, in two separate browsers, driven through the production site over HTTPS; only synthetic data in a dedicated project",
+   "accounts": {
+    "total": 3,
+    "emailVerified": 3
+   },
+   "beforeJoining": {
+    "memberPageAccess": "denied page",
+    "invitationPreview": "project, inviter, role and expiry shown"
+   },
+   "invitation": {
+    "delivery": "one-time link, no invitation email by design",
+    "accepted": true,
+    "reuseAfterAcceptance": "rejected as already used"
+   },
+   "collaboration": {
+    "memberMovedTask": "TODO to IN_PROGRESS, visible to the owner",
+    "memberCommented": true,
+    "memberUploaded": {
+     "status": 201,
+     "ownerDownloadSha256Matches": true
+    },
+    "ownerAssignedTaskToMember": "appeared on the member's workbench",
+    "ownerRepliedComment": "visible to the member",
+    "activityFeed": "all eight actions listed with the right actor"
+   },
+   "memberPermissionChecks": {
+    "createInvitation": 403,
+    "listInvitations": 403,
+    "renameProject": 403,
+    "removeOwner": 403
+   },
+   "afterRemoval": {
+    "project": 404,
+    "board": 404,
+    "task": 404,
+    "comment": 404,
+    "newDownloadLink": 404,
+    "downloadLinkIssuedBeforeRemoval": 404,
+    "projectPage": "denied page",
+    "assigneeCleared": true,
+    "workbenchTaskGone": true
+   },
+   "productionRows": {
+    "tasks": 1,
+    "membersLeft": 0,
+    "invitations": 1,
+    "comments": 2,
+    "attachmentsReady": 1,
+    "activityRows": 9
+   },
+   "webErrorsLastHour": 0,
+   "passwordResetMail": "Delivered according to Resend; the existing password is unchanged until the link is used",
+   "passwordReset": {
+    "evidence": "Production data: the credential of the account that requested the reset changed after the reset mail, and a new session was created after that change",
+    "performedBy": "owner"
+   },
+   "ownerReported": {
+    "statement": "On 2026-11-09 the owner reported completing sign-out and password sign-in, a real IME and a real phone with no problems",
+    "dataEvidence": "None for IME. No session from a phone browser was created in the preceding three hours, so the phone check is the owner's report only"
+   }
+  }
  }
 }

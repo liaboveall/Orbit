@@ -1,6 +1,6 @@
 # M6 运行手册
 
-本手册提供可复现的发布步骤。当前生产为 https://smartorbit.tech，域名、邮件、异地备份和告警的现状见 [OCI 部署指南第 16 节](OCI-DEPLOYMENT.md)；真实邮件与 HTTPS 双账户冒烟待本人验收，ORB-021 保持 review。
+本手册提供可复现的发布步骤。当前生产为 https://smartorbit.tech，域名、邮件、异地备份和告警的现状见 [OCI 部署指南第 16 节](OCI-DEPLOYMENT.md)；验证邮件、重置密码与 HTTPS 双账户协作已线上验收，ORB-021 保持 review。
 
 ## 镜像和发布
 
