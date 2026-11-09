@@ -68,6 +68,12 @@ try {
   console.log(JSON.stringify({ ...result, directory: dir }));
 } finally {
   await db?.end(); storage?.destroy();
-  // Only this generated Compose project's disposable resources.
-  compose(["down", "-v"]);
+  try {
+    // Only this generated Compose project's disposable resources.
+    compose(["down", "-v"]);
+  } finally {
+    // The backup runs as root with umask 077, so a non-root Linux checkout cannot read
+    // this directory, and the next `next build` fails when Turbopack walks the tree.
+    docker(["run", "--rm", "--mount", `type=bind,source=${process.cwd()},target=/source`, "docker:27-cli", "sh", "-c", `rm -rf /source/artifacts/${name}/backups`]);
+  }
 }
