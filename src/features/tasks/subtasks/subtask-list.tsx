@@ -1,6 +1,7 @@
 "use client";
 import { useUnsavedChanges } from "../unsaved-changes";
 import { useRouter } from "next/navigation";
+import { useRetainedEditors, type RetainedRow } from "../retained-editors";
 import { useResourceRefresh } from "../use-resource-refresh";
 
 import { ListChecks, Plus } from "lucide-react";
@@ -48,8 +49,9 @@ export function SubtaskList({
   revision?: string;
 }) {
   const router = useRouter();
+  const { onEditingChange, retain } = useRetainedEditors<SubtaskDTO>();
   const { toast } = useToast();
-  const [subtasks, setSubtasks] = useState<SubtaskDTO[] | null>(null);
+  const [subtasks, setSubtasks] = useState<RetainedRow<SubtaskDTO>[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [rowBusy, setRowBusy] = useState(false);
@@ -84,14 +86,14 @@ export function SubtaskList({
         );
         return;
       }
-      setSubtasks(res.data);
+      setSubtasks(previous => retain(previous, res.data));
       setLoadError(null);
       setForbidden(false);
     } catch {
       if (epoch !== generation.current) return;
       setLoadError("无法连接服务器，请检查网络后重试。");
     }
-  }, [taskId, router]);
+  }, [taskId, router, retain]);
 
   useResourceRefresh(load, revision);
   const changed = async () => {
@@ -100,7 +102,7 @@ export function SubtaskList({
   };
 
   async function handleAdd() {
-    if (addLock.current || !canEdit) return;
+    if (addLock.current || !canEdit || forbidden) return;
     const parsed = CreateSubtaskSchema.safeParse({ title: draft.trim() });
     if (!parsed.success) {
       // Zod 4：读取 .issues（非 Zod 3 的 .errors）。
@@ -143,11 +145,12 @@ export function SubtaskList({
     }
   }
 
-  const doneCount = subtasks?.filter((s) => s.isCompleted).length ?? 0;
-  const total = subtasks?.length ?? 0;
+  const doneCount = subtasks?.filter((s) => !s.unavailable && s.isCompleted).length ?? 0;
+  const total = subtasks?.filter(s => !s.unavailable).length ?? 0;
 
   return (
     <section className="space-y-3" aria-label="子任务">
+      {forbidden && <p role="status">任务已不可用，未保存的内容仅供复制。</p>}
       <h2 className="flex items-center gap-2 text-label font-semibold text-foreground">
         <ListChecks
           className="h-4 w-4 text-foreground-muted"
@@ -162,7 +165,7 @@ export function SubtaskList({
             <Skeleton key={i} className="h-8" />
           ))}
         </SkeletonBlock>
-      ) : forbidden ? (
+      ) : forbidden && subtasks === null ? (
         <p className="text-caption text-foreground-muted">
           你没有查看该任务子任务的权限。
         </p>
@@ -179,15 +182,17 @@ export function SubtaskList({
       ) : (
         <>
           {loadError && <div role="alert"><InlineError>{loadError}</InlineError><Button size="sm" variant="secondary" onClick={() => void load()}>重新加载</Button></div>}
-          {total === 0 && !adding ? (
+          {total === 0 && !adding && !subtasks?.some(s => s.unavailable) ? (
             <p className="text-caption text-foreground-muted">暂无子任务。</p>
           ) : (
             <ul className="space-y-1" role="list">
-              {subtasks!.map((subtask) => (
+              {(subtasks ?? []).map((subtask) => (
                 <SubtaskItem
                   key={subtask.id}
                   subtask={subtask}
-                  canEdit={canEdit}
+                  canEdit={canEdit && !forbidden && !subtask.unavailable}
+                  unavailable={subtask.unavailable}
+                  onEditingChange={onEditingChange}
                   disabled={rowBusy}
                   onBusyChange={setRowBusy}
                   onReload={changed}
@@ -196,13 +201,14 @@ export function SubtaskList({
             </ul>
           )}
 
-          {canEdit && (
+          {(canEdit || draft.length > 0) && (
             <div className="rounded-control border border-line p-2">
               {adding ? (
                 <div className="space-y-2">
                   <Textarea
                     value={draft}
-            disabled={submitting}
+                    disabled={submitting}
+                    readOnly={!canEdit || forbidden}
                     onChange={(e) => {
                       setDraft(e.target.value);
                       setAddError(null);
@@ -237,7 +243,7 @@ export function SubtaskList({
                     <Button
                       size="sm"
                       onClick={handleAdd}
-                      disabled={submitting || !draft.trim()}
+                      disabled={submitting || !canEdit || forbidden || !draft.trim()}
                     >
                       {submitting ? "添加中…" : "添加"}
                     </Button>

@@ -135,6 +135,7 @@ sudo docker image ls | grep orbit
 sudo install -d -m 700 /opt/orbit /opt/orbit/backups
 sudo install -m 644 infra/compose.micro.yml /opt/orbit/compose.yml
 sudo install -m 700 infra/backup-local.sh /opt/orbit/backup-local.sh
+sudo install -m 700 infra/select-backup.sh /opt/orbit/select-backup.sh
 sudo tee /opt/orbit/.env > /dev/null <<'ENV'
 COMPOSE_PROFILES=local-storage
 ORBIT_POSTGRES_MEM_LIMIT=1g
@@ -333,7 +334,9 @@ sudo docker compose -f /opt/orbit/compose.yml run --rm operations
 
 ### 每日备份
 
-[backup-local.sh](../infra/backup-local.sh) 先导出并校验数据库，再短暂停止存储服务，打包附件数据卷（期间 web 继续运行，附件请求返回 503），然后立即重启存储；两类文件各保留 7 天。任何一步失败都会返回非零，并保证存储服务被重新启动。
+[backup-local.sh](../infra/backup-local.sh) 在内部 flock 互斥下先停止存储，再导出数据库和归档附件，最后重启存储。附件在整个 dump/归档期间暂时不可用，web 其余功能继续运行；冻结存储确保维护程序不能删除快照引用的对象。失败时尝试重启存储并清除本批未完成文件。两文件均校验后才原子发布 `backup-<批次>.sha256`，保留 7 天。
+
+下载/恢复必须通过 [select-backup.sh](../infra/select-backup.sh) 选择摘要匹配的同一完整批次。旧备份没有清单，不能自动标为完整；保留原文件并按既有来源和隔离恢复结果人工核验。新脚本需要和新选择器一起安装，不修改旧备份。
 
 ```bash
 sudo /opt/orbit/backup-local.sh
@@ -364,8 +367,9 @@ sudo ls -lh /opt/orbit/backups
 **服务器 Bash：**
 
 ```bash
-sudo sh -c 'install -o ubuntu -g ubuntu -m 600 "$(ls -t /opt/orbit/backups/orbit-*.dump | head -1)" /home/ubuntu/orbit-latest.dump'
-sudo sh -c 'install -o ubuntu -g ubuntu -m 600 "$(ls -t /opt/orbit/backups/storage-*.tar.gz | head -1)" /home/ubuntu/storage-latest.tar.gz'
+batch=$(sudo /opt/orbit/select-backup.sh)
+sudo install -o ubuntu -g ubuntu -m 600 "/opt/orbit/backups/orbit-$batch.dump" /home/ubuntu/orbit-latest.dump
+sudo install -o ubuntu -g ubuntu -m 600 "/opt/orbit/backups/storage-$batch.tar.gz" /home/ubuntu/storage-latest.tar.gz
 ```
 
 **Windows PowerShell：**
@@ -385,14 +389,15 @@ scp -i "KEY_PATH" ubuntu@YOUR_IP:/home/ubuntu/storage-latest.tar.gz "$env:USERPR
 
 ```bash
 sudo docker compose -f /opt/orbit/compose.yml exec -T postgres createdb -U postgres orbit_restore_check
-sudo sh -c 'docker compose -f /opt/orbit/compose.yml exec -T postgres pg_restore -U postgres -d orbit_restore_check < "$(ls -t /opt/orbit/backups/orbit-*.dump | head -1)"'
+batch=$(sudo /opt/orbit/select-backup.sh)
+sudo bash -c 'docker compose -f /opt/orbit/compose.yml exec -T postgres pg_restore -U postgres -d orbit_restore_check < "$1"' _ "/opt/orbit/backups/orbit-$batch.dump"
 ```
 
 核对后用 `dropdb -U postgres orbit_restore_check`（同样经 `exec -T postgres`）删除检查库。附件恢复会**用备份覆盖当前全部附件数据**，只在确实需要回滚时执行：
 
 ```bash
 sudo docker compose -f /opt/orbit/compose.yml stop storage
-sudo sh -c 'docker compose -f /opt/orbit/compose.yml run --rm --no-deps -T --user seaweed --entrypoint sh storage -c "find /data -mindepth 1 -delete && tar -xzf - -C /data" < "$(ls -t /opt/orbit/backups/storage-*.tar.gz | head -1)"'
+sudo bash -c 'docker compose -f /opt/orbit/compose.yml run --rm --no-deps -T --user seaweed --entrypoint sh storage -c "find /data -mindepth 1 -delete && tar -xzf - -C /data" < "$1"' _ "/opt/orbit/backups/storage-$batch.tar.gz"
 sudo docker compose -f /opt/orbit/compose.yml start storage
 ```
 

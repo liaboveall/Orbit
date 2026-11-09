@@ -113,7 +113,9 @@ function TaskEditorContent({
   const lock = useRef(false);
   const [deleting, setDeleting] = useState(false);
   const [closing, setClosing] = useState(false);
-  const locked = readOnly || unavailable;
+  const [saveUnavailable, setSaveUnavailable] = useState<number | null>(null);
+  const rejectedSave = saveUnavailable === task.version;
+  const locked = readOnly || unavailable || rejectedSave;
   const draftKey = taskDraftKey(currentUserId, task.projectId, task.id);
   // 本机持久化草稿（刷新/崩溃/会话过期后恢复）；服务端渲染与首帧没有草稿，避免水合不一致。
   const storedRaw = useSyncExternalStore(
@@ -186,8 +188,7 @@ function TaskEditorContent({
             loginPathWithReturnTo(location.pathname + location.search),
           );
         if (result.status === 404) {
-          discard();
-          onDeleted?.();
+          setSaveUnavailable(task.version);
           router.refresh();
         }
         return;
@@ -391,7 +392,7 @@ function TaskEditorContent({
           )}
         </div>
       </header>
-      {unavailable && (
+      {(unavailable || rejectedSave) && (
         <div role="alert" className="rounded-card border border-danger bg-danger-soft p-3 text-label text-danger">
           该任务已被删除或你已失去访问权限，无法继续保存。未保存的内容仍显示在下方，可复制后关闭。
         </div>
@@ -465,7 +466,7 @@ function TaskEditorContent({
             value={inputTitle}
             maxLength={120}
             disabled={busy}
-            readOnly={unavailable}
+            readOnly={locked}
             onChange={(e) => edit("title", e.target.value)}
             autoFocus={editing === "title"}
           />
@@ -575,7 +576,7 @@ function TaskEditorContent({
               rows={8}
               value={inputDescription}
               disabled={busy}
-              readOnly={unavailable}
+              readOnly={locked}
               onChange={(e) => edit("description", e.target.value)}
               autoFocus={editing === "description"}
             />
@@ -613,18 +614,18 @@ function TaskEditorContent({
 
       {/* M5 子任务 / 评论讨论 / 附件：任务不可用时保持挂载，已输入的草稿不被卸载。 */}
       <section className="space-y-6">
-        <SubtaskList key={`subtasks:${task.id}`} taskId={task.id} revision={incoming.updatedAt} canEdit={!readOnly} />
+        <SubtaskList key={`subtasks:${task.id}`} taskId={task.id} revision={incoming.updatedAt} canEdit={!locked} />
         <CommentList key={`comments:${task.id}`} revision={incoming.updatedAt}
           taskId={task.id}
           currentUserId={currentUserId}
           isProjectOwner={isProjectOwner}
-          canWrite={!readOnly}
+          canWrite={!locked}
         />
         <AttachmentList key={`attachments:${task.id}`} revision={incoming.updatedAt}
           taskId={task.id}
           currentUserId={currentUserId}
           isProjectOwner={isProjectOwner}
-          canWrite={!readOnly}
+          canWrite={!locked}
         />
       </section>
       <Dialog

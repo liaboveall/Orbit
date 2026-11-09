@@ -5,7 +5,7 @@
 
 - 状态：V1_RELEASE_ACCEPTANCE_PENDING
 - 当前依据：[CURRENT-STATUS.md](docs/CURRENT-STATUS.md)
-- 说明：两轮审查确认的 10 个应用问题已修复，2026-10-19 全栈审查的修复已提交。2026-11-08 升级 Next 16.4.5、better-auth 1.7.18 等以关闭新披露的依赖漏洞（生产依赖审计 0 漏洞），完整门禁 971 项通过、源码指纹一致；Orbit 从 2026-10-12 的最终备份恢复，并在 Oracle 共用服务器上重新上线（https://149-118-55-232.sslip.io，提交 72ff749，第一阶段无邮件、无自有域名）。2026-11-09 用合成数据完成线上单账户试用，含附件的备份恢复逐字节一致。详见 CURRENT-REVIEW.md；M6 保持 review，7 组外部与历史事项仍开放。
+- 说明：2026-11-09 新增的 7 组问题已修复并经冻结门禁验收：980 项测试通过（304 unit、172 contract、381 integration、110 E2E、13 UI），源码指纹一致；真实并发备份/成对恢复、故障注入、默认恢复、迁移历史和全依赖审计 0 均通过。仍保留 7 组外部或历史事项；修复尚未提交/部署，M6 review、M7 todo。生产只读核查确认可沿用 ChatApp 的 OCI 主机、Resend 和 R2 服务，Orbit 容器可连接 Resend；下一步锁定候选版本、配置独立凭证并完成 AC-12。
 - 里程碑：M0 done；M1 done；M2 done；M3 done；M4 done；M5 done；M6 review；M7 todo
 - 历史数据恢复：missing_original_records_and_backup
 

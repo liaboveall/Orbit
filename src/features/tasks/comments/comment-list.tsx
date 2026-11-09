@@ -1,6 +1,7 @@
 "use client";
 import { useUnsavedChanges } from "../unsaved-changes";
 import { useRouter } from "next/navigation";
+import { useRetainedEditors, type RetainedRow } from "../retained-editors";
 import { useResourceRefresh } from "../use-resource-refresh";
 
 import { MessageSquare } from "lucide-react";
@@ -54,8 +55,9 @@ export function CommentList({
   canWrite: boolean;
 }) {
   const router = useRouter();
+  const { onEditingChange, retain } = useRetainedEditors<CommentDTO>();
   const { toast } = useToast();
-  const [comments, setComments] = useState<CommentDTO[] | null>(null);
+  const [comments, setComments] = useState<RetainedRow<CommentDTO>[] | null>(null);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -114,11 +116,11 @@ export function CommentList({
         page++;
       } while (more && next && page < pages.current);
       pages.current = page;
-      setComments(
+      setComments(previous => retain(previous,
         [...new Map(rows.map((row) => [row.id, row])).values()].sort(
           (a, b) =>
             a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id),
-        ),
+        )),
       );
       setCursor(next ?? null);
       setHasMore(more);
@@ -129,7 +131,7 @@ export function CommentList({
       if (epoch !== generation.current) return;
       setLoadError("无法连接服务器，请检查网络后重试。");
     }
-  }, [taskId, router]);
+  }, [taskId, router, retain]);
 
   useResourceRefresh(load, revision);
   const changed = async () => {
@@ -224,6 +226,7 @@ export function CommentList({
 
   return (
     <section className="space-y-4" aria-label="评论">
+      {forbidden && <p role="status">任务已不可用，未保存的内容仅供复制。</p>}
       <h2 className="flex items-center gap-2 text-label font-semibold text-foreground">
         <MessageSquare
           className="h-4 w-4 text-foreground-muted"
@@ -238,7 +241,7 @@ export function CommentList({
             <Skeleton key={i} className="h-14" />
           ))}
         </SkeletonBlock>
-      ) : forbidden ? (
+      ) : forbidden && comments === null ? (
         <p className="text-caption text-foreground-muted">
           你没有查看该任务评论的权限。
         </p>
@@ -268,7 +271,9 @@ export function CommentList({
                   comment={comment}
                   currentUserId={currentUserId}
                   isProjectOwner={isProjectOwner}
-                  canWrite={canWrite}
+                  canWrite={canWrite && !forbidden && !comment.unavailable}
+                  unavailable={comment.unavailable}
+                  onEditingChange={onEditingChange}
                   disabled={rowBusy}
                   onBusyChange={setRowBusy}
                   onReload={changed}
@@ -292,12 +297,12 @@ export function CommentList({
         </>
       )}
 
-      {canWrite && (
+      {(canWrite || draft.length > 0) && (
         <div className="rounded-control border border-line p-3">
           {postedOutsideWindow && <p role="status" className="text-caption text-foreground-secondary">评论已发布到讨论末尾，可继续加载更多评论查看。</p>}
           <Textarea
             value={draft}
-            disabled={posting}
+            disabled={posting} readOnly={!canWrite || forbidden}
             onChange={(e) => {
               setDraft(e.target.value);
               setPostError(null);
@@ -332,7 +337,7 @@ export function CommentList({
             <Button
               size="sm"
               onClick={handlePost}
-              disabled={posting || !draft.trim()}
+              disabled={posting || !canWrite || forbidden || !draft.trim()}
             >
               {posting ? "发布中…" : "发表评论"}
             </Button>

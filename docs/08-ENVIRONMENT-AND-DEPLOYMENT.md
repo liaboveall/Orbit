@@ -6,7 +6,7 @@
 
 环境要求：Node.js24 LTS、pnpm兼容稳定版本、Docker/Compose（或等价独立PostgreSQL、S3 兼容存储、Mailpit）。不自动假设用户安装了Docker；M0先检查，缺少时说明具体安装/启动步骤，仍可完成独立的规格与UI工作。
 
-本地与 CI 的 S3 兼容存储是 SeaweedFS（`compose.dev.yml` 的 `storage` 服务，`weed mini` 单容器模式，镜像按摘要固定，见 ADR-029）：宿主 127.0.0.1:9000 映射容器 S3 端口 8333，所以 `STORAGE_ENDPOINT` 仍是 `http://localhost:9000`；访问密钥由 `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` 配置，与 `.env.example` 一致；启动时创建 `orbit-dev` 桶；关闭上传时自动建桶（桶不存在即报错，与 S3 一致）和匿名统计上报。它只用于本地与 CI，生产使用托管的 S3 兼容存储。
+本地与 CI 的 S3 兼容存储是 SeaweedFS（`compose.dev.yml` 的 `storage` 服务，`weed mini` 单容器模式，镜像按摘要固定，见 ADR-029）：宿主 127.0.0.1:9000 映射容器 S3 端口 8333，所以 `STORAGE_ENDPOINT` 仍是 `http://localhost:9000`；访问密钥由 `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` 配置，与 `.env.example` 一致；启动时创建 `orbit-dev` 桶；关闭上传时自动建桶（桶不存在即报错，与 S3 一致）和匿名统计上报。生产可选托管 S3 兼容存储；当前 OCI 第一阶段使用独立配置的同机 SeaweedFS（ADR-030），不能复用开发 bucket 或凭证，备份限制见 [当前审查 R1/R2](CURRENT-REVIEW.md)。
 
 推荐本地端口：应用3000、PostgreSQL5432、S3 兼容存储9000、Mailpit SMTP 宿主25025→容器1025/Web8025。只绑定localhost。Mailpit SMTP 宿主端口用25025而非1025：Windows 动态/临时端口区间（约1024–15000）会随机占用1025导致bind失败；`.env.local`/`.env.example` 的 SMTP_PORT 须与宿主端口一致（25025），容器内Mailpit始终监听1025（`compose.dev.yml` 映射 `${MAILPIT_SMTP_HOST_PORT:-25025}:1025`）。测试使用独立数据库orbit_test和独立对象前缀，不复用orbit_dev的数据（`pnpm test:e2e` 的具体实现见本节下方「E2E 测试环境隔离」）。
 
@@ -115,7 +115,7 @@ pnpm dev
 
 ## 4. 生产部署基线
 
-首版采用持续运行的Node容器，部署到用户选择的容器托管平台或服务器，配托管PostgreSQL、私有S3兼容存储和邮件服务。供应商最终选择涉及账户/费用，在需要配置时处理；规划不假设已经购买或授权访问任何平台。
+首版采用持续运行的 Node 容器，配 PostgreSQL、私有 S3 兼容存储和邮件服务。数据库/存储可用托管服务，或采用下面已确定的 OCI 同机方案。新增供应商账户与费用仍按实际需要处理；已有部署不等于完成全部发布验收。
 
 当前目标（2026-09-26，ADR-030）：一台 Oracle Cloud Ampere A1（2 OCPU/12 GB，ARM64）单机部署，按 [OCI 部署指南](OCI-DEPLOYMENT.md) 执行。`compose.micro.yml` 的 `local-storage` 配置在同机运行 SeaweedFS；staging/production 的 `STORAGE_ENDPOINT` 仍须为 https://，唯一例外是 compose 内网的单段服务名（`http://storage:8333`），IP 与含点域名一律拒绝。第一阶段没有域名与邮件服务：用 sslip.io 主机名取得 HTTPS，SMTP 指向保留域名 `smtp.invalid`；按上一段规定，这不构成发布完成，邮件验证与重置流程在配置真实邮件后单独验收。
 
@@ -182,3 +182,9 @@ Nginx 在 http 上下文加载 [安全日志格式](../infra/nginx-http.conf)，
 预览含候选计数、目标指纹与只读存储配额对账；对账偏差返回非零并交给人工核查，绝不自动改账。执行仍只处理过期维护记录/失效上传/已标记附件，不清业务历史。清理超过每次批量预算或对象删除失败返回非零，由调度告警并按需重跑；一小时为失效上传候选阈值，不是恢复时间上限。
 
 DATABASE_POOL_MAX 默认5，合法范围1–20；总容量计算与测量要求见 [变更和升级清单](14-CHANGE-AND-UPGRADE-CHECKLIST.md)。当前新增邀请 RESTRICT 迁移后共16个迁移；禁止改写既有迁移。
+
+### 2026-11-09 验收补强
+
+Windows 开发/测试环境 Prisma CLI 将非 TLS localhost 数据库连接规范化为 IPv4；模板直接使用 127.0.0.1，生产/staging 与显式 sslmode 保持原样。`db:generate`、dev/build/typecheck 同步生成只含 schema 元数据的 readiness 清单，不能仅复制旧 generated 文件。就绪检查不替代独立约束/索引审计。
+
+本机附件备份暂停存储贯穿数据库 dump 与附件归档；恢复必须选同一完成清单且校验摘要。附件服务在此窗口不可用，备份时长应计入目标服务器运维预算。`node scripts/verify-local-backup.mjs` 使用全新容器/卷验证真实并发删除、备份和成对恢复，不使用 .env 或用户数据。

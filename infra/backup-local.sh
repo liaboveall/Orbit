@@ -11,37 +11,47 @@ database="${ORBIT_BACKUP_DATABASE:-orbit_prod}"
 compose() { docker compose -f "$compose_file" "$@"; }
 
 install -d -m 700 "$backup_dir"
+# Serialize manual and scheduled backups as well as all their restart paths.
+exec 9>"$backup_dir/.backup.lock"
+flock -n 9 || { echo 'A backup is already running' >&2; exit 1; }
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
 dump="$backup_dir/orbit-$stamp-$$.dump"
 archive="$backup_dir/storage-$stamp-$$.tar.gz"
+manifest="$backup_dir/backup-$stamp-$$.sha256"
+complete=0
 storage_stopped=0
 cleanup() {
-  rm -f -- "$dump.partial" "$archive.partial"
+  rm -f -- "$dump.partial" "$archive.partial" "$manifest.partial"
+  if [ "$complete" = 0 ]; then rm -f -- "$dump" "$archive"; fi
   # Never leave attachments offline because a later step failed.
   if [ "$storage_stopped" = 1 ]; then compose start storage > /dev/null || true; fi
 }
 trap cleanup EXIT
 
-# Database first: every attachment the dump marks ready was written to storage before
-# that, so the archive taken next contains it. pg_dump reads a consistent snapshot.
+# Freeze object writes/deletes BEFORE acquiring the database snapshot. Maintenance
+# may still mark records, but cannot physically remove snapshot-referenced objects.
+# Storage remains stopped through dump and archive; this deliberately trades
+# attachment availability for a consistent single-host recovery set.
+storage_stopped=1
+compose stop storage > /dev/null
 compose exec -T postgres pg_dump -U postgres -Fc "$database" > "$dump.partial"
 test -s "$dump.partial"
 compose exec -T postgres pg_restore --list < "$dump.partial" > /dev/null
 mv -- "$dump.partial" "$dump"
 
-# Stop storage so its data files are consistent; web keeps running and attachment
-# requests answer 503 for these seconds. Read the volume as its owner, not as root.
-compose stop storage > /dev/null
-storage_stopped=1
+# Read the frozen volume as its owner, not as root.
 compose run --rm --no-deps -T --user seaweed --entrypoint tar storage -czf - -C /data . > "$archive.partial"
 compose start storage > /dev/null
 storage_stopped=0
 test -s "$archive.partial"
 tar -tzf "$archive.partial" > /dev/null
 mv -- "$archive.partial" "$archive"
+(cd "$backup_dir" && sha256sum "$(basename "$dump")" "$(basename "$archive")") > "$manifest.partial"
+mv -- "$manifest.partial" "$manifest"
+complete=1
 
 # Delete only this script's completed files older than 7 days.
-find "$backup_dir" -maxdepth 1 -type f \( -name 'orbit-????????T??????Z-*.dump' -o -name 'storage-????????T??????Z-*.tar.gz' \) -mtime +7 -delete
+find "$backup_dir" -maxdepth 1 -type f \( -name 'orbit-????????T??????Z-*.dump' -o -name 'storage-????????T??????Z-*.tar.gz' -o -name 'backup-????????T??????Z-*.sha256' \) -mtime +7 -delete
 printf '{"event":"local_backup_complete","databaseBytes":%s,"databaseSha256":"%s","storageBytes":%s,"storageSha256":"%s"}\n' \
   "$(stat -c %s "$dump")" "$(sha256sum "$dump" | cut -d ' ' -f 1)" \
   "$(stat -c %s "$archive")" "$(sha256sum "$archive" | cut -d ' ' -f 1)"

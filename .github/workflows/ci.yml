@@ -53,6 +53,8 @@ jobs:
           ORBIT_VERIFICATION_DIRECTORY: artifacts/runner-selftest
       - run: pnpm test:integration
       - run: node --conditions=react-server --import tsx scripts/recovery-drill.ts
+      - name: Verify paired backup with concurrent deletion on isolated services
+        run: node scripts/verify-local-backup.mjs
       - name: Verify backup integrity handling in a disposable container
         run: docker run --rm --network none -v "$PWD/scripts:/source/scripts:ro" -v "$PWD/infra:/source/infra:ro" debian:bookworm-slim bash /source/scripts/verify-backup.sh
       - run: node scripts/verify-image-policy.mjs

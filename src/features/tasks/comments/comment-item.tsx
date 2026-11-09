@@ -3,7 +3,7 @@
 import { useUnsavedChanges } from "../unsaved-changes";
 import { formatEventDateTime, useUserTimezone } from "@/lib/user-timezone";
 import { Pencil, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Avatar,
   Button,
@@ -43,6 +43,8 @@ export function CommentItem({
   disabled,
   onBusyChange,
   onReload,
+  unavailable = false,
+  onEditingChange,
 }: {
   comment: CommentDTO;
   currentUserId: string;
@@ -55,6 +57,8 @@ export function CommentItem({
   onBusyChange: (busy: boolean) => void;
   /** 重新拉取列表；返回后本条 comment prop 会更新为远端最新值。 */
   onReload: () => Promise<void>;
+  unavailable?: boolean;
+  onEditingChange: (id: string, editing: boolean) => void;
 }) {
   const { toast } = useToast();
   const tz = useUserTimezone(); // F23：账户时区。
@@ -66,6 +70,10 @@ export function CommentItem({
   const [saving, setSaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   useUnsavedChanges(editing, saving);
+  useEffect(() => {
+    onEditingChange(comment.id, editing);
+    return () => onEditingChange(comment.id, false);
+  }, [comment.id, editing, onEditingChange]);
   const lock = useRef(false);
   const { captureFocus, handleCloseAutoFocus } = useFocusReturn();
 
@@ -188,6 +196,7 @@ export function CommentItem({
   // F23 修复：评论时间用账户时区（原 toLocaleString 用设备时区）。
   const createdLabel = formatEventDateTime(comment.createdAt, tz);
 
+  if (unavailable && !editing) return null;
   return (
     <li className="group/comment flex items-start gap-3 rounded-control border border-transparent p-2 transition-colors hover:bg-surface-sunken">
       <Avatar name={comment.author.name} size="sm" />
@@ -207,8 +216,10 @@ export function CommentItem({
 
         {editing ? (
           <div className="space-y-2">
+            {!canEdit && <p role="status">内容已不可编辑，草稿保留供复制。</p>}
             <Textarea
               value={draft}
+              readOnly={!canEdit}
               disabled={saving}
               onChange={(e) => {
                 setDraft(e.target.value);
@@ -278,7 +289,7 @@ export function CommentItem({
               <Button
                 size="sm"
                 onClick={handleSave}
-                disabled={saving || conflict || !draft.trim()}
+                disabled={saving || !canEdit || conflict || !draft.trim()}
               >
                 {saving ? "保存中…" : "保存"}
               </Button>

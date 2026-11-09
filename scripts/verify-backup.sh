@@ -40,10 +40,10 @@ mkdir -p "$work/volume" && printf 'synthetic-object' > "$work/volume/object"
 cat > "$work/bin/docker" <<'STUB'
 #!/usr/bin/env bash
 case "$*" in
-  *pg_dump*) printf 'synthetic-dump-only' ;;
+  *pg_dump*) test -f "$LOCAL_TEST_VOLUME/frozen" || exit 98; printf 'synthetic-dump-only' ;;
   *pg_restore*) cat >/dev/null; [ "${LOCAL_TEST_BAD_DUMP:-0}" = 0 ] ;;
-  *" stop storage") echo stop >> "$LOCAL_TEST_CALLS" ;;
-  *" start storage") echo start >> "$LOCAL_TEST_CALLS" ;;
+  *" stop storage") touch "$LOCAL_TEST_VOLUME/frozen"; echo stop >> "$LOCAL_TEST_CALLS" ;;
+  *" start storage") rm -f "$LOCAL_TEST_VOLUME/frozen"; echo start >> "$LOCAL_TEST_CALLS" ;;
   *"--user seaweed --entrypoint tar storage -czf - -C /data ."*)
     [ "${LOCAL_TEST_TAR_FAIL:-0}" = 0 ] || { printf 'partial'; exit 1; }
     tar -czf - -C "$LOCAL_TEST_VOLUME" . ;;
@@ -65,7 +65,13 @@ test "$(find "$work/local" -name 'storage-*.tar.gz' | wc -l)" = 1
 if LOCAL_TEST_BAD_DUMP=1 bash /source/infra/backup-local.sh; then
   printf 'Unreadable dump incorrectly accepted\n' >&2; exit 1
 fi
-test ! -s "$work/calls"
-test "$(find "$work/local" -name 'orbit-*.dump' | wc -l)" = 2
+test "$(tr '\n' ' ' < "$work/calls")" = "stop start "
+test "$(find "$work/local" -name 'orbit-*.dump' | wc -l)" = 1
 test -z "$(find "$work/local" -name '*.partial')"
-printf '{"localBackupAccepted":true,"storageRestartedAfterFailure":true,"unreadableDumpRejectedBeforeStop":true,"temporaryFilesRemoved":true}\n'
+printf '{"localBackupAccepted":true,"storageRestartedAfterFailure":true,"storageFrozenBeforeSnapshot":true,"temporaryFilesRemoved":true}\n'
+
+batch=$(bash /source/infra/select-backup.sh)
+test -n "$batch"
+printf corrupt >> "$work/local/storage-$batch.tar.gz"
+if bash /source/infra/select-backup.sh; then echo 'Corrupt pair accepted' >&2; exit 1; fi
+printf '{"completePairSelectedAfterFailures":true,"corruptPairRejected":true}\n'

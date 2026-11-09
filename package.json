@@ -10,11 +10,11 @@
     "pnpm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "prisma generate && next dev",
-    "build": "prisma generate && next build",
+    "dev": "prisma generate && node scripts/generate-readiness.mjs && next dev",
+    "build": "prisma generate && node scripts/generate-readiness.mjs && next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "prisma generate && tsc --noEmit",
+    "typecheck": "prisma generate && node scripts/generate-readiness.mjs && tsc --noEmit",
     "typecheck:scripts": "tsc -p tsconfig.scripts.json --noEmit",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
@@ -22,7 +22,7 @@
     "test:e2e": "playwright test",
     "test:ui": "playwright test --config playwright.ui.config.ts",
     "test:contract": "vitest run --project contract",
-    "db:generate": "prisma generate",
+    "db:generate": "prisma generate && node scripts/generate-readiness.mjs",
     "db:migrate:dev": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
@@ -91,7 +91,8 @@
       "fast-uri@<3.1.9": "3.1.9",
       "brace-expansion@<1.1.21": "1.1.21",
       "brace-expansion@>=5.0.0 <5.0.12": "5.0.12",
-      "vite@<8.2.4": "8.3.6"
+      "vite@<8.2.4": "8.3.6",
+      "minimatch@10.2.6": "11.0.1"
     }
   }
 }
