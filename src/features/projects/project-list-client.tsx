@@ -1,8 +1,7 @@
 "use client";
 
-import { confirmLeave } from "@/features/tasks/unsaved-changes";
-
 import { Archive, ArchiveRestore, FolderPlus, LayoutGrid, ListChecks, Plus, Users } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -16,11 +15,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InlineError } from "@/components/ui/inline-error";
+import { LinkLabel } from "@/components/ui/link-label";
+import { PageHeader } from "@/components/ui/page-header";
+import { Segments } from "@/components/ui/segments";
 import { Spinner } from "@/features/auth/auth-form";
 import { cn } from "@/lib/cn";
+import type { CSSProperties } from "react";
 import { loginPathWithReturnTo } from "@/lib/return-to";
-import { PROJECT_COLOR_DOT, PROJECT_COLOR_LABEL, projectColorAria } from "@/lib/project-color";
-import { ProjectCreateForm } from "./project-create-form";
+import { projectColorAria } from "@/lib/project-color";
+import { ProjectCreateDialog } from "./project-create-form";
+import { ProjectGlyph } from "./project-glyph";
 
 /**
  * 项目列表客户端（M2 Phase 6，`/app/projects`）。
@@ -194,57 +198,47 @@ export function ProjectListClient({
     router.push(next === "only" ? `${PROJECTS_PATH}?archived=only` : PROJECTS_PATH);
   }
 
-  return (
-    <div className="mx-auto w-full max-w-6xl">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-mono text-caption uppercase tracking-[0.18em] text-foreground-muted">
-            项目空间
-          </p>
-          <h1 className="mt-1 text-page font-semibold tracking-tight text-foreground">
-            全部项目
-          </h1>
-          <p className="mt-1.5 text-label text-foreground-secondary">
-            {archived === "only"
-              ? "已归档的项目（只读）"
-              : "你拥有或参与的项目（未归档）"}
-            · 共 {projects.length} 个{hasMore ? "+" : ""}
-          </p>
-        </div>
-        {archived === "exclude" && projects.length > 0 ? (
-          <Button
-            type="button"
-            onClick={() => {
-              setListError(null);
-              if (creating && !confirmLeave()) return;
-                  setCreating((prev) => !prev);
-            }}
-            aria-expanded={creating}
-            aria-controls="project-create-form"
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            <span>{creating ? "收起表单" : "新建项目"}</span>
-          </Button>
-        ) : null}
-      </header>
+  const tabClass = (active: boolean) =>
+    cn(
+      "inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-label font-medium outline-none transition-colors duration-200",
+      active ? "text-foreground" : "text-foreground-secondary hover:text-foreground",
+    );
 
-      {/* 未归档 / 已归档 tab（A08：归档项目的列表找回入口）。 */}
-      <div
+  return (
+    <div className="w-full pt-2 md:pt-5">
+      <PageHeader
+        title="全部项目"
+        description={`${archived === "only" ? "已归档的项目（只读）" : "你拥有或参与的项目"}，共 ${projects.length}${hasMore ? "+" : ""} 个`}
+        actions={
+          archived === "exclude" && projects.length > 0 ? (
+            <Button
+              type="button"
+              onClick={() => {
+                setListError(null);
+                setCreating(true);
+              }}
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              新建项目
+            </Button>
+          ) : null
+        }
+      />
+
+      <Segments
         role="tablist"
         aria-label="项目归档筛选"
-        className="mb-6 inline-flex rounded-control border border-line bg-surface-sunken p-1"
+        activeKey={archived}
+        className="mb-6 inline-flex rounded-full bg-surface-sunken p-1"
+        style={{ "--segment-inset": "4px" } as CSSProperties}
       >
         <button
           type="button"
           role="tab"
           aria-selected={archived === "exclude"}
+          data-active={archived === "exclude" || undefined}
           onClick={() => switchTab("exclude")}
-          className={cn(
-            "rounded-control px-3 py-1.5 text-label font-medium transition-colors duration-150",
-            archived === "exclude"
-              ? "bg-surface text-foreground shadow-popover"
-              : "text-foreground-muted hover:text-foreground-secondary",
-          )}
+          className={tabClass(archived === "exclude")}
         >
           未归档
         </button>
@@ -252,38 +246,32 @@ export function ProjectListClient({
           type="button"
           role="tab"
           aria-selected={archived === "only"}
+          data-active={archived === "only" || undefined}
           onClick={() => switchTab("only")}
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-control px-3 py-1.5 text-label font-medium transition-colors duration-150",
-            archived === "only"
-              ? "bg-surface text-foreground shadow-popover"
-              : "text-foreground-muted hover:text-foreground-secondary",
-          )}
+          className={tabClass(archived === "only")}
         >
           <Archive className="h-3.5 w-3.5" aria-hidden="true" />
           已归档
         </button>
-      </div>
+      </Segments>
 
-      {/* 创建表单：展开在页头之下（空态按钮同样触发），归档 tab 不展示。 */}
-      {creating && archived === "exclude" ? (
-        <div id="project-create-form" className="mb-6">
-          <ProjectCreateForm
-            onCreated={async () => {
-              // toast（「项目已创建」）由表单在成功分支自行发出（含项目名）。
-              setCreating(false);
-              // await：等新 props 流入后再由表单解除 loading，避免用旧数据再次提交。
-              await router.refresh();
-            }}
-            onCancelled={() => setCreating(false)}
-            onUnauthorized={goToLogin}
-          />
-        </div>
+      {archived === "exclude" ? (
+        <ProjectCreateDialog
+          open={creating}
+          onOpenChange={setCreating}
+          onCreated={async () => {
+            // toast（「项目已创建」）由表单在成功分支自行发出（含项目名）。
+            setCreating(false);
+            // await：等新 props 流入后再由表单解除 loading，避免用旧数据再次提交。
+            await router.refresh();
+          }}
+          onUnauthorized={goToLogin}
+        />
       ) : null}
 
       <InlineError className="mb-4">{listError}</InlineError>
 
-      {projects.length === 0 && !creating ? (
+      {projects.length === 0 ? (
         archived === "only" ? (
           <EmptyState
             icon={<Archive className="h-6 w-6" />}
@@ -313,7 +301,7 @@ export function ProjectListClient({
       ) : null}
 
       {projects.length > 0 ? (
-        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {projects.map((project) => (
             <li key={project.id}>
               <ProjectCard
@@ -349,12 +337,7 @@ export function ProjectListClient({
   );
 }
 
-/**
- * 项目卡片：整卡为单个 button（无嵌套交互元素），点击进入该项目的任务列表。
- * 展示 name / key（mono Badge）/ 标记色圆点（附文本，不单靠颜色）/ 角色 /
- * 成员数 / 未完成任务数；已归档项目加「已归档」标识；归档 tab 下额外展示恢复按钮
- * （独立于卡片主 button，避免嵌套交互元素）。
- */
+/** 项目卡片：标题是覆盖整卡的链接，恢复按钮叠在其上，避免嵌套交互元素。 */
 function ProjectCard({
   project,
   showRestore,
@@ -366,72 +349,56 @@ function ProjectCard({
   restoring: boolean;
   onRestore: () => void;
 }) {
-  const router = useRouter();
   const archived = project.archivedAt !== null;
 
   return (
-    <div
-      className={cn(
-        "flex h-full w-full flex-col gap-3 rounded-card border border-line bg-surface p-4",
-        "shadow-popover transition-colors duration-150 ease-standard",
-      )}
-    >
-      <button
-        type="button"
-        onClick={() => {
-          router.push(`/app/projects/${project.id}/tasks`);
-        }}
-        className="flex flex-1 flex-col gap-3 text-left outline-none"
-      >
-        <span className="flex min-w-0 items-center gap-2.5">
-          <span
-            className={cn(
-              "inline-block h-3 w-3 shrink-0 rounded-full",
-              PROJECT_COLOR_DOT[project.color],
-            )}
-            aria-hidden="true"
-          />
-          <span className="min-w-0 flex-1 truncate text-section font-semibold text-foreground">
-            {project.name}
-          </span>
-          <Badge className="shrink-0 font-mono">{project.key}</Badge>
-        </span>
-        <span className="sr-only">{projectColorAria(project.color)}</span>
-
-        {project.description.trim().length > 0 ? (
-          <span className="line-clamp-2 text-label leading-relaxed text-foreground-secondary">
-            {project.description}
-          </span>
-        ) : null}
-
-        <span className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-foreground-muted">
-          <Badge tone={project.role === "OWNER" ? "brand" : "neutral"}>
-            {project.role === "OWNER" ? "所有者" : "成员"}
+    <article className="glass-card lift relative flex h-full min-h-40 flex-col gap-3 rounded-card p-4 has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-ring">
+      <div className="flex min-w-0 items-center gap-3">
+        <ProjectGlyph name={project.name} color={project.color} size="md" />
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-body font-semibold tracking-[-0.01em] text-foreground">
+            <Link
+              href={`/app/projects/${project.id}/board`}
+              className="outline-none after:absolute after:inset-0 after:rounded-card after:content-['']"
+            >
+              <LinkLabel>{project.name}</LinkLabel>
+            </Link>
+          </h2>
+          <p className="text-caption tabular-nums text-foreground-muted">
+            {project.key} · {project.role === "OWNER" ? "所有者" : "成员"}
+            <span className="sr-only">，{projectColorAria(project.color)}</span>
+          </p>
+        </div>
+        {archived ? (
+          <Badge tone="warning" icon={<Archive className="h-3 w-3" />}>
+            已归档
           </Badge>
-          {archived ? (
-            <Badge tone="warning" icon={<Archive className="h-3 w-3" />}>
-              已归档
-            </Badge>
-          ) : null}
-          <span className="inline-flex items-center gap-1.5">
-            <Users className="h-3.5 w-3.5" aria-hidden="true" />
-            {project.memberCount} 名成员
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <ListChecks className="h-3.5 w-3.5" aria-hidden="true" />
-            {project.openTaskCount} 个未完成任务
-          </span>
-          <span className="ml-auto font-mono uppercase tracking-widest">
-            {PROJECT_COLOR_LABEL[project.color]}
-          </span>
+        ) : null}
+      </div>
+
+      {project.description.trim().length > 0 ? (
+        <p className="line-clamp-2 text-label leading-relaxed text-foreground-secondary">
+          {project.description}
+        </p>
+      ) : null}
+
+      <p className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-foreground-muted">
+        <span className="inline-flex items-center gap-1.5">
+          <Users className="h-3.5 w-3.5" aria-hidden="true" />
+          {project.memberCount} 名成员
         </span>
-      </button>
+        <span className="inline-flex items-center gap-1.5">
+          <ListChecks className="h-3.5 w-3.5" aria-hidden="true" />
+          {project.openTaskCount} 个未完成任务
+        </span>
+      </p>
 
       {showRestore && project.role === "OWNER" ? (
         <Button
           type="button"
           variant="secondary"
           size="sm"
+          className="relative z-10 self-start"
           disabled={restoring}
           aria-busy={restoring || undefined}
           onClick={onRestore}
@@ -440,6 +407,6 @@ function ProjectCard({
           <span>{restoring ? "正在恢复…" : "恢复项目"}</span>
         </Button>
       ) : null}
-    </div>
+    </article>
   );
 }

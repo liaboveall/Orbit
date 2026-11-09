@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { formatDateTimeCN } from "@/features/tasks/real/datetime";
 import { TaskRestoreButton } from "@/features/tasks/real/task-restore-button";
@@ -51,44 +52,17 @@ export default async function ProjectTrashPage({ params }: PageProps) {
   const isOwner = project.role === "OWNER";
 
   return (
-    <div className="mx-auto w-full max-w-4xl">
-      <header className="mb-6">
-        <nav aria-label="面包屑" className="mb-2 flex items-center gap-1.5 text-caption">
-          <Link
-            href="/app/projects"
-            className="rounded-control text-foreground-muted outline-none transition-colors duration-150 ease-standard hover:text-brand"
-          >
-            全部项目
-          </Link>
-          <span aria-hidden="true" className="text-line-strong">
-            /
-          </span>
-          <Link
-            href={tasksPath}
-            className="min-w-0 truncate rounded-control text-foreground-muted outline-none transition-colors duration-150 ease-standard hover:text-brand"
-          >
-            {project.name}
-          </Link>
-          <span aria-hidden="true" className="text-line-strong">
-            /
-          </span>
-          <span className="text-foreground-secondary">回收站</span>
-        </nav>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-page font-semibold tracking-tight text-foreground">
-              回收站
-            </h1>
-            <p className="mt-1.5 text-label text-foreground-secondary">
-              已删除的任务保留在此，可恢复回任务列表（共 {deletedTasks.tasks.length} 条
-              {deletedTasks.hasMore ? "+" : ""}）。
-            </p>
-          </div>
+    <div className="w-full max-w-4xl">
+      <PageHeader
+        eyebrow={project.name}
+        title="回收站"
+        description={`已删除的任务保留在此，可恢复回任务列表（共 ${deletedTasks.tasks.length}${deletedTasks.hasMore ? "+" : ""} 条）。`}
+        actions={
           <Link href={tasksPath} className={buttonVariants({ variant: "secondary" })}>
             返回任务列表
           </Link>
-        </div>
-      </header>
+        }
+      />
 
       {deletedTasks.tasks.length === 0 ? (
         <EmptyState
@@ -102,13 +76,13 @@ export default async function ProjectTrashPage({ params }: PageProps) {
           }
         />
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface shadow-popover">
+        <ul className="glass-card divide-y divide-line overflow-hidden rounded-card">
           {deletedTasks.tasks.map((task) => (
             <li
               key={task.id}
               className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3"
             >
-              <span className="shrink-0 font-mono text-caption text-foreground-muted">
+              <span className="shrink-0 text-caption tabular-nums text-foreground-muted">
                 {task.identifier}
               </span>
               <span className="min-w-0 flex-1 truncate text-label font-medium text-foreground" title={task.title}>

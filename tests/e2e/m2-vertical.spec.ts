@@ -126,11 +126,13 @@ test.describe("M2 纵向闭环", () => {
     // reload 触发服务端重读并重新挂载，据此验证项目已持久化（本用例聚焦服务端真源/持久化）。
     // 注：写操作后**同页不 reload** 的即时刷新（含连续写不再假 409）由 m2-no-reload.spec.ts 覆盖。
     await page.reload();
-    const projectCard = page.getByRole("button", { name: projectName });
+    const projectCard = page.getByRole("main").getByRole("link", { name: projectName });
     await expect(projectCard).toBeVisible();
 
-    // 4. 点击卡片进入项目任务列表（router.push → /app/projects/[id]/tasks）
+    // 4. 点击卡片进入项目看板，再切到任务列表
     await projectCard.click();
+    await expect(page).toHaveURL(/\/app\/projects\/.+\/board/);
+    await page.getByRole("navigation", { name: "项目分区" }).getByRole("link", { name: "列表", exact: true }).click();
     await expect(page).toHaveURL(/\/app\/projects\/.+\/tasks/);
     await expect(page.getByRole("heading", { name: projectName })).toBeVisible();
 
@@ -144,7 +146,7 @@ test.describe("M2 纵向闭环", () => {
     const isTaskRestore = (r: PwResponse) =>
       r.request().method() === "POST" && /\/api\/v1\/tasks\/[^/]+\/restore$/.test(new URL(r.url()).pathname);
 
-    // 5. 创建第一个任务（内联表单，非 dialog）
+    // 5. 创建第一个任务（新建任务对话框）
     await page.getByRole("button", { name: "新建任务" }).first().click();
     await expect(page.getByRole("heading", { name: "新建任务" })).toBeVisible();
     await page.getByLabel("任务标题").fill(taskTitle1);

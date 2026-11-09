@@ -50,14 +50,13 @@ export function Tooltip({
       <TooltipPrimitive.Portal>
         <TooltipPrimitive.Content
           side={side}
-          sideOffset={6}
+          sideOffset={8}
           className={cn(
-            "z-50 max-w-64 rounded-control bg-foreground px-2.5 py-1.5 text-caption text-foreground-invert shadow-popover",
+            "z-50 max-w-64 animate-pop-in rounded-full bg-tooltip px-3 py-1.5 text-caption text-tooltip-foreground shadow-popover backdrop-blur-md",
             className,
           )}
         >
           {content}
-          <TooltipPrimitive.Arrow className="fill-foreground" />
         </TooltipPrimitive.Content>
       </TooltipPrimitive.Portal>
     </TooltipPrimitive.Root>

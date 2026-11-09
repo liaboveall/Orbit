@@ -149,7 +149,7 @@ test("project task pagination survives refresh and resets on a real filter chang
   await refreshed;
   await expect(page.getByRole("row")).toHaveCount(56);
   await page.getByRole("searchbox", {name:"搜索任务",exact:true}).fill("审查任务");
-  await page.getByRole("button", {name:"应用筛选",exact:true}).click();
+  await page.getByRole("searchbox", {name:"搜索任务",exact:true}).press("Enter");
   await expect(page.getByRole("row")).toHaveCount(2);
 });
 

@@ -1,0 +1,244 @@
+/**
+ * 液态玻璃材质。
+ *
+ * 分层规则：玻璃只给浮在内容之上的导航与控件（侧栏、分区胶囊、弹层、面板）。
+ * 内容层用 glass-card，看起来通透但不做实时模糊，看板上百张卡片也不掉帧。
+ *
+ *   glass        浮动导航与工具栏
+ *   glass-thick  需要承载正文的弹层、对话框、任务面板
+ *   glass-card   内容卡片（无 backdrop-filter）
+ *   glass-chip   次要按钮、筛选胶囊
+ *
+ * 光泽由 GlassLight 写入的 --glass-x / --glass-y 驱动，跟随指针移动。
+ * 边缘高光用多层 inset 阴影实现，不依赖伪元素，可用在 Radix 的 fixed 元素上。
+ */
+
+@property --glass-glow {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+:root {
+  --glass-fill: rgb(255 255 255 / 0.46);
+  --glass-fill-thick: rgb(250 250 252 / 0.82);
+  --glass-blur: 26px;
+  --glass-blur-thick: 44px;
+  --glass-saturate: 185%;
+  --glass-gradient: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.3),
+    rgb(255 255 255 / 0.04) 44%,
+    rgb(255 255 255 / 0.12)
+  );
+  --glass-rim:
+    inset 0 1px 0 rgb(255 255 255 / 0.92),
+    inset 0 0 0 1px rgb(255 255 255 / 0.42),
+    inset 0 -1px 0 rgb(255 255 255 / 0.32),
+    inset 0 14px 22px -18px rgb(255 255 255 / 0.9),
+    0 0 0 1px rgb(0 0 0 / 0.045);
+  --glass-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 18px 44px -18px rgb(10 20 50 / 0.24);
+  --glass-glow-strength: 0.5;
+  --card-rim: inset 0 1px 0 rgb(255 255 255 / 0.75), 0 0 0 1px rgb(0 0 0 / 0.04);
+  --chip-fill: rgb(255 255 255 / 0.66);
+  --chip-fill-hover: rgb(255 255 255 / 0.92);
+  --chip-rim: inset 0 1px 0 rgb(255 255 255 / 0.85), 0 0 0 1px rgb(0 0 0 / 0.07);
+  --chip-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+  --selection-fill: rgb(255 255 255 / 0.86);
+  --selection-rim:
+    inset 0 1px 0 rgb(255 255 255 / 0.95),
+    0 0 0 1px rgb(0 0 0 / 0.04),
+    0 2px 8px -2px rgb(10 20 50 / 0.18);
+  --input-fill: rgb(255 255 255 / 0.74);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --glass-fill: rgb(38 38 42 / 0.44);
+    --glass-fill-thick: rgb(32 32 36 / 0.82);
+    --glass-gradient: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.1),
+      rgb(255 255 255 / 0.01) 44%,
+      rgb(255 255 255 / 0.04)
+    );
+    --glass-rim:
+      inset 0 1px 0 rgb(255 255 255 / 0.24),
+      inset 0 0 0 1px rgb(255 255 255 / 0.08),
+      inset 0 -1px 0 rgb(255 255 255 / 0.05),
+      inset 0 14px 22px -18px rgb(255 255 255 / 0.2),
+      0 0 0 1px rgb(0 0 0 / 0.4);
+    --glass-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 20px 48px -18px rgb(0 0 0 / 0.8);
+    --glass-glow-strength: 0.12;
+    --card-rim: inset 0 1px 0 rgb(255 255 255 / 0.09), 0 0 0 1px rgb(255 255 255 / 0.05);
+    --chip-fill: rgb(118 118 128 / 0.24);
+    --chip-fill-hover: rgb(118 118 128 / 0.38);
+    --chip-rim: inset 0 1px 0 rgb(255 255 255 / 0.1), 0 0 0 1px rgb(255 255 255 / 0.05);
+    --chip-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+    --selection-fill: rgb(118 118 128 / 0.42);
+    --selection-rim:
+      inset 0 1px 0 rgb(255 255 255 / 0.16),
+      0 0 0 1px rgb(0 0 0 / 0.2),
+      0 2px 8px -2px rgb(0 0 0 / 0.6);
+    --input-fill: rgb(118 118 128 / 0.18);
+  }
+}
+
+/* 系统要求降低透明度，或浏览器不支持模糊时，退回实色表面。 */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass-fill: var(--color-surface-solid);
+    --glass-fill-thick: var(--color-surface-solid);
+    --color-surface: var(--color-surface-solid);
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --glass-fill: var(--color-surface-solid);
+    --glass-fill-thick: var(--color-surface-solid);
+  }
+}
+
+@utility glass {
+  background-color: var(--glass-fill);
+  background-image:
+    radial-gradient(
+      300px circle at var(--glass-x, 50%) var(--glass-y, 0%),
+      rgb(255 255 255 / calc(var(--glass-glow) * var(--glass-glow-strength))),
+      transparent 72%
+    ),
+    var(--glass-gradient);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--glass-rim), var(--glass-shadow);
+  transition: --glass-glow 260ms var(--ease-standard);
+
+  @media (hover: hover) {
+    &:hover {
+      --glass-glow: 1;
+    }
+  }
+}
+
+@utility glass-thick {
+  background-color: var(--glass-fill-thick);
+  background-image: var(--glass-gradient);
+  -webkit-backdrop-filter: blur(var(--glass-blur-thick)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur-thick)) saturate(var(--glass-saturate));
+  box-shadow: var(--glass-rim), var(--shadow-overlay);
+}
+
+@utility glass-card {
+  background-color: var(--color-surface);
+  background-image: radial-gradient(
+    260px circle at var(--glass-x, 50%) var(--glass-y, 0%),
+    rgb(255 255 255 / calc(var(--glass-glow) * var(--glass-glow-strength))),
+    transparent 72%
+  );
+  box-shadow: var(--card-rim), var(--shadow-card);
+  transition:
+    --glass-glow 260ms var(--ease-standard),
+    box-shadow 240ms var(--ease-standard),
+    transform 280ms var(--ease-spring),
+    background-color 200ms var(--ease-standard);
+
+  @media (hover: hover) {
+    &:hover {
+      --glass-glow: 1;
+    }
+  }
+}
+
+@utility glass-chip {
+  background-color: var(--chip-fill);
+  box-shadow: var(--chip-rim), var(--chip-shadow);
+
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background-color: var(--chip-fill-hover);
+    }
+  }
+}
+
+/* 内容卡片的 hover 抬升，只在有悬停能力的设备上生效。 */
+@utility lift {
+  @media (hover: hover) {
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--card-rim), var(--shadow-card-hover);
+    }
+  }
+}
+
+/* 选中态：一片更亮的玻璃，用在侧栏和分段控件。 */
+@utility selected-glass {
+  background-color: var(--selection-fill);
+  box-shadow: var(--selection-rim);
+}
+
+/* 彩色主按钮的玻璃高光。 */
+@utility btn-tint {
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0) 60%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.34),
+    0 1px 2px rgb(0 30 90 / 0.18),
+    0 8px 18px -10px rgb(0 40 110 / 0.5);
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* 分段控件：选中胶囊在选项之间流动，前缘先到、后缘跟上。 */
+@layer components {
+  [data-segments] {
+    position: relative;
+    isolation: isolate;
+  }
+
+  [data-segment-thumb] {
+    position: absolute;
+    z-index: -1;
+    top: var(--segment-inset, 0px);
+    bottom: var(--segment-inset, 0px);
+    left: var(--segment-left, 0px);
+    right: var(--segment-right, 100%);
+    border-radius: 999px;
+    opacity: 0;
+    background-color: var(--selection-fill);
+    box-shadow: var(--selection-rim);
+    pointer-events: none;
+  }
+
+  [data-segments][data-placed] > [data-segment-thumb] {
+    opacity: 1;
+  }
+
+  [data-segments][data-animate] > [data-segment-thumb] {
+    transition:
+      left var(--segment-left-time, 320ms) var(--ease-fluid),
+      right var(--segment-right-time, 320ms) var(--ease-fluid);
+  }
+
+  /* 服务端首屏与 JS 就绪前，由选中项自己画底色，避免闪烁。 */
+  [data-segments]:not([data-placed]) [data-active] {
+    border-radius: 999px;
+    background-color: var(--selection-fill);
+    box-shadow: var(--selection-rim);
+  }
+
+  /* 原生 date 控件的日历图标跟随主题。 */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0.55;
+    cursor: pointer;
+  }
+
+  /* 限制 Markdown 正文的节奏。 */
+  .prose-orbit > * + * {
+    margin-top: 0.6em;
+  }
+}

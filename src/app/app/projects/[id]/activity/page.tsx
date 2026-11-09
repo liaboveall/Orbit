@@ -34,9 +34,10 @@ export default async function ProjectActivityPage({ params }: PageProps) {
   const sessionUser = await requirePageUser();
 
   let result;
+  let projectName;
   try {
     // getProject 先判定成员关系（非成员/不存在 → NOT_FOUND → notFound()）。
-    await getProject(id, sessionUser.id);
+    projectName = (await getProject(id, sessionUser.id)).name;
     result = await listActivities({
       projectId: id,
       actorId: sessionUser.id,
@@ -50,6 +51,7 @@ export default async function ProjectActivityPage({ params }: PageProps) {
   return (
     <ActivityFeed
       projectId={id}
+      projectName={projectName}
       initialActivities={result.activities}
       nextCursor={result.nextCursor}
       hasMore={result.hasMore}

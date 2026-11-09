@@ -62,7 +62,7 @@ export function TaskPanel({
       <DrawerContent
         side="right"
         showCloseButton={false}
-        className="w-full overflow-y-auto sm:w-[600px]"
+        className="w-full overflow-y-auto overscroll-contain sm:w-[var(--task-panel-width)]"
         ref={content}
         onEscapeKeyDown={(e) => {
           e.preventDefault();
@@ -107,14 +107,14 @@ export function TaskPanel({
             onDeleted={close}
           />
         ) : (
-          <section className="space-y-4 p-4 sm:p-6">
-            <header className="flex items-center justify-between border-b border-line pb-3">
-              <h2 className="text-section font-semibold">任务不存在或已被删除</h2>
+          <section className="space-y-4 p-5 sm:p-6">
+            <header className="flex items-center justify-between gap-3">
+              <h2 className="text-section font-semibold tracking-[-0.015em]">任务不存在或已被删除</h2>
               <IconButton label="关闭详情" onClick={close}>
                 <X className="h-4 w-4" />
               </IconButton>
             </header>
-            <p role="status" className="text-label text-foreground-secondary">
+            <p role="status" className="text-label leading-relaxed text-foreground-secondary">
               它可能已被移入回收站，或链接有误。关闭后可继续浏览本项目。
             </p>
           </section>

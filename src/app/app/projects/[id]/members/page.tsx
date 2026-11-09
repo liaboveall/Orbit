@@ -30,6 +30,7 @@ export default async function ProjectMembersPage({ params }: PageProps) {
 
   let members;
   let isOwner;
+  let projectName;
   try {
     const [project, list] = await Promise.all([
       getProject(id, sessionUser.id),
@@ -37,6 +38,7 @@ export default async function ProjectMembersPage({ params }: PageProps) {
     ]);
     members = list;
     isOwner = project.role === "OWNER";
+    projectName = project.name;
   } catch (error) {
     if (error instanceof DomainError && error.code === "NOT_FOUND") notFound();
     throw error;
@@ -45,6 +47,7 @@ export default async function ProjectMembersPage({ params }: PageProps) {
   return (
     <MembersList
       projectId={id}
+      projectName={projectName}
       currentUserId={sessionUser.id}
       isOwner={isOwner}
       members={members}

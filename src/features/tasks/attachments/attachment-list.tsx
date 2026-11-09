@@ -280,13 +280,11 @@ function AttachmentItem({
   return (
     <li
       className={cn(
-        "group/row flex items-start gap-3 rounded-control border p-2 transition-colors",
-        isFailed
-          ? "border-danger bg-danger-soft"
-          : "border-line hover:bg-surface-sunken",
+        "group/row flex items-center gap-3 rounded-[14px] p-2 transition-colors",
+        isFailed ? "bg-danger-soft" : "bg-surface-sunken",
       )}
     >
-      <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-sunken text-foreground-secondary">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-surface text-foreground-secondary">
         {iconType === "image" ? (
           <ImageIcon className="h-5 w-5" aria-hidden="true" />
         ) : iconType === "text" ? (

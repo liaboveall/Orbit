@@ -33,11 +33,13 @@ export default async function ProjectInvitationsPage({ params }: PageProps) {
   const sessionUser = await requirePageUser();
 
   let projectId = id;
+  let projectName;
   let invitations;
   let isOwner;
   try {
     const project = await getProject(id, sessionUser.id);
     projectId = project.id;
+    projectName = project.name;
     isOwner = project.role === "OWNER";
     invitations = isOwner ? await listInvitations(project.id, sessionUser.id) : [];
   } catch (error) {
@@ -48,6 +50,7 @@ export default async function ProjectInvitationsPage({ params }: PageProps) {
   return (
     <InvitationsList
       projectId={projectId}
+      projectName={projectName}
       userIsOwner={isOwner}
       initialInvitations={invitations}
     />

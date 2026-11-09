@@ -144,11 +144,13 @@ test.describe("M2 不 reload 连续写（假 409 回归）", () => {
     expect(projResp.status()).toBe(201);
 
     // 关键：**不 reload**，断言新项目卡片经 router.refresh() 后同页立即出现。
-    const projectCard = page.getByRole("button", { name: projectName });
+    const projectCard = page.getByRole("main").getByRole("link", { name: projectName });
     await expect(projectCard).toBeVisible();
 
     // ── 步骤 2：进入任务页 → 创建任务（不 reload，断言行同页立即出现）────────────
     await projectCard.click();
+    await expect(page).toHaveURL(/\/app\/projects\/.+\/board/);
+    await page.getByRole("navigation", { name: "项目分区" }).getByRole("link", { name: "列表", exact: true }).click();
     await expect(page).toHaveURL(/\/app\/projects\/.+\/tasks/);
     await expect(page.getByRole("heading", { name: projectName })).toBeVisible();
 

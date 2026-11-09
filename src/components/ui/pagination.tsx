@@ -77,7 +77,7 @@ export function Pagination({
             aria-label={itemLabel(entry)}
             aria-current={entry === page ? "page" : undefined}
             className={cn(
-              "h-8 min-w-8 rounded-control px-2 text-label font-medium outline-none",
+              "h-8 min-w-8 rounded-full px-2 text-label font-medium outline-none",
               "transition-colors duration-150 ease-standard",
               entry === page
                 ? "bg-brand text-foreground-invert"

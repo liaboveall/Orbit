@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { ProjectSettingsForm } from "@/features/projects/project-settings-form";
 import { requirePageUser } from "@/server/auth/page-session";
 import { DomainError } from "@/server/http/errors";
@@ -44,39 +45,12 @@ export default async function ProjectSettingsPage({ params }: PageProps) {
   const isOwner = project.role === "OWNER";
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <header className="mb-6">
-        <nav
-          aria-label="面包屑"
-          className="mb-2 flex items-center gap-1.5 text-caption"
-        >
-          <Link
-            href="/app/projects"
-            className="rounded-control text-foreground-muted outline-none transition-colors duration-150 ease-standard hover:text-brand"
-          >
-            全部项目
-          </Link>
-          <span aria-hidden="true" className="text-line-strong">
-            /
-          </span>
-          <Link
-            href={tasksPath}
-            className="min-w-0 truncate rounded-control text-foreground-muted outline-none transition-colors duration-150 ease-standard hover:text-brand"
-          >
-            {project.name}
-          </Link>
-          <span aria-hidden="true" className="text-line-strong">
-            /
-          </span>
-          <span className="text-foreground-secondary">设置</span>
-        </nav>
-        <h1 className="text-page font-semibold tracking-tight text-foreground">
-          项目设置
-        </h1>
-        <p className="mt-1.5 text-label text-foreground-secondary">
-          管理项目资料与归档状态（仅项目所有者可修改）。
-        </p>
-      </header>
+    <div className="w-full max-w-3xl">
+      <PageHeader
+        eyebrow={project.name}
+        title="项目设置"
+        description="管理项目资料与归档状态（仅项目所有者可修改）。"
+      />
 
       {isOwner ? (
         <ProjectSettingsForm project={project} />

@@ -100,7 +100,7 @@ export function TaskStatusSelect({ task, disabled, onUnauthorized, mutation }: T
       disabled={disabled || pending}
     >
       <SelectTrigger
-        className="h-8 px-2 text-caption"
+        className="h-11 w-auto rounded-full bg-transparent! pl-3 pr-2.5 shadow-none! hover:bg-surface-sunken! md:h-8 md:text-label"
         aria-label={`任务 ${task.identifier} 的状态${pending ? "（更新中）" : ""}`}
       >
         <SelectValue />

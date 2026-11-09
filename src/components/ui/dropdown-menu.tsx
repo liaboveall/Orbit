@@ -4,20 +4,14 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
-/**
- * DropdownMenu（ORB-002，基于 @radix-ui/react-dropdown-menu）。
- *
- * Radix 提供完整键盘支持：Enter/Space/方向键打开与导航、Escape 关闭、焦点管理。
- * docs/02 §5：任务卡「hover 可显示更多菜单，但键盘焦点时必须同样可见」——
- * 由 TaskCard 在 focus-within 时一并显示触发按钮，菜单本身走此原语。
- */
+/** DropdownMenu（基于 Radix）：键盘导航、Escape 与焦点管理由 Radix 提供。 */
 
 export const DropdownMenu = DropdownMenuPrimitive.Root;
 export const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 
 export function DropdownMenuContent({
   className,
-  sideOffset = 6,
+  sideOffset = 8,
   ...props
 }: ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   return (
@@ -25,7 +19,7 @@ export function DropdownMenuContent({
       <DropdownMenuPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          "z-50 min-w-44 rounded-overlay border border-line bg-surface p-1.5 shadow-popover",
+          "glass-thick z-50 min-w-44 origin-[var(--radix-dropdown-menu-content-transform-origin)] animate-pop-in rounded-[20px] p-1.5",
           className,
         )}
         {...props}
@@ -41,9 +35,9 @@ export function DropdownMenuItem({
   return (
     <DropdownMenuPrimitive.Item
       className={cn(
-        "flex cursor-pointer select-none items-center gap-2 rounded-control px-2.5 py-2 text-label text-foreground outline-none",
-        "data-[highlighted]:bg-brand-soft data-[highlighted]:text-brand",
-        "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "flex min-h-11 cursor-pointer select-none items-center gap-2.5 rounded-[14px] px-3 text-label text-foreground outline-none sm:min-h-9",
+        "transition-colors duration-100 data-[highlighted]:bg-brand data-[highlighted]:text-foreground-invert",
+        "data-[disabled]:pointer-events-none data-[disabled]:opacity-45",
         className,
       )}
       {...props}
@@ -57,10 +51,7 @@ export function DropdownMenuLabel({
 }: ComponentProps<typeof DropdownMenuPrimitive.Label>) {
   return (
     <DropdownMenuPrimitive.Label
-      className={cn(
-        "px-2.5 py-1.5 text-caption font-medium text-foreground-muted",
-        className,
-      )}
+      className={cn("px-3 py-1.5 text-caption font-medium text-foreground-muted", className)}
       {...props}
     />
   );
@@ -72,7 +63,7 @@ export function DropdownMenuSeparator({
 }: ComponentProps<typeof DropdownMenuPrimitive.Separator>) {
   return (
     <DropdownMenuPrimitive.Separator
-      className={cn("my-1 h-px bg-line", className)}
+      className={cn("mx-3 my-1 h-px bg-line", className)}
       {...props}
     />
   );

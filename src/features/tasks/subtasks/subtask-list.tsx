@@ -185,7 +185,7 @@ export function SubtaskList({
           {total === 0 && !adding && !subtasks?.some(s => s.unavailable) ? (
             <p className="text-caption text-foreground-muted">暂无子任务。</p>
           ) : (
-            <ul className="space-y-1" role="list">
+            <ul className="-mx-2 space-y-0.5" role="list">
               {(subtasks ?? []).map((subtask) => (
                 <SubtaskItem
                   key={subtask.id}
@@ -202,7 +202,7 @@ export function SubtaskList({
           )}
 
           {(canEdit || draft.length > 0) && (
-            <div className="rounded-control border border-line p-2">
+            <div>
               {adding ? (
                 <div className="space-y-2">
                   <Textarea

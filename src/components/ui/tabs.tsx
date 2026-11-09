@@ -4,12 +4,7 @@ import * as TabsPrimitive from "@radix-ui/react-tabs";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
-/**
- * Tabs（ORB-002，基于 @radix-ui/react-tabs）。
- *
- * 用于项目二级导航（看板/列表/活动/设置）与手机看板的按状态切换。
- * Radix 提供方向键切换、Home/End、aria-selected/role=tablist 等完整键盘与语义。
- */
+/** Tabs（基于 Radix）：方向键切换、Home/End 与 role=tablist 语义由 Radix 提供。 */
 
 export const Tabs = TabsPrimitive.Root;
 
@@ -19,10 +14,7 @@ export function TabsList({
 }: ComponentProps<typeof TabsPrimitive.List>) {
   return (
     <TabsPrimitive.List
-      className={cn(
-        "flex items-center gap-1 overflow-x-auto border-b border-line",
-        className,
-      )}
+      className={cn("inline-flex items-center gap-0.5 rounded-full bg-surface-sunken p-1", className)}
       {...props}
     />
   );
@@ -35,10 +27,9 @@ export function TabsTrigger({
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        "relative -mb-px shrink-0 whitespace-nowrap px-3 py-2 text-label font-medium text-foreground-secondary outline-none",
-        "border-b-2 border-transparent transition-[color,border-color] duration-150 ease-standard",
-        "hover:text-foreground",
-        "data-[state=active]:border-brand data-[state=active]:text-brand",
+        "shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-label font-medium text-foreground-secondary outline-none",
+        "transition-[color,background-color] duration-200 ease-standard hover:text-foreground",
+        "data-[state=active]:selected-glass data-[state=active]:text-foreground",
         className,
       )}
       {...props}
@@ -50,10 +41,5 @@ export function TabsContent({
   className,
   ...props
 }: ComponentProps<typeof TabsPrimitive.Content>) {
-  return (
-    <TabsPrimitive.Content
-      className={cn("pt-4 outline-none", className)}
-      {...props}
-    />
-  );
+  return <TabsPrimitive.Content className={cn("pt-4 outline-none", className)} {...props} />;
 }

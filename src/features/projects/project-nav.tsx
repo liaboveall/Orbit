@@ -1,77 +1,89 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Trash2 } from "lucide-react";
+import { LinkLabel } from "@/components/ui/link-label";
+import { Segments } from "@/components/ui/segments";
 import { cn } from "@/lib/cn";
 
 /**
- * 项目分区导航（M4 / Part 7，`/app/projects/[id]/layout`）。
- *
- * 横向 Tab 栏，覆盖项目全部子页：任务 / 看板 / 成员 / 邀请 / 活动 / 设置。
- * 遵循现有 TaskFilters 的导航范式（`<nav aria-label>` + Link + aria-current）；
- * 激活态由 usePathname 匹配当前 section（含 tasks/[taskId] 等嵌套路径）。
- *
- * 注：回收站（trash）是任务级功能，其入口由任务列表工具栏（task-list-client）提供；
- * 此处不再重复渲染「回收站」链接，避免任务页出现两个同名 link 触发 Playwright strict mode 冲突。
- *
- * 手机横向滚动（overflow-x-auto，隐藏滚动条），平板/桌面完整展开。
- * 边界（features 层）：仅消费 pathname，不导入 @/server / @/generated。
+ * 项目分区导航：吸顶的玻璃胶囊，滚动时内容从它下方穿过。
+ * 看板与列表是同一批任务的两种视图，切换时保留筛选条件。
  */
 
-type Section = {
-  /** 项目下的路径后缀（不含前导斜杠），用于拼接与匹配。 */
-  slug: string;
-  label: string;
-};
-
-const SECTIONS: Section[] = [
-  { slug: "tasks", label: "任务" },
+const SECTIONS = [
   { slug: "board", label: "看板" },
+  { slug: "tasks", label: "列表" },
+  { slug: "activity", label: "活动" },
   { slug: "members", label: "成员" },
   { slug: "invitations", label: "邀请" },
-  { slug: "activity", label: "活动" },
   { slug: "settings", label: "设置" },
-];
+] as const;
 
-export type ProjectNavProps = {
-  projectId: string;
-};
+const TASK_VIEWS = new Set<string>(["board", "tasks"]);
 
-export function ProjectNav({ projectId }: ProjectNavProps) {
+export function ProjectNav({ projectId }: { projectId: string }) {
   const pathname = usePathname();
+  const search = useSearchParams();
   const base = `/app/projects/${projectId}`;
+  const active = SECTIONS.find(
+    (section) => pathname === `${base}/${section.slug}` || pathname.startsWith(`${base}/${section.slug}/`),
+  )?.slug;
+
+  const viewQuery = new URLSearchParams(search.toString());
+  for (const key of ["task", "cursor", "sort"]) viewQuery.delete(key);
+  const carried = viewQuery.size ? `?${viewQuery}` : "";
+
+  const trashActive = pathname === `${base}/trash`;
 
   return (
-    <nav
-      aria-label="项目分区"
-      className="mb-6 -mx-4 overflow-x-auto border-b border-line px-4 md:-mx-6 md:px-6 xl:-mx-8 xl:px-8"
-    >
-      <ul className="flex min-w-max items-center gap-1">
-        {SECTIONS.map((section) => {
-          const href = `${base}/${section.slug}`;
-          // 精确匹配或嵌套子路径（如 tasks/[taskId]）均视为激活。
-          const active =
-            pathname === href || pathname.startsWith(`${href}/`);
-          return (
-            <li key={section.slug}>
-              <Link
-                href={href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "-mb-px inline-flex h-10 items-center rounded-t-control border-b-2 px-3",
-                  "text-label font-medium outline-none transition-colors duration-150 ease-standard",
-                  "focus-visible:ring-2 focus-visible:ring-brand",
-                  active
-                    ? "border-brand text-brand"
-                    : "border-transparent text-foreground-secondary hover:border-line-strong hover:text-foreground",
-                )}
-              >
-                {section.label}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+    <div className="pointer-events-none sticky top-2 z-20 mb-6 md:top-3">
+      <nav
+        aria-label="项目分区"
+        className="glass pointer-events-auto inline-flex max-w-full items-center rounded-full p-1"
+      >
+        <Segments activeKey={active} className="no-scrollbar min-w-0 overflow-x-auto rounded-full">
+          <ul className="flex w-max items-center">
+            {SECTIONS.map((section) => {
+              const isActive = section.slug === active;
+              const keepFilters = TASK_VIEWS.has(section.slug) && active !== undefined && TASK_VIEWS.has(active);
+              return (
+                <li key={section.slug}>
+                  <Link
+                    href={`${base}/${section.slug}${keepFilters ? carried : ""}`}
+                    aria-current={isActive ? "page" : undefined}
+                    data-active={isActive || undefined}
+                    className={cn(
+                      "flex h-9 items-center rounded-full px-4 text-label font-medium outline-none",
+                      "transition-colors duration-200 ease-standard",
+                      isActive ? "text-foreground" : "text-foreground-secondary hover:text-foreground",
+                    )}
+                  >
+                    <LinkLabel>{section.label}</LinkLabel>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </Segments>
+        <span aria-hidden="true" className="mx-1 h-5 w-px shrink-0 bg-line" />
+        <Link
+          href={`${base}/trash`}
+          aria-label="回收站"
+          title="回收站"
+          aria-current={trashActive ? "page" : undefined}
+          className={cn(
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-full outline-none",
+            "transition-colors duration-200 ease-standard",
+            trashActive
+              ? "selected-glass text-foreground"
+              : "text-foreground-secondary hover:bg-surface-sunken hover:text-foreground",
+          )}
+        >
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
+        </Link>
+      </nav>
+    </div>
   );
 }

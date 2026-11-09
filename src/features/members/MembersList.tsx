@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InlineError } from "@/components/ui/inline-error";
+import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/components/ui/toast";
 import { Spinner } from "@/features/auth/auth-form";
 import { formatEventDate, useUserTimezone } from "@/lib/user-timezone";
@@ -47,6 +48,7 @@ type PendingAction =
 
 export type MembersListProps = {
   projectId: string;
+  projectName: string;
   currentUserId: string;
   /** 当前用户是否为项目 owner（决定「移除」按钮可见性；服务端仍权威复核）。 */
   isOwner: boolean;
@@ -55,6 +57,7 @@ export type MembersListProps = {
 
 export function MembersList({
   projectId,
+  projectName,
   currentUserId,
   isOwner,
   members,
@@ -114,18 +117,12 @@ export function MembersList({
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl">
-      <header className="mb-6">
-        <p className="font-mono text-caption uppercase tracking-[0.18em] text-foreground-muted">
-          团队协作
-        </p>
-        <h1 className="mt-1 text-page font-semibold tracking-tight text-foreground">
-          项目成员
-        </h1>
-        <p className="mt-1.5 text-label text-foreground-secondary">
-          共 {members.length} 名成员。{isOwner ? "作为所有者，你可以移除非所有者成员。" : "你可以选择退出该项目。"}
-        </p>
-      </header>
+    <div className="w-full max-w-4xl">
+      <PageHeader
+        eyebrow={projectName}
+        title="项目成员"
+        description={`共 ${members.length} 名成员。${isOwner ? "作为所有者，你可以移除非所有者成员。" : "你可以选择退出该项目。"}`}
+      />
 
       <InlineError className="mb-4">{error}</InlineError>
 
@@ -148,7 +145,7 @@ export function MembersList({
           }
         />
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface shadow-popover">
+        <ul className="glass-card divide-y divide-line overflow-hidden rounded-card">
           {members.map((member) => {
             const isSelf = member.userId === currentUserId;
             const isOwnerRow = member.role === "OWNER";

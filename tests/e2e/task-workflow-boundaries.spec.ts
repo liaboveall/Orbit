@@ -26,13 +26,14 @@ test("board creation protects collapse and uses product defaults without a false
   await page.goto(`/app/projects/${project.id}/board`);
   const toggle = page.getByRole("button", { name: "新建任务", exact: true });
   const title = page.getByRole("textbox", { name: "任务标题", exact: true });
-  await toggle.click(); await toggle.click();
+  const close = page.getByRole("button", { name: "关闭对话框", exact: true });
+  await toggle.click(); await close.click();
   await expect(title).toHaveCount(0); expect(dialogs).toBe(0);
   await toggle.click(); await title.fill("保留输入");
-  await toggle.click(); await expect(title).toHaveValue("保留输入"); expect(dialogs).toBe(1);
+  await close.click(); await expect(title).toHaveValue("保留输入"); expect(dialogs).toBe(1);
   await page.getByRole("button", { name: "取消", exact: true }).click();
   await expect(title).toHaveValue("保留输入"); expect(dialogs).toBe(2);
-  accept = true; await toggle.click(); await expect(title).toHaveCount(0); expect(dialogs).toBe(3);
+  accept = true; await close.click(); await expect(title).toHaveCount(0); expect(dialogs).toBe(3);
   await toggle.click(); await expect(title).toHaveValue(""); await title.fill("默认中优先级");
   await page.getByRole("button", { name: "创建任务", exact: true }).click();
   await expect(title).toHaveCount(0); expect(dialogs).toBe(3);
@@ -47,25 +48,26 @@ test("board creation protects collapse and uses product defaults without a false
   expect(none.data[0]?.priority).toBe("NONE");
 });
 
-test("opening and closing details preserves unapplied filters, applying them updates the query", async ({ page }) => {
+test("filters apply immediately and survive opening and closing details", async ({ page }) => {
   await page.goto(`/app/projects/${project.id}/board`);
   const search = page.getByRole("searchbox", { name: "搜索任务" });
-  await search.fill("未应用搜索词");
-  await page.getByRole("combobox", { name: "筛选优先级" }).selectOption("HIGH");
+  const query = () => new URL(page.url()).searchParams.get("q");
+  await search.fill(task.identifier);
+  await expect.poll(query).toBe(task.identifier);
   await page.locator(`[data-task-link="${task.id}"]`).click();
   await expect(page.getByRole("button", { name: "关闭详情", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "关闭详情", exact: true }).click();
-  await expect(search).toHaveValue("未应用搜索词");
-  await expect(page.getByRole("combobox", { name: "筛选优先级" })).toHaveValue("HIGH");
-  await page.getByRole("button", { name: "应用筛选", exact: true }).click();
-  await expect.poll(() => new URL(page.url()).searchParams.get("q")).toBe("未应用搜索词");
+  await expect(search).toHaveValue(task.identifier);
+  await expect.poll(query).toBe(task.identifier);
+  await search.fill("不存在的搜索词");
+  await search.press("Enter");
+  await expect.poll(query).toBe("不存在的搜索词");
   await expect(page.locator(`[data-task-card="${task.id}"]`)).toHaveCount(0);
 });
 
 test("sign out cancellation sends no request; failure preserves draft; success confirms only once", async ({ page, request }) => {
-  await page.goto(`/app/projects/${project.id}/board`);
-  await page.getByRole("button", { name: "新建任务", exact: true }).click();
-  await page.getByRole("textbox", { name: "任务标题", exact: true }).fill("退出前的草稿");
+  await page.goto("/app/settings");
+  await page.locator('input[name="name"]').fill("退出前的草稿");
   let requests = 0, dialogs = 0, accept = false;
   page.on("request", req => { if (req.url().endsWith("/api/auth/sign-out")) requests++; });
   page.on("dialog", async dialog => { dialogs++; if (accept) await dialog.accept(); else await dialog.dismiss(); });
@@ -78,7 +80,7 @@ test("sign out cancellation sends no request; failure preserves draft; success c
   await page.getByRole("menuitem", { name: "退出登录", exact: true }).click();
   await expect.poll(() => requests).toBe(1);
   await expect(page.getByText("退出失败", { exact: true })).toBeVisible();
-  await expect(page.locator('input[name="title"]')).toHaveValue("退出前的草稿");
+  await expect(page.locator('input[name="name"]')).toHaveValue("退出前的草稿");
   expect(dialogs).toBe(2);
   await page.unroute("**/api/auth/sign-out");
   await page.getByRole("menuitem", { name: "退出登录", exact: true }).click();

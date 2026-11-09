@@ -229,7 +229,7 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
         <span className="flex h-12 w-12 items-center justify-center rounded-full bg-danger-soft text-danger">
           <ShieldAlert className="h-6 w-6" aria-hidden="true" />
         </span>
-        <h1 className="text-page font-semibold tracking-tight text-foreground">
+        <h1 className="text-page font-semibold tracking-[-0.015em] text-foreground">
           {status.title}
         </h1>
         <p className="text-label leading-relaxed text-foreground-secondary">{status.detail}</p>
@@ -243,17 +243,17 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
 
   return (
     <div className="space-y-5">
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft text-brand">
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft text-brand-ink">
         <UserPlus className="h-6 w-6" aria-hidden="true" />
       </span>
       <div className="space-y-1.5">
-        <h1 className="text-page font-semibold tracking-tight text-foreground">
+        <h1 className="text-page font-semibold tracking-[-0.015em] text-foreground">
           邀请你加入项目
         </h1>
-        <p className="text-section font-semibold text-brand">{preview.projectName}</p>
+        <p className="text-section font-semibold text-brand-ink">{preview.projectName}</p>
       </div>
 
-      <dl className="space-y-2 rounded-card border border-line bg-surface-sunken px-4 py-3 text-label">
+      <dl className="space-y-2 glass-card rounded-card-sunken px-4 py-3 text-label">
         <div className="flex items-center justify-between gap-3">
           <dt className="text-foreground-muted">邀请人</dt>
           <dd className="font-medium text-foreground">{preview.ownerName}</dd>

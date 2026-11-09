@@ -7,7 +7,6 @@ import { DomainError } from "@/server/http/errors";
 import { getProject, listMembers } from "@/server/modules/project";
 import { findProjectTask, listProjectTasks } from "@/server/modules/task";
 import { TaskListClient } from "@/features/tasks/real/task-list-client";
-import { TaskFilters } from "@/features/tasks/real/task-filters";
 import { TaskPanel } from "@/features/tasks/real/task-panel";
 import { ProjectRefresh } from "@/features/tasks/real/project-refresh";
 import { InlineError } from "@/components/ui";
@@ -52,9 +51,9 @@ export default async function Page({
   return (
     <>
       <ProjectRefresh />
-      <TaskFilters projectId={project.id} members={members} />
       <TaskListClient
         project={project}
+        members={members}
         initialTasks={result.tasks}
         nextCursor={result.nextCursor}
         hasMore={result.hasMore}

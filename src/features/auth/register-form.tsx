@@ -52,7 +52,7 @@ export function RegisterForm() {
           </Link>
           <Link
             href="/auth/login"
-            className="text-label text-brand underline-offset-4 hover:text-brand-hover hover:underline"
+            className="text-label text-brand-ink underline-offset-4 hover:text-brand-hover hover:underline"
           >
             返回登录
           </Link>
@@ -146,7 +146,7 @@ export function RegisterForm() {
         已有账号？
         <Link
           href="/auth/login"
-          className="ml-1 text-brand underline-offset-4 transition-colors duration-150 ease-standard hover:text-brand-hover hover:underline"
+          className="ml-1 text-brand-ink underline-offset-4 transition-colors duration-150 ease-standard hover:text-brand-hover hover:underline"
         >
           登录
         </Link>

@@ -1,10 +1,11 @@
 "use client";
 import { loginPathWithReturnTo } from "@/lib/return-to";
-import { useState, useRef, useEffect, useId, useSyncExternalStore } from "react";
+import { useState, useRef, useEffect, useId, useSyncExternalStore, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   TouchSensor,
   KeyboardSensor,
@@ -12,7 +13,10 @@ import {
   useSensors,
   useDroppable,
   closestCorners,
+  type Announcements,
   type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -21,7 +25,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Plus } from "lucide-react";
 import {
   BoardSchema,
   MoveResultSchema,
@@ -30,17 +34,20 @@ import {
   type BoardDTO,
   type BoardColumnDTO,
   type BoardQueryDTO,
+  type MemberDTO,
   type ProjectDTO,
   type TaskStatus,
   type TaskSummaryDTO,
 } from "@/contracts";
-import { Button, InlineError } from "@/components/ui";
-import { TaskCreateForm } from "@/features/tasks/real/task-create-form";
-import { STATUS_LABEL, getDueMeta } from "@/features/tasks/task-meta";
-import { DueBadge, PriorityBadge } from "@/features/tasks/priority-badge";
+import { Button, InlineError, PageHeader, Segments } from "@/components/ui";
+import { ProjectGlyph } from "@/features/projects/project-glyph";
+import { TaskCreateDialog } from "@/features/tasks/real/task-create-form";
+import { TaskFilters } from "@/features/tasks/real/task-filters";
+import { STATUS_LABEL } from "@/features/tasks/task-meta";
+import { StatusGlyph } from "@/features/tasks/status-glyph";
 import { useAutoRefresh } from "@/features/tasks/real/use-auto-refresh";
-import { confirmLeave } from "@/features/tasks/unsaved-changes";
-import { TaskResourceCounts } from "./task-resource-counts";
+import { cn } from "@/lib/cn";
+import { TaskCardFace } from "./task-card-face";
 
 const api = createApiClient();
 const mobileQuery = "(max-width: 767px)";
@@ -71,11 +78,13 @@ async function refillBoard(endpoint: string, query: BoardQueryDTO, first: BoardD
 export function RealBoard({
   initial,
   project,
+  members,
   query,
   today,
 }: {
   initial: BoardDTO;
   project: ProjectDTO;
+  members: MemberDTO[];
   query: BoardQueryDTO;
   today: string;
 }) {
@@ -106,6 +115,8 @@ export function RealBoard({
     return () => controller.abort();
   }, [state.refreshing, state.source, state.previous, project.id, queryKey]);
   const [creating, setCreating] = useState(false);
+  const [dragging, setDragging] = useState<TaskSummaryDTO | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ id: string; status: TaskStatus | null } | null>(null);
   // B8 修复：手机（<md）用状态 tab 单列查看，避免三列纵向长页堆叠；桌面保持三列。
   const [mobileStatus, setMobileStatus] = useState<TaskStatus>(query.status ?? "TODO");
   const selectedStatus = board.columns.some(column => column.status === mobileStatus) ? mobileStatus : board.columns[0]?.status;
@@ -306,35 +317,60 @@ export function RealBoard({
           : (column.items[overIndex]?.id ?? null);
     void move(task, column.status, before);
   }
+  const taskById = (id: string | number | undefined) =>
+    board.columns.flatMap((c) => c.items).find((t) => t.id === id);
+  const columnOf = (id: string | number | undefined) =>
+    board.columns.find((c) => c.status === id || c.items.some((t) => t.id === id));
+  function dragStart(event: DragStartEvent) {
+    setDragging(taskById(event.active.id) ?? null);
+  }
+  function dragOver(event: DragOverEvent) {
+    setDropTarget(event.over ? { id: String(event.over.id), status: columnOf(event.over.id)?.status ?? null } : null);
+  }
+  function dragFinish() {
+    setDragging(null);
+    setDropTarget(null);
+  }
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => `已拿起 ${taskById(active.id)?.identifier ?? "任务"}。`,
+    onDragOver: ({ active, over }) =>
+      over ? `${taskById(active.id)?.identifier ?? "任务"} 移到${STATUS_LABEL[columnOf(over.id)?.status ?? "TODO"]}列。` : undefined,
+    onDragEnd: ({ active, over }) =>
+      over ? `${taskById(active.id)?.identifier ?? "任务"} 已放入${STATUS_LABEL[columnOf(over.id)?.status ?? "TODO"]}列。` : "已取消移动。",
+    onDragCancel: () => "已取消移动。",
+  };
   return (
     <div
-      className="space-y-5"
+      className="outline-none"
       data-project-content
       tabIndex={-1}
       data-task-saving={busy || undefined}
       data-task-editing={creating || undefined}
     >
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-page font-semibold [overflow-wrap:anywhere]">{project.name}</h1>
-          <p className="text-caption text-foreground-muted">
-            {project.key} · {project.memberCount} 名成员
-            {!writable && " · 已归档，只读"}
-          </p>
-        </div>
-        {writable && (
-          <Button onClick={() => { if (!creating || confirmLeave()) setCreating(!creating); }}>新建任务</Button>
-        )}
-      </header>
-      {creating && writable && (
-        <TaskCreateForm
+      <PageHeader
+        leading={<ProjectGlyph name={project.name} color={project.color} size="lg" />}
+        eyebrow={`${project.key} · ${project.memberCount} 名成员${writable ? "" : " · 已归档，只读"}`}
+        title={project.name}
+        actions={
+          writable ? (
+            <Button onClick={() => setCreating(true)}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              新建任务
+            </Button>
+          ) : null
+        }
+      />
+      <TaskFilters members={members} board />
+      {writable && (
+        <TaskCreateDialog
+          open={creating}
+          onOpenChange={setCreating}
           projectId={project.id}
           onCreated={async () => {
             setCreating(false);
             await fresh();
             router.refresh();
           }}
-          onCancelled={() => setCreating(false)}
           onUnauthorized={() =>
             window.location.assign(
               loginPathWithReturnTo(location.pathname + location.search),
@@ -342,22 +378,24 @@ export function RealBoard({
           }
         />
       )}
-      <InlineError>{error}</InlineError>
-      {error && (
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={busy}
-          onClick={() => {
-            setError(null);
-            void fresh().catch(() => setError("重新加载失败，请重试。"));
-          }}
-        >
-          重新加载看板
-        </Button>
-      )}
-      {!canDrag && writable && (
-        <div className="flex flex-wrap items-center gap-2 text-caption text-foreground-secondary">
+      {error ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <InlineError className="min-w-0 flex-1">{error}</InlineError>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={busy}
+            onClick={() => {
+              setError(null);
+              void fresh().catch(() => setError("重新加载失败，请重试。"));
+            }}
+          >
+            重新加载看板
+          </Button>
+        </div>
+      ) : null}
+      {writable && (filtered || !complete) && (
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-caption text-foreground-muted">
           <p>
             {filtered
               ? "筛选视图下可通过任务状态菜单移动。"
@@ -375,11 +413,13 @@ export function RealBoard({
           )}
         </div>
       )}
-      {/* 手机状态 tab（B8）：带列计数，选中列单列显示；筛选/分页/冲突回滚逻辑不变 */}
-      <div
+      {/* 手机一次看一列：状态 tab 与列面板通过 id 关联，方向键循环 */}
+      <Segments
         role="tablist"
         aria-label="看板状态"
-        className="flex gap-2 md:hidden"
+        activeKey={selectedStatus}
+        className="mb-4 flex rounded-full bg-surface-sunken p-1 md:hidden"
+        style={{ "--segment-inset": "4px" } as CSSProperties}
       >
         {board.columns.map((column) => {
           const active = column.status === selectedStatus;
@@ -390,6 +430,7 @@ export function RealBoard({
               role="tab"
               id={`${tabPrefix}-${column.status}-tab`}
               aria-controls={`${tabPrefix}-${column.status}-panel`}
+              data-active={active || undefined}
               tabIndex={active ? 0 : -1}
               onKeyDown={(event) => {
                 const index = board.columns.findIndex(item => item.status === column.status);
@@ -404,28 +445,33 @@ export function RealBoard({
               }}
               aria-selected={active}
               onClick={() => setMobileStatus(column.status)}
-              className={
-                "min-h-11 flex-1 rounded-control border px-3 py-2 text-label font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand " +
-                (active
-                  ? "border-brand bg-brand-soft text-brand"
-                  : "border-line bg-surface text-foreground-secondary hover:bg-surface-sunken")
-              }
+              className={cn(
+                "min-h-10 flex-1 rounded-full px-3 text-label font-medium outline-none transition-colors duration-200",
+                active ? "text-foreground" : "text-foreground-secondary",
+              )}
             >
               {STATUS_LABEL[column.status]}
-              <span className="ml-1 font-mono text-caption text-foreground-muted">
-                {column.total}
-              </span>
+              <span className="ml-1.5 tabular-nums text-foreground-muted">{column.total}</span>
             </button>
           );
         })}
-      </div>
+      </Segments>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
-        onDragEnd={dragEnd}
+        accessibility={{
+          announcements,
+          screenReaderInstructions: { draggable: "按空格键拿起任务，方向键移动，再按空格键放下，Escape 取消。" },
+        }}
+        onDragStart={dragStart}
+        onDragOver={dragOver}
+        onDragEnd={(event) => {
+          dragFinish();
+          dragEnd(event);
+        }}
+        onDragCancel={dragFinish}
       >
-        {/* F29：三列起点与任务列表/表格的 md(768) 切换点统一（原 lg）。 */}
-        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-3 xl:gap-4">
           {board.columns.map((column) => (
             <Column
               key={column.status}
@@ -439,9 +485,23 @@ export function RealBoard({
               mobileVisible={column.status === selectedStatus}
               isMobile={isMobile}
               tabPrefix={tabPrefix}
+              isTarget={dragging !== null && dropTarget?.status === column.status}
+              insertBefore={dragging !== null && dragging.status !== column.status ? dropTarget?.id : undefined}
             />
           ))}
         </div>
+        <DragOverlay dropAnimation={{ duration: 240, easing: "cubic-bezier(0.32, 0.72, 0, 1)" }}>
+          {dragging ? (
+            <div className="glass-thick cursor-grabbing rounded-[18px] p-3 shadow-drag">
+              <TaskCardFace
+                task={dragging}
+                today={today}
+                status={<StatusGlyph status={dragging.status} className="mt-px" />}
+                title={<p className="line-clamp-2 text-label font-medium">{dragging.title}</p>}
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </div>
   );
@@ -458,6 +518,8 @@ function Column({
   mobileVisible = true,
   isMobile,
   tabPrefix,
+  isTarget,
+  insertBefore,
 }: {
   isMobile: boolean;
   tabPrefix: string;
@@ -472,10 +534,13 @@ function Column({
     before: string | null,
   ) => Promise<void>;
   onLoad: () => void;
-  /** B8：手机 tab 下仅选中列可见（md+ 三列不受影响）。 */
+  /** 手机 tab 下仅选中列可见（md 以上三列不受影响）。 */
   mobileVisible?: boolean;
+  isTarget: boolean;
+  /** 跨列拖拽时显示插入线的任务 id。 */
+  insertBefore?: string;
 }) {
-  const { setNodeRef, isOver } = useDroppable({
+  const { setNodeRef } = useDroppable({
     id: column.status,
     disabled: !canDrag,
   });
@@ -487,17 +552,24 @@ function Column({
       aria-labelledby={isMobile ? `${tabPrefix}-${column.status}-tab` : undefined}
       aria-label={isMobile ? undefined : STATUS_LABEL[column.status] + "列"}
       tabIndex={isMobile ? 0 : undefined}
-      className={`min-h-40 rounded-card border p-3 ${isOver ? "border-brand bg-brand-soft" : "border-line bg-surface-sunken"} ${mobileVisible ? "" : "hidden md:block"}`}
+      className={cn(
+        "min-h-40 rounded-card bg-surface-tray p-2 outline-none transition-[background-color,box-shadow] duration-200 ease-standard",
+        isTarget && "bg-brand-soft shadow-[inset_0_0_0_1.5px_var(--color-brand)]",
+        mobileVisible ? "" : "hidden md:block",
+      )}
     >
-      <h2 className="mb-3 flex justify-between text-label font-medium">
-        <span>{STATUS_LABEL[column.status]}</span>
-        <span className="font-mono text-foreground-muted">{column.total}</span>
+      <h2 className="mb-1.5 flex items-center justify-between px-2 py-1 text-label font-semibold max-md:sr-only">
+        <span className="flex items-center gap-2">
+          <StatusGlyph status={column.status} className="h-4 w-4" />
+          {STATUS_LABEL[column.status]}
+        </span>
+        <span className="tabular-nums font-medium text-foreground-muted">{column.total}</span>
       </h2>
       <SortableContext
         items={column.items.map((t) => t.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="space-y-3">
+        <div className="space-y-2">
           {column.items.map((task) => (
             <Card
               key={task.id}
@@ -507,18 +579,19 @@ function Column({
               busy={busy}
               today={today}
               onMove={onMove}
+              showInsertLine={insertBefore === task.id}
             />
           ))}
         </div>
       </SortableContext>
       {column.items.length === 0 && (
-        <p className="py-8 text-center text-caption text-foreground-muted">
+        <p className="py-10 text-center text-caption text-foreground-muted">
           暂无任务
         </p>
       )}
       {column.nextCursor && (
         <Button
-          className="mt-3 w-full"
+          className="mt-2 w-full"
           size="sm"
           variant="ghost"
           disabled={busy}
@@ -530,6 +603,7 @@ function Column({
     </section>
   );
 }
+
 function Card({
   task,
   canDrag,
@@ -537,6 +611,7 @@ function Card({
   busy,
   today,
   onMove,
+  showInsertLine,
 }: {
   task: TaskSummaryDTO;
   canDrag: boolean;
@@ -548,11 +623,13 @@ function Card({
     status: TaskStatus,
     before: string | null,
   ) => Promise<void>;
+  showInsertLine: boolean;
 }) {
   const {
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
@@ -565,61 +642,70 @@ function Card({
     <article
       ref={setNodeRef}
       data-task-card={task.id}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.5 : 1,
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      // 鼠标可以按住卡片任意位置拖动；触屏只从手柄开始，避免和滚动冲突。
+      onPointerDown={(event) => {
+        if (event.pointerType !== "mouse" || (event.target as Element).closest("select, button")) return;
+        listeners?.onPointerDown?.(event);
       }}
-      className={
-        "space-y-3 rounded-card border border-line bg-surface p-3 " +
-        // F28 修复：影子只用于悬浮层；拖拽浮层用 shadow-drag 与静态表面区分。
-        (isDragging ? "shadow-drag" : "")
-      }
+      className={cn(
+        "glass-card group relative rounded-[18px] p-3",
+        !isDragging && "lift",
+        isDragging && "opacity-35",
+        canDrag && "cursor-grab",
+      )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-mono text-caption text-foreground-muted">
-          {task.identifier}
-        </span>
-        <button
-          {...attributes}
-          {...listeners}
-          disabled={!canDrag}
-          aria-label={`排序 ${task.identifier}`}
-          className="touch-none rounded-control p-1 disabled:opacity-30"
-        >
-          <GripVertical className="h-4 w-4" />
-        </button>
-      </div>
-      <Link
-        data-task-link={task.id}
-        href={path + "?" + target.toString()}
-        scroll={false}
-        title={task.title}
-        className="line-clamp-2 block text-label font-medium [overflow-wrap:anywhere] hover:text-brand"
-      >
-        {task.title}
-      </Link>
-      <div className="flex flex-wrap items-center gap-2">
-        <PriorityBadge priority={task.priority} />
-        <DueBadge meta={getDueMeta(task.dueDate, today, task.status)} />
-        <span className="text-caption text-foreground-muted">
-          {task.assignee?.name ?? "未分配"}
-        </span>
-      </div>
-      <TaskResourceCounts task={task} />
-      <select
-        aria-label={`移动 ${task.identifier}`}
-        className="w-full rounded-control border border-line bg-surface px-2 py-1.5 text-body md:text-caption"
-        value={task.status}
-        disabled={!writable || busy}
-        onChange={(e) => void onMove(task, e.target.value as TaskStatus, null)}
-      >
-        {TASK_STATUS.map((status) => (
-          <option key={status} value={status}>
-            {STATUS_LABEL[status]}
-          </option>
-        ))}
-      </select>
+      {showInsertLine ? (
+        <span aria-hidden="true" className="absolute inset-x-2 -top-[5px] h-0.5 rounded-full bg-brand" />
+      ) : null}
+      <TaskCardFace
+        task={task}
+        today={today}
+        status={
+          /* 状态图形本身就是移动菜单：系统原生下拉，读屏和键盘都能用 */
+          <span className="relative -m-1.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full transition-colors hover:bg-surface-sunken has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-ring [@media(pointer:coarse)]:-m-3 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11">
+            <StatusGlyph status={task.status} />
+            <select
+              aria-label={`移动 ${task.identifier}`}
+              title={STATUS_LABEL[task.status]}
+              className="absolute inset-0 cursor-pointer appearance-none opacity-0 disabled:cursor-default"
+              value={task.status}
+              disabled={!writable || busy}
+              onChange={(e) => void onMove(task, e.target.value as TaskStatus, null)}
+            >
+              {TASK_STATUS.map((status) => (
+                <option key={status} value={status}>
+                  {STATUS_LABEL[status]}
+                </option>
+              ))}
+            </select>
+          </span>
+        }
+        title={
+          <Link
+            data-task-link={task.id}
+            href={path + "?" + target.toString()}
+            scroll={false}
+            title={task.title}
+            draggable={false}
+            className="line-clamp-2 block rounded-[6px] text-label font-medium text-foreground [overflow-wrap:anywhere] hover:text-brand-ink"
+          >
+            {task.title}
+          </Link>
+        }
+        corner={
+          <button
+            ref={setActivatorNodeRef}
+            {...attributes}
+            {...listeners}
+            disabled={!canDrag}
+            aria-label={`排序 ${task.identifier}`}
+            className="-mr-1 -mt-0.5 shrink-0 touch-none cursor-grab rounded-[8px] p-0.5 text-foreground-muted opacity-0 outline-none transition-opacity duration-150 focus-visible:opacity-100 group-hover:opacity-100 disabled:!opacity-0 [@media(hover:none)]:opacity-100"
+          >
+            <GripVertical className="h-4 w-4" aria-hidden="true" />
+          </button>
+        }
+      />
     </article>
   );
 }

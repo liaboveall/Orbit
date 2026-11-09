@@ -7,10 +7,8 @@ import { cn } from "@/lib/cn";
 import { IconButton } from "./button";
 
 /**
- * Drawer（ORB-002）：侧滑面板，基于 Radix Dialog 复用其焦点陷阱/Escape/焦点恢复。
- *
- * docs/02 §4：<768 顶部汉堡按钮打开抽屉导航；任务详情在手机端占满屏亦可用此。
- * side="left" 用于导航抽屉，side="right" 用于详情侧面板。
+ * Drawer：基于 Radix Dialog 的玻璃面板，复用焦点陷阱、Escape 与焦点恢复。
+ * side="right" 用于任务详情（手机全屏），side="bottom" 用于手机导航。
  */
 
 export const Drawer = DialogPrimitive.Root;
@@ -19,16 +17,23 @@ export const DrawerClose = DialogPrimitive.Close;
 
 export type DrawerContentProps = ComponentProps<typeof DialogPrimitive.Content> & {
   children: ReactNode;
-  side?: "left" | "right";
+  side?: "right" | "bottom";
   closeLabel?: string;
   /** 内容已有自己的关闭入口时隐藏默认按钮，仍由 Root 处理 Escape/遮罩关闭。 */
   showCloseButton?: boolean;
   className?: string;
 };
 
+const sideClass: Record<NonNullable<DrawerContentProps["side"]>, string> = {
+  right:
+    "inset-y-0 right-0 animate-sheet-right sm:inset-y-2 sm:right-2 sm:rounded-overlay",
+  bottom:
+    "inset-x-2 bottom-[max(8px,env(safe-area-inset-bottom))] max-h-[82dvh] animate-sheet-up rounded-overlay",
+};
+
 export function DrawerContent({
   children,
-  side = "left",
+  side = "right",
   closeLabel = "关闭面板",
   showCloseButton = true,
   className,
@@ -36,22 +41,14 @@ export function DrawerContent({
 }: DrawerContentProps) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-overlay" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-40 animate-fade-in bg-overlay" />
       <DialogPrimitive.Content
-        className={cn(
-          "fixed top-0 z-50 flex h-dvh w-[min(85vw,320px)] flex-col bg-surface shadow-overlay",
-          side === "left" ? "left-0 border-r border-line" : "right-0 border-l border-line",
-          className,
-        )}
+        className={cn("glass-thick fixed z-50 flex flex-col", sideClass[side], className)}
         {...props}
       >
         {showCloseButton ? (
           <DialogPrimitive.Close asChild>
-            <IconButton
-              label={closeLabel}
-              size="sm"
-              className="absolute right-3 top-3"
-            >
+            <IconButton label={closeLabel} size="sm" className="absolute right-3 top-3 z-10">
               <X className="h-4 w-4" />
             </IconButton>
           </DialogPrimitive.Close>
@@ -74,15 +71,12 @@ export function DrawerTitle({
   );
 }
 
-/** 视觉隐藏但保留可访问名称的 Description（Radix 会告警缺少 Description 时用它）。 */
+/** 视觉隐藏但保留可访问名称的 Description。 */
 export function DrawerDescription({
   className,
   ...props
 }: ComponentProps<typeof DialogPrimitive.Description>) {
   return (
-    <DialogPrimitive.Description
-      className={cn("sr-only", className)}
-      {...props}
-    />
+    <DialogPrimitive.Description className={cn("sr-only", className)} {...props} />
   );
 }

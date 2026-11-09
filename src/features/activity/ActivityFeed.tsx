@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InlineError } from "@/components/ui/inline-error";
+import { PageHeader } from "@/components/ui/page-header";
 import { Spinner } from "@/features/auth/auth-form";
 import { STATUS_LABEL } from "@/features/tasks/task-meta";
 import { loginPathWithReturnTo as _loginPathWithReturnTo } from "@/lib/return-to";
@@ -122,6 +123,7 @@ function dedupeById(items: ActivityDTO[]): ActivityDTO[] {
 
 export type ActivityFeedProps = {
   projectId: string;
+  projectName: string;
   initialActivities: ActivityDTO[];
   nextCursor: string | null;
   hasMore: boolean;
@@ -129,6 +131,7 @@ export type ActivityFeedProps = {
 
 export function ActivityFeed({
   projectId,
+  projectName,
   initialActivities,
   nextCursor: initialCursor,
   hasMore: initialHasMore,
@@ -273,18 +276,12 @@ export function ActivityFeed({
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <header className="mb-6">
-        <p className="font-mono text-caption uppercase tracking-[0.18em] text-foreground-muted">
-          项目动态
-        </p>
-        <h1 className="mt-1 text-page font-semibold tracking-tight text-foreground">
-          项目活动
-        </h1>
-        <p className="mt-1.5 text-label text-foreground-secondary">
-          项目内任务、成员与设置的变更记录，按时间倒序排列。
-        </p>
-      </header>
+    <div className="w-full max-w-3xl">
+      <PageHeader
+        eyebrow={projectName}
+        title="项目活动"
+        description="任务、成员与设置的变更记录，按时间倒序排列。"
+      />
 
       <InlineError className="mb-4">{error}</InlineError>
 
@@ -295,41 +292,35 @@ export function ActivityFeed({
           description="创建任务、邀请成员或修改项目后，变更会记录在这里。"
         />
       ) : (
-        <ol className="relative space-y-1 border-l border-line pl-6">
+        <ol className="glass-card divide-y divide-line overflow-hidden rounded-card">
           {activities.map((item) => (
-            <li key={item.id} className="relative py-3">
-              <span
-                className="absolute -left-[31px] top-4 flex h-3 w-3 items-center justify-center rounded-full border-2 border-surface bg-brand"
-                aria-hidden="true"
-              />
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <Avatar name={item.actor.name} size="sm" />
-                <span className="text-label font-medium text-foreground">
-                  {item.actor.name}
-                </span>
-                <span className="text-label text-foreground-secondary">
-                  {ACTION_LABEL[item.action]}
-                </span>
-                {item.metadata.taskIdentifier ? (
-                  <Badge className="font-mono">{item.metadata.taskIdentifier}</Badge>
-                ) : (
-                  <Badge tone="neutral">{ENTITY_LABEL[item.entityType]}</Badge>
-                )}
-                {item.action === "TASK_MOVED" &&
-                item.metadata.fromStatus &&
-                item.metadata.toStatus ? (
-                  <span className="text-caption text-foreground-muted">
-                    {STATUS_LABEL[item.metadata.fromStatus]} → {STATUS_LABEL[item.metadata.toStatus]}
-                  </span>
-                ) : null}
+            <li key={item.id} className="flex items-start gap-3 px-4 py-3">
+              <Avatar name={item.actor.name} size="md" />
+              <div className="min-w-0 flex-1">
+                <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-label">
+                  <span className="font-medium text-foreground">{item.actor.name}</span>
+                  <span className="text-foreground-secondary">{ACTION_LABEL[item.action]}</span>
+                  {item.metadata.taskIdentifier ? (
+                    <Badge className="tabular-nums">{item.metadata.taskIdentifier}</Badge>
+                  ) : (
+                    <Badge tone="neutral">{ENTITY_LABEL[item.entityType]}</Badge>
+                  )}
+                  {item.action === "TASK_MOVED" &&
+                  item.metadata.fromStatus &&
+                  item.metadata.toStatus ? (
+                    <span className="text-caption text-foreground-muted">
+                      {STATUS_LABEL[item.metadata.fromStatus]} → {STATUS_LABEL[item.metadata.toStatus]}
+                    </span>
+                  ) : null}
+                </p>
+                <time
+                  dateTime={item.createdAt}
+                  title={formatEventDateTime(item.createdAt, tz)}
+                  className="mt-0.5 block text-caption text-foreground-muted"
+                >
+                  {mounted ? formatRelative(item.createdAt, tz) : formatEventDateTime(item.createdAt, tz)}
+                </time>
               </div>
-              <time
-                dateTime={item.createdAt}
-                title={formatEventDateTime(item.createdAt, tz)}
-                className="mt-1 block text-caption text-foreground-muted"
-              >
-                {mounted ? formatRelative(item.createdAt, tz) : formatEventDateTime(item.createdAt, tz)}
-              </time>
             </li>
           ))}
         </ol>

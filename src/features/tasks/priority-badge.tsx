@@ -13,7 +13,7 @@ import { PRIORITY_LABEL, type DueMeta } from "./task-meta";
 
 const priorityTone: Record<TaskPriority, BadgeTone> = {
   HIGH: "danger",
-  MEDIUM: "warning",
+  MEDIUM: "neutral",
   LOW: "neutral",
   NONE: "neutral",
 };

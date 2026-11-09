@@ -1,13 +1,7 @@
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-/**
- * EmptyState（ORB-002）：真正无数据 / 筛选无结果时使用。
- *
- * docs/02 §5、§7：空态要「解释价值并提供下一步」——标题说明现状，
- * 描述给出意义，action 提供明确的下一步操作（如「创建项目」）。
- * 使用简单线形图标（icon 由调用方传入 lucide 节点），不做庆祝动画。
- */
+/** EmptyState：说明现状与价值，并给出明确的下一步。 */
 
 export type EmptyStateProps = Omit<ComponentProps<"div">, "title"> & {
   icon?: ReactNode;
@@ -27,24 +21,23 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-4 rounded-card border border-line",
-        "bg-surface px-6 py-16 text-center",
+        "glass-card flex flex-col items-center justify-center gap-4 rounded-card px-6 py-16 text-center",
         className,
       )}
       {...props}
     >
       {icon ? (
         <span
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-sunken text-foreground-muted"
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft text-brand-ink"
           aria-hidden="true"
         >
           {icon}
         </span>
       ) : null}
-      <div className="max-w-prose space-y-2">
-        <p className="text-section font-semibold text-foreground">{title}</p>
+      <div className="max-w-md space-y-1.5">
+        <p className="text-section font-semibold tracking-[-0.015em] text-foreground">{title}</p>
         {description ? (
-          <p className="text-label text-foreground-secondary">{description}</p>
+          <p className="text-label leading-relaxed text-foreground-secondary">{description}</p>
         ) : null}
       </div>
       {action ? <div className="mt-1 flex flex-wrap justify-center gap-3">{action}</div> : null}

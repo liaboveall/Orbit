@@ -63,7 +63,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
             href={url}
             target="_blank"
             rel="noopener noreferrer nofollow"
-            className="text-brand underline underline-offset-2"
+            className="text-brand-ink underline underline-offset-2"
           >
             {label}
           </a>,

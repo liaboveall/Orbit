@@ -230,7 +230,7 @@ export function TimezonePicker({
           className="h-10 min-w-0 flex-1 bg-transparent text-body text-foreground outline-none placeholder:text-foreground-muted md:text-label"
         />
         {selected?.offsetLabel ? (
-          <span className="hidden shrink-0 font-mono text-caption text-foreground-muted sm:inline">
+          <span className="hidden shrink-0 text-caption tabular-nums text-foreground-muted sm:inline">
             {selected.offsetLabel}
           </span>
         ) : null}
@@ -266,13 +266,13 @@ export function TimezonePicker({
               type="button"
               onPointerDown={(event) => event.preventDefault()}
               onClick={() => commit(deviceZone)}
-              className="inline-flex min-w-0 items-center gap-1.5 rounded-control text-caption text-foreground-secondary transition-colors duration-150 ease-standard hover:text-brand"
+              className="inline-flex min-w-0 items-center gap-1.5 rounded-control text-caption text-foreground-secondary transition-colors duration-150 ease-standard hover:text-brand-ink"
             >
               <MonitorSmartphone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <span className="truncate">使用设备时区</span>
               <span className="shrink-0 font-mono text-foreground-muted">{deviceZone}</span>
             </button>
-            <span className="shrink-0 font-mono text-caption text-foreground-muted">
+            <span className="shrink-0 text-caption tabular-nums text-foreground-muted">
               {isQueryEmpty
                 ? `${options.length} 个时区`
                 : `${filtered.length} 条匹配`}
@@ -335,19 +335,19 @@ export function TimezonePicker({
                       />
                       <span className="flex h-4 w-4 shrink-0 items-center justify-center">
                         {isSelected ? (
-                          <Check className="h-4 w-4 text-brand" aria-hidden="true" />
+                          <Check className="h-4 w-4 text-brand-ink" aria-hidden="true" />
                         ) : null}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span
                           className={cn(
                             "block truncate text-label",
-                            isSelected ? "font-semibold text-brand" : "text-foreground",
+                            isSelected ? "font-semibold text-brand-ink" : "text-foreground",
                           )}
                         >
                           {option.label}
                         </span>
-                        <span className="block truncate font-mono text-caption text-foreground-muted">
+                        <span className="block truncate text-caption tabular-nums text-foreground-muted">
                           {option.id}
                         </span>
                       </span>

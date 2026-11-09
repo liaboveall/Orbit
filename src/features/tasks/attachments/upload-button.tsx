@@ -180,8 +180,8 @@ export function UploadButton({
 
       <div
         className={cn(
-          "flex items-center justify-between gap-3 rounded-control border border-line p-3 transition-colors",
-          hasError && "border-danger",
+          "flex items-center justify-between gap-3 rounded-[16px] bg-surface-sunken p-3 transition-colors",
+          hasError && "bg-danger-soft",
         )}
       >
         {file ? (
@@ -259,7 +259,7 @@ export function UploadButton({
             </div>
             <Button
               size="sm"
-              variant="ghost"
+              variant="secondary"
               onClick={() => inputRef.current?.click()}
             >
               选择文件

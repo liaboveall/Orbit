@@ -122,7 +122,7 @@ function ResendVerificationState({ compact = false }: { compact?: boolean }) {
     return (
       <div className="space-y-4 text-center">
         {!compact ? (
-          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft text-brand">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft text-brand-ink">
             <MailCheck className="h-6 w-6" aria-hidden="true" />
           </span>
         ) : null}
@@ -137,7 +137,7 @@ function ResendVerificationState({ compact = false }: { compact?: boolean }) {
         </div>
         <Link
           href="/auth/login"
-          className="text-label text-brand underline-offset-4 hover:text-brand-hover hover:underline"
+          className="text-label text-brand-ink underline-offset-4 hover:text-brand-hover hover:underline"
         >
           返回登录
         </Link>
@@ -149,7 +149,7 @@ function ResendVerificationState({ compact = false }: { compact?: boolean }) {
     <form onSubmit={handleSubmit} noValidate className="space-y-4">
       {!compact ? (
         <div className="space-y-3 text-center">
-          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft text-brand">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft text-brand-ink">
             <MailCheck className="h-6 w-6" aria-hidden="true" />
           </span>
           <h2 className="text-section font-semibold text-foreground">验证你的邮箱</h2>
@@ -178,7 +178,7 @@ function ResendVerificationState({ compact = false }: { compact?: boolean }) {
       <p className="text-center text-label text-foreground-secondary">
         <Link
           href="/auth/login"
-          className="text-brand underline-offset-4 hover:text-brand-hover hover:underline"
+          className="text-brand-ink underline-offset-4 hover:text-brand-hover hover:underline"
         >
           返回登录
         </Link>

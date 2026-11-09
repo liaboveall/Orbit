@@ -1,129 +1,192 @@
 /**
- * Orbit 设计 tokens（ORB-002）——视觉的唯一真源。
+ * Orbit 设计 tokens：视觉的唯一真源（规范见 docs/02-UX-AND-DESIGN.md §2）。
  *
- * 全部映射自 docs/02-UX-AND-DESIGN.md §2。采用 Tailwind CSS 4 的 CSS-first 配置：
- * `@theme` 中定义的变量会被编译进 `:root`（即 CSS 自定义属性），并同时生成对应的
- * Tailwind 工具类（如 `--color-brand` → `bg-brand` / `text-brand` / `border-brand`）。
- * 因此这里既是「:root 变量」也是「Tailwind 4 主题配置」，无需 tailwind.config.js。
+ * `@theme` 中的变量同时是 :root 自定义属性和 Tailwind 工具类
+ * （`--color-brand` → `bg-brand` / `border-brand`）。深色模式跟随系统，
+ * 只在下方 `@layer base` 里覆盖变量，组件不写 `dark:` 分支。
  *
- * ── 对比度实测（相对 surface #FFFFFF 与 background #F7F8FA，WCAG 2.1）──
- * 正文/图标要求 AA 4.5:1，大字号 3:1，控件边界与焦点环 3:1。逐一实测：
- *   foreground   #171A21 → 白 16.4:1   ✅
- *   fg-secondary #5B6472 → 白  5.98:1 / 背景 5.68:1  ✅（正文）
- *   fg-muted     #5F6B7A → 白  5.43:1 / 背景 5.11:1 / sunken 4.88:1 /
- *                brand-soft 4.81:1  ✅（F25 修复：原 #6B7280 在 sunken 4.35:1、
- *                brand-soft 4.29:1 不达 4.5:1，调深后全部背景达标且留余量）
- *   brand        #355CFF → 白  5.09:1 ✅（白字压品牌底同为 5.09:1）
- *   danger       #B42318 → 白  6.57:1 ✅
- *   warning      #8A5700 → 白  6.10:1 ✅
- *   success      #18794E → 白  5.41:1 ✅
- *   line-strong  #7D8798 → 白  3.63:1 ✅（控件边界，满足 3:1）
- * 结论：docs/02 §2 的初始值除 fg-muted 按 F25 裁定调深外，其余全部按原值落地。
+ * 填充色与文字色分开：`brand` / `*-fill` 用作白字的底，`brand-ink` 和
+ * success / warning / danger 用作文字与图标。
+ *
+ * 对比度实测（scripts 外的一次性计算，内容卡合成在 aurora 背景上的最差情况）：
+ *   浅色  foreground 15.9  secondary 8.6  muted 5.7  brand-ink 5.7
+ *         success 5.1  warning 6.3  danger 5.7  line-strong 3.4（控件边界）
+ *         tinted badge 文字 4.7 以上；白字压 brand 4.7，压 danger-fill 5.4
+ *   深色  foreground 13.4  secondary 8.7  muted 5.7  brand-ink 6.6
+ *         success 7.8  warning 8.2  danger 5.8  line-strong 4.5
  */
 
 @theme {
-  /* ── 颜色：表面与前景 ─────────────────────────────────────────────── */
-  --color-background: #f7f8fa; /* 应用背景 */
-  --color-surface: #ffffff; /* 卡片 / 对话框 / 侧栏 */
-  --color-surface-sunken: #f1f3f7; /* 列头、代码块等下沉面（派生） */
-  --color-overlay: rgb(23 26 33 / 0.48); /* 弹层遮罩（派生自 foreground） */
+  /* 表面 */
+  --color-background: #f5f5f7;
+  --color-surface: rgb(255 255 255 / 0.72); /* 内容层：卡片、列表 */
+  --color-surface-solid: #ffffff; /* 需要完全不透明的输入底色 */
+  --color-surface-sunken: rgb(118 118 128 / 0.12); /* 填充、hover、分组底 */
+  --color-surface-tray: rgb(255 255 255 / 0.36); /* 看板列 */
+  --color-overlay: rgb(10 14 26 / 0.26);
 
-  --color-foreground: #171a21; /* text-primary：正文/标题 */
-  --color-foreground-secondary: #5b6472; /* text-secondary：次要说明 */
-  --color-foreground-muted: #5f6b7a; /* text-muted：辅助文字（F25 修复：调深以满足全部背景 ≥4.5:1） */
-  --color-foreground-invert: #ffffff; /* 深底上的文字 */
+  /* 前景 */
+  --color-foreground: #1d1d1f;
+  --color-foreground-secondary: #48484d;
+  --color-foreground-muted: #62626a;
+  --color-foreground-invert: #ffffff; /* 彩色填充上的文字 */
 
-  /* ── 颜色：边界 ───────────────────────────────────────────────────── */
-  --color-line: #e2e6ed; /* border：装饰分隔 */
-  --color-line-strong: #7d8798; /* border-control：需清楚识别边界的交互控件 */
+  /* 边界 */
+  --color-line: rgb(60 60 67 / 0.14);
+  --color-line-strong: #86868b;
 
-  /* ── 颜色：品牌与语义 ─────────────────────────────────────────────── */
-  --color-brand: #355cff; /* 主按钮 / 选中态 / 焦点 */
-  --color-brand-hover: #2749e0; /* 主按钮 hover（派生，加深） */
-  --color-brand-soft: #edf1ff; /* 浅选中背景 */
-  --color-ring: #355cff; /* 焦点环 = brand，2px solid + 2px offset */
+  /* 品牌与语义 */
+  --color-brand: #0071e3;
+  --color-brand-hover: #0064cc;
+  --color-brand-ink: #0060c7;
+  --color-brand-soft: rgb(0 113 227 / 0.12);
+  --color-ring: #0071e3;
 
-  --color-success: #18794e;
-  --color-success-soft: #e7f4ec; /* 派生浅底 */
-  --color-warning: #8a5700;
-  --color-warning-soft: #fbf0da; /* 派生浅底 */
-  --color-danger: #b42318;
-  --color-danger-soft: #fbeae8; /* 派生浅底 */
+  --color-success: #1a7a33;
+  --color-success-soft: rgb(52 199 89 / 0.16);
+  --color-warning: #8f4a00;
+  --color-warning-soft: rgb(255 149 0 / 0.16);
+  --color-danger: #c8001a;
+  --color-danger-fill: #d70015;
+  --color-danger-soft: rgb(255 59 48 / 0.13);
 
-  /* ── 颜色：项目标记（6 固定，仅用于项目标记，不替代状态/权限）──────── */
-  --color-project-blue: #355cff;
-  --color-project-purple: #7c5cff;
-  --color-project-teal: #12a594;
-  --color-project-green: #18794e;
-  --color-project-orange: #d97706;
-  --color-project-gray: #6b7280;
+  --color-tooltip: rgb(29 29 31 / 0.92);
+  --color-tooltip-foreground: #ffffff;
 
-  /* ── 字号（px）+ 配对行高 ─────────────────────────────────────────── */
-  /* 正文行高 1.6；标题 1.25；极小辅助/标签取中间值保证可读 */
-  --text-caption: 12px; /* 极少量辅助 */
-  --text-caption--line-height: 1.5;
-  --text-label: 14px; /* 标签 / 任务卡 */
+  /* 项目标记：只用于项目图标，不表达状态或权限 */
+  --color-project-blue: #0a72e8;
+  --color-project-purple: #8e44d6;
+  --color-project-teal: #0e8a9a;
+  --color-project-green: #1f9d4d;
+  --color-project-orange: #d9730d;
+  --color-project-gray: #76767c;
+
+  /* 字号 */
+  --text-caption: 12px;
+  --text-caption--line-height: 1.45;
+  --text-label: 14px;
   --text-label--line-height: 1.45;
-  --text-body: 16px; /* 正文 */
+  --text-body: 16px;
   --text-body--line-height: 1.6;
-  --text-section: 20px; /* 区域标题 */
+  --text-section: 20px;
   --text-section--line-height: 1.25;
-  --text-page: 28px; /* 页面标题 */
-  --text-page--line-height: 1.25;
-  --text-hero: 40px; /* 介绍页主标题 */
-  --text-hero--line-height: 1.2;
+  --text-page: clamp(28px, 1.6rem + 0.7vw, 34px);
+  --text-page--line-height: 1.14;
+  --text-hero: clamp(44px, 1.6rem + 5.2vw, 84px);
+  --text-hero--line-height: 1.06;
 
-  /* ── 字体栈：优先系统字体，避免首版引入大体积中文字体下载 ─────────── */
+  /* 系统字体：macOS / iOS 走 SF 与苹方，Windows 走 Segoe 与微软雅黑 */
   --font-sans:
-    Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei",
-    sans-serif;
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+    "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI",
+    "Microsoft YaHei", "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
   --font-mono:
-    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
-    monospace;
+    ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 
-  /* ── 间距基数：4px。默认数值刻度即命中 docs/02 的 4/8/12/16/24/32/48 ── */
-  /* p-1=4 p-2=8 p-3=12 p-4=16 p-6=24 p-8=32 p-12=48；控件高 h-10=40，触控 h-11=44 */
   --spacing: 4px;
 
-  /* ── 圆角：控件 8 / 卡片 12 / 弹层 16 ─────────────────────────────── */
-  --radius-control: 8px;
-  --radius-card: 12px;
-  --radius-overlay: 16px;
+  /* 圆角：同心递进，控件 12 → 卡片 20 → 浮层 28 */
+  --radius-control: 12px;
+  --radius-card: 20px;
+  --radius-panel: 26px;
+  --radius-overlay: 28px;
 
-  /* ── 阴影：仅用于悬浮层与拖拽浮层，不做大面积夸张阴影 ─────────────── */
-  --shadow-popover:
-    0 1px 2px rgb(23 26 33 / 0.06), 0 4px 12px rgb(23 26 33 / 0.08);
-  --shadow-overlay:
-    0 2px 4px rgb(23 26 33 / 0.06), 0 12px 32px rgb(23 26 33 / 0.14);
-  --shadow-drag:
-    0 4px 8px rgb(23 26 33 / 0.1), 0 16px 40px rgb(23 26 33 / 0.18);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.03), 0 10px 28px -18px rgb(0 0 0 / 0.16);
+  --shadow-card-hover: 0 2px 6px rgb(0 0 0 / 0.05), 0 18px 40px -20px rgb(0 0 0 / 0.26);
+  --shadow-popover: 0 1px 2px rgb(0 0 0 / 0.05), 0 16px 40px -12px rgb(0 0 0 / 0.22);
+  --shadow-overlay: 0 2px 6px rgb(0 0 0 / 0.05), 0 32px 80px -20px rgb(0 0 0 / 0.34);
+  --shadow-drag: 0 6px 14px rgb(0 0 0 / 0.08), 0 28px 56px -14px rgb(0 0 0 / 0.36);
 
-  /* ── 动效缓动：120–180ms，以 opacity/transform 为主 ────────────────── */
-  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-standard: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-fluid: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
 
-  /* ── 断点：桌面 ≥1280(xl) / 平板 768–1279(md–xl) / 手机 <768(base) ── */
-  /* 与 Tailwind 默认 md=768、xl=1280 一致，无需覆盖；验收视口 390/768/1440 */
+  --animate-fade-in: fade-in 180ms var(--ease-standard);
+  --animate-dialog-in: dialog-in 280ms var(--ease-fluid);
+  --animate-sheet-right: sheet-right 360ms var(--ease-fluid);
+  --animate-sheet-up: sheet-up 360ms var(--ease-fluid);
+  --animate-pop-in: pop-in 200ms var(--ease-fluid);
+  --animate-rise: rise 420ms var(--ease-fluid) both;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+  }
+  @keyframes dialog-in {
+    from { opacity: 0; transform: scale(0.94); }
+  }
+  @keyframes sheet-right {
+    from { transform: translateX(calc(100% + 16px)); }
+  }
+  @keyframes sheet-up {
+    from { transform: translateY(calc(100% + 16px)); }
+  }
+  @keyframes pop-in {
+    from { opacity: 0; transform: scale(0.96); }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+  }
 }
 
 @layer base {
   :root {
     color-scheme: light;
 
-    /* 动效时长 token（供组件内联 duration 使用；Tailwind duration-* 亦可用） */
-    --motion-fast: 120ms;
-    --motion-base: 160ms;
-    --motion-slow: 180ms;
+    /* 背景光斑：给玻璃提供可折射的颜色，内容层保持安静 */
+    --aurora-1: rgb(0 122 255 / 0.16);
+    --aurora-2: rgb(175 82 222 / 0.13);
+    --aurora-3: rgb(48 176 199 / 0.15);
+    --aurora-4: rgb(255 149 0 / 0.07);
 
-    /* 外壳尺寸 token：桌面/平板/手机三档（docs/02 §4） */
-    --shell-sidebar-desktop: 224px;
-    --shell-sidebar-tablet: 72px;
-    --shell-topbar: 64px;
-    --shell-content-pad-desktop: 32px;
-    --shell-content-pad-tablet: 24px;
-    --shell-content-pad-mobile: 16px;
-    --task-panel-width: 600px; /* 560–640px 区间取中 */
+    /* 外壳尺寸 */
+    --shell-inset: 12px;
+    --shell-rail: 72px;
+    --shell-sidebar: 248px;
+    --task-panel-width: 600px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+
+      --color-background: #0c0c10;
+      --color-surface: rgb(44 44 46 / 0.6);
+      --color-surface-solid: #1c1c1e;
+      --color-surface-sunken: rgb(118 118 128 / 0.24);
+      --color-surface-tray: rgb(255 255 255 / 0.045);
+      --color-overlay: rgb(0 0 0 / 0.52);
+
+      --color-foreground: #f5f5f7;
+      --color-foreground-secondary: #c7c7cc;
+      --color-foreground-muted: #a1a1a8;
+
+      --color-line: rgb(235 235 245 / 0.14);
+      --color-line-strong: #8e8e93;
+
+      --color-brand-ink: #6cb2ff;
+      --color-brand-soft: rgb(10 132 255 / 0.22);
+      --color-ring: #4da3ff;
+
+      --color-success: #4ad66d;
+      --color-success-soft: rgb(48 209 88 / 0.2);
+      --color-warning: #ffb340;
+      --color-warning-soft: rgb(255 159 10 / 0.2);
+      --color-danger: #ff7a70;
+      --color-danger-soft: rgb(255 69 58 / 0.2);
+
+      --color-tooltip: rgb(72 72 74 / 0.94);
+
+      --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 28px -18px rgb(0 0 0 / 0.7);
+      --shadow-card-hover: 0 2px 6px rgb(0 0 0 / 0.35), 0 20px 44px -20px rgb(0 0 0 / 0.85);
+      --shadow-popover: 0 1px 2px rgb(0 0 0 / 0.4), 0 18px 44px -12px rgb(0 0 0 / 0.75);
+      --shadow-overlay: 0 2px 6px rgb(0 0 0 / 0.4), 0 36px 90px -20px rgb(0 0 0 / 0.85);
+      --shadow-drag: 0 8px 16px rgb(0 0 0 / 0.4), 0 32px 64px -14px rgb(0 0 0 / 0.9);
+
+      --aurora-1: rgb(10 132 255 / 0.2);
+      --aurora-2: rgb(191 90 242 / 0.16);
+      --aurora-3: rgb(64 200 224 / 0.12);
+      --aurora-4: rgb(255 159 10 / 0.05);
+    }
   }
 
   html,
@@ -139,10 +202,29 @@
     font-size: var(--text-body);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    font-feature-settings: "cv11", "ss03";
   }
 
-  /* 遵从 prefers-reduced-motion：取消非必要过渡/动画，状态仍清楚（docs/02 §7）。 */
+  /* 固定在视口的光斑层。玻璃层下面始终有颜色，滚动时不重绘。 */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(60vmax 46vmax at 6% -6%, var(--aurora-1), transparent 68%),
+      radial-gradient(56vmax 44vmax at 100% 2%, var(--aurora-2), transparent 66%),
+      radial-gradient(64vmax 50vmax at 78% 108%, var(--aurora-3), transparent 68%),
+      radial-gradient(48vmax 40vmax at -4% 100%, var(--aurora-4), transparent 66%);
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-brand) 28%, transparent);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -155,15 +237,9 @@
   }
 }
 
-/* ── 统一焦点环（刻意不放进 @layer：优先级高于 utilities）──────────────────
-   docs/02 §6：所有可聚焦元素的键盘焦点环必须可见。项目里大量组件带 Tailwind 的
-   outline-none 工具类（属 @layer utilities），其层级高于 @layer base，会把 base 层
-   焦点环的 outline-style 覆盖成 none，导致 36/48 个元素键盘焦点环不可见。
-   CSS 层叠规则：「无 @layer 的样式」优先级高于任何 @layer 内的样式，故此规则刻意
-   置于所有层之外，确保 :focus-visible 时焦点环必定胜过 outline-none。
-   只设 outline / outline-offset，不含 border-radius：否则会反过来覆盖组件自身的
-   rounded-card / rounded-overlay 等圆角（outline 在现代浏览器已自动贴合 border-radius）。 */
-:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+/* 焦点环刻意不进 @layer，保证压过组件上的 outline-none 工具类。
+   .field 是文本输入框，在组件内画 2px 同色焦点环，不再叠加 outline。 */
+:where(a, button, input:not(.field), textarea:not(.field), select, summary, [tabindex]):focus-visible {
   outline: 2px solid var(--color-ring);
   outline-offset: 2px;
 }

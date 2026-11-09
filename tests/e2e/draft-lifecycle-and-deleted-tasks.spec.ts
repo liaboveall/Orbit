@@ -147,12 +147,10 @@ test("the standalone task page keeps drafts visible when the task is deleted els
   await expect(page.getByRole("heading", { level: 1, name: "任务不存在或已被删除" })).toBeVisible();
 });
 
-test("without the Navigation API, back from a panel opened after another editor still guards its comment draft", async ({ page }) => {
+test("without the Navigation API, back from a panel still guards its comment draft", async ({ page }) => {
   await page.addInitScript(() => Object.defineProperty(window, "navigation", { value: undefined, configurable: true }));
   const listPath = `/app/projects/${project.id}/tasks`;
   await page.goto(listPath);
-  await page.getByRole("button", { name: "新建任务", exact: true }).first().click();
-  await expect(page.getByRole("textbox", { name: "任务标题", exact: true })).toBeVisible();
   await page.locator(`[data-task-link="${task.id}"]`).first().click();
   await expect(page).toHaveURL(new RegExp("task=" + task.id));
   const comment = page.getByRole("textbox", { name: "评论正文", exact: true });

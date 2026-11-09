@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InlineError } from "@/components/ui/inline-error";
+import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/components/ui/toast";
 import { Spinner } from "@/features/auth/auth-form";
 import { formatEventDateTime, useUserTimezone } from "@/lib/user-timezone";
@@ -79,6 +80,7 @@ const FILTER_LABEL: Record<Filter, string> = {
 // F23 修复：事件时间改用账户时区（formatEventDateTime），不再用设备时区。
 export type InvitationsListProps = {
   projectId: string;
+  projectName: string;
   /** 当前用户是否为项目 owner：仅 owner 可创建/撤销邀请（服务端仍权威复核）。 */
   userIsOwner: boolean;
   initialInvitations: InvitationDTO[];
@@ -86,6 +88,7 @@ export type InvitationsListProps = {
 
 export function InvitationsList({
   projectId,
+  projectName,
   userIsOwner,
   initialInvitations,
 }: InvitationsListProps) {
@@ -204,21 +207,13 @@ export function InvitationsList({
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl">
-      <header className="mb-6">
-        <p className="font-mono text-caption uppercase tracking-[0.18em] text-foreground-muted">
-          邀请协作
-        </p>
-        <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="text-page font-semibold tracking-tight text-foreground">
-              邀请管理
-            </h1>
-            <p className="mt-1.5 text-label text-foreground-secondary">
-              创建邀请链接分享给同事，他们接受后即成为项目成员。链接有效期 7 天，明文令牌仅在创建时显示一次。
-            </p>
-          </div>
-          {userIsOwner ? (
+    <div className="w-full max-w-4xl">
+      <PageHeader
+        eyebrow={projectName}
+        title="邀请管理"
+        description="创建邀请链接分享给同学，对方接受后即成为项目成员。链接有效期 7 天，明文令牌仅在创建时显示一次。"
+        actions={
+          userIsOwner ? (
             <Button
               type="button"
               onClick={() => {
@@ -229,9 +224,9 @@ export function InvitationsList({
               <Plus className="h-4 w-4" aria-hidden="true" />
               创建邀请
             </Button>
-          ) : null}
-        </div>
-      </header>
+          ) : null
+        }
+      />
 
       <InlineError className="mb-4">{error}</InlineError>
 
@@ -239,13 +234,13 @@ export function InvitationsList({
       {createdLink ? (
         <section
           aria-label="新创建的邀请链接"
-          className="mb-6 space-y-3 rounded-card border border-brand/30 bg-brand-soft px-4 py-4"
+          className="mb-6 space-y-3 rounded-card bg-brand-soft p-4"
         >
           <p className="text-label font-medium text-foreground">
             邀请链接已生成，请立即复制分享（关闭后无法再次查看明文令牌）：
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <code className="min-w-0 flex-1 break-all rounded-control border border-line bg-surface px-3 py-2 font-mono text-caption text-foreground">
+            <code className="min-w-0 flex-1 break-all rounded-control bg-surface px-3 py-2 font-mono text-caption text-foreground">
               {createdLink}
             </code>
             <Button
@@ -268,14 +263,13 @@ export function InvitationsList({
 
       {/* 状态过滤器 */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="text-caption font-medium text-foreground-muted">状态</span>
         <div className="flex flex-wrap gap-1" role="group" aria-label="按状态筛选邀请">
           {FILTERS.map((option) => (
             <Button
               key={option}
               type="button"
               size="sm"
-              variant={filter === option ? "primary" : "ghost"}
+              variant={filter === option ? "secondary" : "ghost"}
               aria-pressed={filter === option}
               onClick={() => setFilter(option)}
             >
@@ -315,7 +309,7 @@ export function InvitationsList({
           }
         />
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface shadow-popover">
+        <ul className="glass-card divide-y divide-line overflow-hidden rounded-card">
           {visible.map((invitation) => {
             const canRevoke = userIsOwner && invitation.state === "ACTIVE";
             return (

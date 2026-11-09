@@ -2,7 +2,7 @@ import { dateInTimezone } from "@/lib/calendar";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { requirePageUser } from "@/server/auth/page-session";
 import { DomainError } from "@/server/http/errors";
 import { getProject, listMembers } from "@/server/modules/project";
@@ -53,27 +53,24 @@ export default async function TaskDetailPage({ params }: PageProps) {
     <div className="space-y-3">
       <Link
         href={`/app/projects/${routeProjectId}/board`}
-        className="inline-flex items-center gap-1.5 rounded-control text-caption font-medium text-foreground-secondary outline-none hover:text-brand"
+        className="inline-flex items-center gap-1 rounded-full text-label font-medium text-brand-ink outline-none hover:opacity-80"
       >
-        <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
         返回看板
       </Link>
 
-      {/* 独立页：卡片占满内容区宽度，内部高度独立滚动（与侧面板一致的滚动行为） */}
-      <div className="mx-auto w-full max-w-3xl overflow-hidden rounded-card border border-line bg-surface shadow-popover">
-        <div className="h-[calc(100dvh-13rem)] min-h-[460px]">
-          <TaskDetailClient
-            members={members}
-            key={taskId}
-            taskDetail={taskDetail}
-            projectId={project.id}
-            currentUserId={sessionUser.id}
-            today={dateInTimezone(sessionUser.timezone)}
-            readOnly={project.archivedAt !== null}
-            isProjectOwner={project.role === "OWNER"}
-            canDelete={taskDetail !== null && (project.role === "OWNER" || taskDetail.creator.id === sessionUser.id)}
-          />
-        </div>
+      <div className="glass-card w-full max-w-3xl overflow-clip rounded-card">
+        <TaskDetailClient
+          members={members}
+          key={taskId}
+          taskDetail={taskDetail}
+          projectId={project.id}
+          currentUserId={sessionUser.id}
+          today={dateInTimezone(sessionUser.timezone)}
+          readOnly={project.archivedAt !== null}
+          isProjectOwner={project.role === "OWNER"}
+          canDelete={taskDetail !== null && (project.role === "OWNER" || taskDetail.creator.id === sessionUser.id)}
+        />
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderPlus, X } from "lucide-react";
+import { Check } from "lucide-react";
 import { useId, useState, type FormEvent } from "react";
 import { UnsavedChangesProvider, useUnsavedChanges, confirmLeave } from "@/features/tasks/unsaved-changes";
 import {
@@ -12,15 +12,16 @@ import {
   type ProjectColor,
 } from "@/contracts";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { InlineError } from "@/components/ui/inline-error";
 import { Input, Label, Textarea } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { Spinner } from "@/features/auth/auth-form";
 import { cn } from "@/lib/cn";
@@ -70,6 +71,29 @@ export type ProjectCreateFormProps = {
   onUnauthorized: () => void;
 };
 
+/** 新建项目对话框。Escape、遮罩、关闭按钮都走同一个未保存确认。 */
+export function ProjectCreateDialog({
+  open,
+  onOpenChange,
+  ...form
+}: Omit<ProjectCreateFormProps, "onCancelled"> & {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next || confirmLeave()) onOpenChange(next);
+      }}
+    >
+      <DialogContent>
+        <ProjectCreateForm {...form} onCancelled={() => onOpenChange(false)} />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /**
  * B6 修复：项目创建草稿保护（结构与任务创建表单一致，见 unsaved-changes.tsx）。
  */
@@ -89,7 +113,6 @@ function ProjectCreateFormContent({
   const nameId = useId();
   const keyId = useId();
   const descriptionId = useId();
-  const colorId = useId();
   const { toast } = useToast();
 
   const [name, setName] = useState("");
@@ -199,20 +222,15 @@ function ProjectCreateFormContent({
         void handleSubmit(event);
       }}
       noValidate
-      className="overflow-hidden rounded-card border border-line bg-surface shadow-popover"
     >
-      <header className="flex items-center justify-between gap-3 border-b border-line bg-surface-sunken px-5 py-3">
-        <h2 className="text-section font-semibold tracking-tight text-foreground">
-          新建项目
-        </h2>
-        <span className="font-mono text-caption uppercase tracking-widest text-foreground-muted">
-          post · /projects
-        </span>
-      </header>
+      <DialogHeader>
+        <DialogTitle>新建项目</DialogTitle>
+        <DialogDescription className="sr-only">填写项目名称和标识后创建。</DialogDescription>
+      </DialogHeader>
 
-      <div className="grid gap-5 px-5 py-5 md:grid-cols-2">
+      <div className="grid gap-4">
         {/* 项目名称 */}
-        <div className="space-y-1.5 md:col-span-2">
+        <div className="space-y-1.5">
           <Label htmlFor={nameId}>项目名称</Label>
           <div className="relative">
             <Input
@@ -234,14 +252,7 @@ function ProjectCreateFormContent({
                   setFieldErrors((prev) => ({ ...prev, name: undefined }));
                 }
               }}
-              className="pr-16"
             />
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-caption tabular-nums text-foreground-muted"
-            >
-              {trimmedName.length}/{NAME_MAX}
-            </span>
           </div>
           <InlineError id={`${nameId}-error`}>{fieldErrors.name}</InlineError>
         </div>
@@ -281,43 +292,41 @@ function ProjectCreateFormContent({
           <InlineError id={`${keyId}-error`}>{fieldErrors.key}</InlineError>
         </div>
 
-        {/* 标记色 */}
-        <div className="space-y-1.5">
-          <Label htmlFor={colorId}>标记色</Label>
-          <Select
-            value={color}
-            onValueChange={(value) => {
-              setColor(value as ProjectColor);
-              // 内容变更：换新幂等键。
-              setIdempotencyKey(crypto.randomUUID());
-            }}
-            disabled={pending}
-          >
-            <SelectTrigger id={colorId} aria-label="项目标记色">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PROJECT_COLOR.map((option) => (
-                <SelectItem key={option} value={option}>
-                  <span
-                    className={cn(
-                      "inline-block h-2.5 w-2.5 rounded-full",
-                      PROJECT_COLOR_DOT[option],
-                    )}
-                    aria-hidden="true"
-                  />
-                  {PROJECT_COLOR_LABEL[option]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-caption text-foreground-muted">
-            用于侧栏与列表中的项目圆点标识。
-          </p>
-        </div>
+        {/* 标记色：色板单选，方向键切换 */}
+        <fieldset className="space-y-1.5">
+          <legend className="text-label font-medium text-foreground-secondary">标记色</legend>
+          <div className="flex flex-wrap gap-2.5 pt-0.5">
+            {PROJECT_COLOR.map((option) => (
+              <label
+                key={option}
+                title={PROJECT_COLOR_LABEL[option]}
+                className={cn(
+                  "relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-white transition-transform duration-200 ease-spring hover:scale-110 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring",
+                  PROJECT_COLOR_DOT[option],
+                )}
+              >
+                <input
+                  type="radio"
+                  name="color"
+                  value={option}
+                  className="sr-only"
+                  checked={color === option}
+                  disabled={pending}
+                  aria-label={`标记色：${PROJECT_COLOR_LABEL[option]}`}
+                  onChange={() => {
+                    setColor(option);
+                    // 内容变更：换新幂等键。
+                    setIdempotencyKey(crypto.randomUUID());
+                  }}
+                />
+                {color === option ? <Check className="h-4 w-4" strokeWidth={3} aria-hidden="true" /> : null}
+              </label>
+            ))}
+          </div>
+        </fieldset>
 
         {/* 描述（可选） */}
-        <div className="space-y-1.5 md:col-span-2">
+        <div className="space-y-1.5">
           <Label htmlFor={descriptionId}>
             项目描述<span className="ml-1 text-foreground-muted">（可选）</span>
           </Label>
@@ -344,23 +353,17 @@ function ProjectCreateFormContent({
         </div>
       </div>
 
-      <footer className="flex flex-wrap items-center gap-3 border-t border-line bg-surface-sunken px-5 py-4">
-        <Button type="submit" disabled={!canSubmit || pending} aria-busy={pending || undefined}>
-          {pending ? <Spinner /> : <FolderPlus className="h-4 w-4" aria-hidden="true" />}
-          <span>{pending ? "正在创建…" : "创建项目"}</span>
-        </Button>
+      <InlineError className="mt-4">{formError}</InlineError>
+
+      <DialogFooter>
         <Button type="button" variant="ghost" disabled={pending} onClick={() => { if (confirmLeave()) onCancelled(); }}>
-          <X className="h-4 w-4" aria-hidden="true" />
           取消
         </Button>
-        <p className="ml-auto text-caption text-foreground-muted">
-          活跃项目上限 {ACTIVE_PROJECT_LIMIT} 个（服务端校验）
-        </p>
-      </footer>
-
-      <div className="px-5 pb-4">
-        <InlineError>{formError}</InlineError>
-      </div>
+        <Button type="submit" disabled={!canSubmit || pending} aria-busy={pending || undefined}>
+          {pending ? <Spinner /> : null}
+          <span>{pending ? "正在创建…" : "创建项目"}</span>
+        </Button>
+      </DialogFooter>
     </form>
   );
 }

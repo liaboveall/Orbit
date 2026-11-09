@@ -7,11 +7,8 @@ import { cn } from "@/lib/cn";
 import { IconButton } from "./button";
 
 /**
- * Dialog（ORB-002，基于 @radix-ui/react-dialog）。
- *
- * 无障碍由 Radix 保证：焦点陷阱、打开时初始焦点移入面板、关闭后焦点恢复触发元素、
- * Escape 关闭、aria-labelledby/aria-describedby 关联标题与描述。
- * 弹层圆角 rounded-overlay(16)、shadow-overlay（docs/02：影子只用于悬浮层）。
+ * Dialog（基于 Radix）。焦点陷阱、初始焦点、关闭后恢复焦点和 Escape 由 Radix 保证。
+ * 桌面居中，手机作为底部抽屉。只做入场动画，关闭立即卸载。
  */
 
 export const Dialog = DialogPrimitive.Root;
@@ -31,10 +28,7 @@ export function DialogOverlay({
 }: ComponentProps<typeof DialogPrimitive.Overlay>) {
   return (
     <DialogPrimitive.Overlay
-      className={cn(
-        "fixed inset-0 z-40 bg-overlay",
-        className,
-      )}
+      className={cn("fixed inset-0 z-40 animate-fade-in bg-overlay", className)}
       {...props}
     />
   );
@@ -77,9 +71,11 @@ export function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 w-[calc(100vw-32px)] max-w-lg -translate-x-1/2 -translate-y-1/2",
-          "rounded-overlay border border-line bg-surface p-6 shadow-overlay",
-          "max-h-[85vh] overflow-y-auto",
+          "glass-thick fixed z-50 max-h-[88dvh] overflow-y-auto rounded-overlay p-6",
+          // 手机：底部抽屉
+          "inset-x-2 bottom-[max(8px,env(safe-area-inset-bottom))] animate-sheet-up",
+          // 桌面：居中
+          "sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-[calc(100vw-32px)] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:animate-dialog-in",
           className,
         )}
         {...props}
@@ -104,11 +100,8 @@ export function DialogContent({
   );
 }
 
-export function DialogHeader({
-  className,
-  ...props
-}: ComponentProps<"div">) {
-  return <div className={cn("mb-4 space-y-2 pr-8", className)} {...props} />;
+export function DialogHeader({ className, ...props }: ComponentProps<"div">) {
+  return <div className={cn("mb-5 space-y-1.5 pr-8", className)} {...props} />;
 }
 
 export function DialogTitle({
@@ -117,7 +110,7 @@ export function DialogTitle({
 }: ComponentProps<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
-      className={cn("text-section font-semibold text-foreground", className)}
+      className={cn("text-section font-semibold tracking-[-0.015em] text-foreground", className)}
       {...props}
     />
   );
@@ -129,20 +122,14 @@ export function DialogDescription({
 }: ComponentProps<typeof DialogPrimitive.Description>) {
   return (
     <DialogPrimitive.Description
-      className={cn("text-label text-foreground-secondary", className)}
+      className={cn("text-label leading-relaxed text-foreground-secondary", className)}
       {...props}
     />
   );
 }
 
-export function DialogFooter({
-  className,
-  ...props
-}: ComponentProps<"div">) {
+export function DialogFooter({ className, ...props }: ComponentProps<"div">) {
   return (
-    <div
-      className={cn("mt-6 flex flex-wrap justify-end gap-3", className)}
-      {...props}
-    />
+    <div className={cn("mt-6 flex flex-wrap justify-end gap-2", className)} {...props} />
   );
 }

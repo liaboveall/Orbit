@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Settings } from "lucide-react";
+import { Ellipsis, LogOut, Settings } from "lucide-react";
 import type { UserDTO } from "@/contracts";
 import { useToast } from "@/components/ui/toast";
 import { useRef } from "react";
@@ -92,13 +92,13 @@ export function UserMenu({
       <button
         type="button"
         aria-label={`${user.name} · 账户菜单`}
-        className="flex h-10 w-full items-center justify-center rounded-control outline-none hover:bg-surface-sunken data-[state=open]:bg-surface-sunken"
+        className="flex h-11 w-11 items-center justify-center rounded-full outline-none transition-colors hover:bg-surface-sunken data-[state=open]:bg-surface-sunken"
       >
         <Avatar name={user.name} size="md" />
       </button>
     ) : (
       <IconButton label="账户菜单" size="sm">
-        <Settings className="h-4 w-4" />
+        <Ellipsis className="h-4 w-4" />
       </IconButton>
     );
 
@@ -118,9 +118,6 @@ export function UserMenu({
               </span>
             </span>
           </span>
-          <span className="block truncate font-mono text-caption font-normal text-foreground-muted">
-            {user.timezone}
-          </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -138,7 +135,7 @@ export function UserMenu({
             event.preventDefault();
             void handleSignOut();
           }}
-          className="text-danger data-[highlighted]:bg-danger-soft data-[highlighted]:text-danger"
+          className="text-danger data-[highlighted]:bg-danger-fill data-[highlighted]:text-foreground-invert"
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />
           {pending ? "正在退出…" : "退出登录"}

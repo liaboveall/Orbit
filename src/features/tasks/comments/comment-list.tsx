@@ -264,7 +264,7 @@ export function CommentList({
               还没有评论，来说点什么吧。
             </p>
           ) : (
-            <ul className="space-y-2" role="list">
+            <ul className="-mx-2 space-y-0.5" role="list">
               {comments!.map((comment) => (
                 <CommentItem
                   key={comment.id}
@@ -298,7 +298,7 @@ export function CommentList({
       )}
 
       {(canWrite || draft.length > 0) && (
-        <div className="rounded-control border border-line p-3">
+        <div className="rounded-[16px] bg-surface-sunken p-2.5">
           {postedOutsideWindow && <p role="status" className="text-caption text-foreground-secondary">评论已发布到讨论末尾，可继续加载更多评论查看。</p>}
           <Textarea
             value={draft}
@@ -332,7 +332,7 @@ export function CommentList({
           {postError && <InlineError>{postError}</InlineError>}
           <div className="mt-2 flex items-center justify-between gap-2">
             <p className="text-caption text-foreground-muted">
-              {draft.length}/{BODY_MAX} · 纯文本，脚本不会执行
+              {draft.length}/{BODY_MAX}
             </p>
             <Button
               size="sm"

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import type { UserDTO } from "@/contracts";
+import { PageHeader } from "@/components/ui/page-header";
 import { SettingsForm } from "@/features/settings/settings-form";
 import { loginPathWithReturnTo } from "@/lib/return-to";
 import { requirePageUser } from "@/server/auth/page-session";
@@ -42,19 +43,11 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
-      <header className="mb-6">
-        <p className="font-mono text-caption uppercase tracking-[0.18em] text-foreground-muted">
-          account · /api/v1/me
-        </p>
-        <h1 className="mt-1 text-page font-semibold tracking-tight text-foreground">
-          个人设置
-        </h1>
-        <p className="mt-1.5 max-w-2xl text-label leading-relaxed text-foreground-secondary">
-          姓名会出现在任务分配、评论与项目成员列表中；时区决定「逾期 / 今天到期 /
-          未来 7 天」的日期边界。保存后立即生效，刷新页面仍然保留。
-        </p>
-      </header>
+    <div className="w-full max-w-5xl pt-2 md:pt-5">
+      <PageHeader
+        title="个人设置"
+        description="姓名会出现在任务分配、评论与成员列表中；时区决定逾期、今天到期的日期边界。"
+      />
 
       <SettingsForm user={user} />
     </div>

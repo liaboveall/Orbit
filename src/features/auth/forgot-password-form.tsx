@@ -24,7 +24,7 @@ export function ForgotPasswordForm() {
   if (submitted) {
     return (
       <div className="space-y-4 text-center">
-        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft text-brand">
+        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft text-brand-ink">
           <CircleCheck className="h-6 w-6" aria-hidden="true" />
         </span>
         <h2 className="text-section font-semibold text-foreground">检查你的邮箱</h2>
@@ -47,7 +47,7 @@ export function ForgotPasswordForm() {
           </button>
           <Link
             href="/auth/login"
-            className="text-label text-brand underline-offset-4 hover:text-brand-hover hover:underline"
+            className="text-label text-brand-ink underline-offset-4 hover:text-brand-hover hover:underline"
           >
             返回登录
           </Link>
@@ -100,7 +100,7 @@ export function ForgotPasswordForm() {
         想起来了？
         <Link
           href="/auth/login"
-          className="ml-1 text-brand underline-offset-4 transition-colors duration-150 ease-standard hover:text-brand-hover hover:underline"
+          className="ml-1 text-brand-ink underline-offset-4 transition-colors duration-150 ease-standard hover:text-brand-hover hover:underline"
         >
           返回登录
         </Link>

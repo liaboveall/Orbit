@@ -7,7 +7,6 @@ import { DomainError } from "@/server/http/errors";
 import { getProject, listMembers } from "@/server/modules/project";
 import { findProjectTask } from "@/server/modules/task";
 import { getBoard } from "@/server/modules/task/board";
-import { TaskFilters } from "@/features/tasks/real/task-filters";
 import { TaskPanel } from "@/features/tasks/real/task-panel";
 import { RealBoard } from "@/features/board/real-board";
 import { InlineError } from "@/components/ui";
@@ -49,11 +48,11 @@ export default async function Page({
   const { project, members, task, selection, today, parsed, board } = data;
   return (
     <>
-      <TaskFilters projectId={project.id} members={members} board />
       <RealBoard
         key={`${user.id}:${project.id}`}
         initial={board}
         project={project}
+        members={members}
         query={parsed.data}
         today={today}
       />

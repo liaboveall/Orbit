@@ -75,7 +75,7 @@ export function LoginForm() {
       <div className="flex justify-end">
         <Link
           href="/auth/forgot-password"
-          className="text-label text-brand underline-offset-4 transition-colors duration-150 ease-standard hover:text-brand-hover hover:underline"
+          className="text-label text-brand-ink underline-offset-4 transition-colors duration-150 ease-standard hover:text-brand-hover hover:underline"
         >
           忘记密码？
         </Link>
@@ -85,7 +85,7 @@ export function LoginForm() {
       {error && <InlineError role="alert">{error}</InlineError>}
 
       {needsVerification ? (
-        <p className="rounded-control bg-brand-soft px-3 py-2 text-label text-brand">
+        <p className="rounded-control bg-brand-soft px-3 py-2 text-label text-brand-ink">
           完成邮箱验证后即可登录。验证邮件已发送到你的邮箱，也可前往
           <Link href="/auth/verify" className="mx-1 underline underline-offset-4">
             验证页
@@ -106,7 +106,7 @@ export function LoginForm() {
         还没有账号？
         <Link
           href="/auth/register"
-          className="ml-1 text-brand underline-offset-4 transition-colors duration-150 ease-standard hover:text-brand-hover hover:underline"
+          className="ml-1 text-brand-ink underline-offset-4 transition-colors duration-150 ease-standard hover:text-brand-hover hover:underline"
         >
           注册
         </Link>

@@ -41,16 +41,10 @@ type ToastContextValue = {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-const variantClass: Record<ToastVariant, string> = {
-  info: "border-line bg-surface text-foreground",
-  success: "border-success/30 bg-success-soft text-success",
-  danger: "border-danger/30 bg-danger-soft text-danger",
-};
-
 const variantIcon: Record<ToastVariant, ReactNode> = {
-  info: <Info className="h-4 w-4" aria-hidden="true" />,
-  success: <CircleCheck className="h-4 w-4" aria-hidden="true" />,
-  danger: <CircleAlert className="h-4 w-4" aria-hidden="true" />,
+  info: <Info className="h-[18px] w-[18px] text-brand-ink" aria-hidden="true" />,
+  success: <CircleCheck className="h-[18px] w-[18px] text-success" aria-hidden="true" />,
+  danger: <CircleAlert className="h-[18px] w-[18px] text-danger" aria-hidden="true" />,
 };
 
 let counter = 0;
@@ -88,9 +82,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               if (!open) dismiss(t.id);
             }}
             className={cn(
-              "flex items-start gap-3 rounded-overlay border p-3 pr-9 shadow-overlay",
-              "relative w-[min(92vw,360px)]",
-              variantClass[t.variant],
+              "glass-thick relative flex w-[min(92vw,360px)] animate-pop-in items-start gap-3 rounded-[22px] py-3 pl-4 pr-10 text-foreground",
             )}
           >
             <span className="mt-0.5 shrink-0">{variantIcon[t.variant]}</span>
@@ -99,14 +91,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 {t.title}
               </ToastPrimitive.Title>
               {t.description ? (
-                <ToastPrimitive.Description className="text-caption opacity-90">
+                <ToastPrimitive.Description className="text-caption text-foreground-secondary [overflow-wrap:anywhere]">
                   {t.description}
                 </ToastPrimitive.Description>
               ) : null}
             </div>
             <ToastPrimitive.Close
               asChild
-              className="absolute right-2 top-2 rounded-control p-1 outline-none"
+              className="absolute right-2.5 top-2.5 rounded-full p-1 text-foreground-muted outline-none hover:bg-surface-sunken"
             >
               <button type="button" aria-label="关闭提示">
                 <X className="h-3.5 w-3.5" />
@@ -114,7 +106,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             </ToastPrimitive.Close>
           </ToastPrimitive.Root>
         ))}
-        <ToastPrimitive.Viewport className="fixed bottom-4 right-4 z-[60] flex list-none flex-col gap-2 outline-none" />
+        {/* 手机端留出底部标签栏的高度 */}
+        <ToastPrimitive.Viewport className="fixed bottom-24 left-1/2 z-[60] flex -translate-x-1/2 list-none flex-col gap-2 outline-none md:bottom-5 md:left-auto md:right-5 md:translate-x-0" />
       </ToastPrimitive.Provider>
     </ToastContext.Provider>
   );

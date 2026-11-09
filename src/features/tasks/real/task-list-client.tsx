@@ -1,29 +1,29 @@
 "use client";
 
-import { confirmLeave } from "@/features/tasks/unsaved-changes";
-
-import { Archive, Plus, Trash2, Undo2 } from "lucide-react";
+import { Archive, Inbox, Plus, SearchX } from "lucide-react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import {
+  type MemberDTO,
   type ProjectDTO,
   type TaskSummaryDTO,
   type TaskListQueryDTO,
 } from "@/contracts";
 import { Avatar } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InlineError } from "@/components/ui/inline-error";
+import { PageHeader } from "@/components/ui/page-header";
 import { Spinner } from "@/features/auth/auth-form";
 import { DueBadge, PriorityBadge } from "@/features/tasks/priority-badge";
 import { getDueMeta } from "@/features/tasks/task-meta";
 import { cn } from "@/lib/cn";
 import { loginPathWithReturnTo } from "@/lib/return-to";
 import { usePagedTasks } from "../use-paged-tasks";
-import { PROJECT_COLOR_DOT, projectColorAria } from "@/lib/project-color";
-import { TaskCreateForm } from "./task-create-form";
+import { ProjectGlyph } from "@/features/projects/project-glyph";
+import { TaskCreateDialog } from "./task-create-form";
+import { TaskFilters } from "./task-filters";
 import { TaskDeleteButton } from "./task-delete-button";
 import { useTaskMutation } from "./use-task-mutation";
 import { TaskStatusSelect } from "./task-status-select";
@@ -50,6 +50,7 @@ const PAGE_SIZE = 50;
 
 export type TaskListClientProps = {
   project: ProjectDTO;
+  members: MemberDTO[];
   initialTasks: TaskSummaryDTO[];
   nextCursor: string | null;
   hasMore: boolean;
@@ -61,6 +62,7 @@ export type TaskListClientProps = {
 
 export function TaskListClient({
   project,
+  members,
   initialTasks,
   nextCursor: initialCursor,
 
@@ -89,114 +91,60 @@ export function TaskListClient({
 
   return (
     <div
-      className="mx-auto w-full max-w-6xl"
+      className="w-full outline-none"
       data-project-content
       tabIndex={-1}
       data-task-editing={creating || undefined}
     >
-      {/* 页头：面包屑 + 项目标识 + 主操作 */}
-      <header className="mb-6">
-        <nav
-          aria-label="面包屑"
-          className="mb-2 flex items-center gap-1.5 text-caption"
-        >
-          <Link
-            href="/app/projects"
-            className="rounded-control text-foreground-muted outline-none transition-colors duration-150 ease-standard hover:text-brand"
-          >
-            全部项目
-          </Link>
-          <span aria-hidden="true" className="text-line-strong">
-            /
-          </span>
-          <span className="min-w-0 truncate text-foreground-secondary">
-            {project.name}
-          </span>
-        </nav>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <span
-              className={cn(
-                "inline-block h-3.5 w-3.5 shrink-0 rounded-full",
-                PROJECT_COLOR_DOT[project.color],
-              )}
-              aria-hidden="true"
-            />
-            <span className="sr-only">{projectColorAria(project.color)}</span>
-            <div className="min-w-0">
-              <h1 className="truncate text-page font-semibold tracking-tight text-foreground">
-                {project.name}
-              </h1>
-              <p className="mt-0.5 flex flex-wrap items-center gap-2 text-label text-foreground-secondary">
-                <Badge className="font-mono">{project.key}</Badge>
-                <span>{project.role === "OWNER" ? "所有者" : "成员"}</span>
-                <span aria-hidden="true">·</span>
-                <span>{project.memberCount} 名成员</span>
-                {archived ? (
-                  <Badge tone="warning" icon={<Archive className="h-3 w-3" />}>
-                    已归档 · 只读
-                  </Badge>
-                ) : null}
-              </p>
-            </div>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Link
-              href={`/app/projects/${project.id}/trash`}
-              className={buttonVariants({ variant: "secondary" })}
+      <PageHeader
+        leading={<ProjectGlyph name={project.name} color={project.color} size="lg" />}
+        eyebrow={`${project.key} · ${project.memberCount} 名成员${archived ? " · 已归档，只读" : ""}`}
+        title={project.name}
+        actions={
+          archived ? null : (
+            <Button
+              type="button"
+              onClick={() => {
+                setListError(null);
+                setCreating(true);
+              }}
             >
-              <Trash2 className="h-4 w-4" aria-hidden="true" />
-              回收站
-            </Link>
-            {archived ? null : (
-              <Button
-                type="button"
-                onClick={() => {
-                  setListError(null);
-                  if (creating && !confirmLeave()) return;
-                  setCreating((prev) => !prev);
-                }}
-                aria-expanded={creating}
-                aria-controls="task-create-form"
-              >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                <span>{creating ? "收起表单" : "新建任务"}</span>
-              </Button>
-            )}
-          </div>
-        </div>
-      </header>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              新建任务
+            </Button>
+          )
+        }
+      />
+      <TaskFilters members={members} />
 
-      {/* 创建表单：展开在页头之下 */}
-      {creating && !archived ? (
-        <div id="task-create-form" className="mb-6">
-          <TaskCreateForm
-            projectId={project.id}
-            onCreated={async () => {
-              // toast（「任务已创建」）由表单在成功分支自行发出。
-              setCreating(false);
-              // 新任务由刷新后的服务端 props 提供，表单成功后收起。
-              router.refresh();
-            }}
-            onCancelled={() => setCreating(false)}
-            onUnauthorized={goToLogin}
-          />
-        </div>
-      ) : null}
+      {archived ? null : (
+        <TaskCreateDialog
+          open={creating}
+          onOpenChange={setCreating}
+          projectId={project.id}
+          onCreated={async () => {
+            // toast（「任务已创建」）由表单在成功分支自行发出。
+            setCreating(false);
+            // 新任务由刷新后的服务端 props 提供，表单成功后收起。
+            router.refresh();
+          }}
+          onUnauthorized={goToLogin}
+        />
+      )}
 
       <InlineError className="mb-4">{listError}</InlineError>
 
       {tasks.length === 0 ? (
         archived ? (
           <EmptyState
-            icon={<Undo2 className="h-6 w-6" />}
+            icon={<Archive className="h-6 w-6" />}
             title="项目已归档"
             description="归档项目处于只读状态，无法创建新任务。恢复项目后可继续。"
           />
         ) : hasActiveFilters ? (
           // B9 修复：筛选无结果 ≠ 没有任何任务；给出清除筛选的明确下一步。
           <EmptyState
-            icon={<Undo2 className="h-6 w-6" />}
+            icon={<SearchX className="h-6 w-6" />}
             title="没有符合筛选的任务"
             description="换个关键词或清除筛选后，可查看项目的全部任务。"
             action={
@@ -207,7 +155,7 @@ export function TaskListClient({
           />
         ) : (
           <EmptyState
-            icon={<Undo2 className="h-6 w-6" />}
+            icon={<Inbox className="h-6 w-6" />}
             title="还没有任务"
             description="创建第一个任务，就能在列表中切换状态、设定优先级与截止日。"
             action={
@@ -281,11 +229,11 @@ function TaskTable({
 }) {
   return (
     <>
-      <div className="relative hidden overflow-x-auto rounded-card border border-line bg-surface shadow-popover md:block">
-        <table className="w-full min-w-[880px] border-collapse text-left">
+      <div className="glass-card relative hidden overflow-x-auto rounded-card md:block">
+        <table className="w-full min-w-[640px] border-collapse text-left">
           <caption className="sr-only">项目任务列表（按最近更新排序）</caption>
           <thead>
-            <tr className="border-b border-line bg-surface-sunken text-caption text-foreground-muted">
+            <tr className="border-b border-line text-caption text-foreground-muted">
               <th scope="col" className="px-4 py-2.5 font-medium">
                 任务
               </th>
@@ -295,7 +243,7 @@ function TaskTable({
               <th scope="col" className="w-20 px-3 py-2.5 font-medium">
                 优先级
               </th>
-              <th scope="col" className="w-32 px-3 py-2.5 font-medium">
+              <th scope="col" className="hidden w-32 px-3 py-2.5 font-medium lg:table-cell">
                 负责人
               </th>
               <th scope="col" className="w-28 px-3 py-2.5 font-medium">
@@ -324,7 +272,7 @@ function TaskTable({
       {/* 手机卡片形态（<md） */}
       <ul
         role="list"
-        className="space-y-2 rounded-card border border-line bg-surface p-2 md:hidden"
+        className="space-y-2 md:hidden"
         aria-label="项目任务列表（按最近更新排序）"
       >
         {tasks.map((task) => (
@@ -366,18 +314,16 @@ function TaskCard({
 
   return (
     <li
-      className={cn(
-        "rounded-control border border-line p-3",
-        done && "bg-surface-sunken/40",
-      )}
+      className="glass-card rounded-[18px] p-3.5"
     >
       <div className="flex items-start justify-between gap-2">
         <span className="flex min-w-0 items-baseline gap-2">
-          <span className="shrink-0 font-mono text-caption text-foreground-muted">
+          <span className="shrink-0 text-caption tabular-nums text-foreground-muted">
             {task.identifier}
           </span>
           <Link
             href={path + "?" + target.toString()}
+            scroll={false}
             // 卡片链接用独立属性（data-task-card-link）：与桌面表格行的
             // data-task-link 区分，桌面测试的属性选择器不会命中隐藏卡片。
             data-task-card-link={task.id}
@@ -449,17 +395,17 @@ function TaskRow({
     // 完成语义由标题删除线 + 状态徽标表达，各行文字对比度保持达标。
     <tr
       className={cn(
-        "transition-colors duration-150 ease-standard hover:bg-surface-sunken",
-        done && "bg-surface-sunken/40",
+        "group/row transition-colors duration-150 ease-standard hover:bg-surface-sunken",
       )}
     >
       <th scope="row" className="px-4 py-3 font-normal">
         <span className="flex min-w-0 items-baseline gap-2.5">
-          <span className="shrink-0 font-mono text-caption text-foreground-muted">
+          <span className="shrink-0 text-caption tabular-nums text-foreground-muted">
             {task.identifier}
           </span>
           <Link
             href={path + "?" + target.toString()}
+            scroll={false}
             data-task-link={task.id}
             className={cn(
               "min-w-0 truncate text-label font-medium text-foreground",
@@ -482,7 +428,7 @@ function TaskRow({
       <td className="px-3 py-2.5">
         <PriorityBadge priority={task.priority} />
       </td>
-      <td className="px-3 py-2.5">
+      <td className="hidden px-3 py-2.5 lg:table-cell">
         {task.assignee ? (
           <span className="flex min-w-0 items-center gap-2">
             <Avatar name={task.assignee.name} size="sm" />
@@ -499,11 +445,13 @@ function TaskRow({
       </td>
       <td className="px-3 py-2.5">
         {canDelete && !archived ? (
-          <TaskDeleteButton
-            mutation={mutation}
-            task={task}
-            onUnauthorized={onUnauthorized}
-          />
+          <span className="block opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100">
+            <TaskDeleteButton
+              mutation={mutation}
+              task={task}
+              onUnauthorized={onUnauthorized}
+            />
+          </span>
         ) : null}
       </td>
     </tr>

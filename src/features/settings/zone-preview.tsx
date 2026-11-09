@@ -101,30 +101,23 @@ export function ZonePreview({ timezone }: { timezone: string }) {
   return (
     <section
       aria-label="所选时区预览"
-      className="overflow-hidden rounded-card border border-line bg-surface shadow-popover"
+      className="overflow-hidden glass-card rounded-card"
     >
-      <header className="flex items-center justify-between gap-2 border-b border-line bg-surface-sunken px-4 py-2.5">
-        <span className="inline-flex items-center gap-1.5 font-mono text-caption uppercase tracking-widest text-foreground-muted">
-          <Globe className="h-3.5 w-3.5" aria-hidden="true" />
+      <header className="flex items-center justify-between gap-2 px-4 pt-3.5">
+        <span className="inline-flex items-center gap-1.5 text-label font-semibold text-foreground">
+          <Globe className="h-3.5 w-3.5 text-foreground-muted" aria-hidden="true" />
           当地此刻
         </span>
-        <span className="truncate font-mono text-caption text-foreground-secondary">
+        <span className="truncate text-caption text-foreground-muted">
           {known ? timezone : "时区无效"}
         </span>
       </header>
 
-      <div className="px-4 pb-4 pt-5">
+      <div className="px-4 pb-4 pt-3">
         {/* 时钟：role=timer 隐式 aria-live=off，逐秒更新不打扰读屏 */}
-        <div role="timer" className="flex items-start justify-center gap-1">
-          <ClockUnit value={hh ?? "--"} />
-          <span aria-hidden="true" className="pt-1 font-mono text-hero leading-none text-line-strong">
-            :
-          </span>
-          <ClockUnit value={mm ?? "--"} />
-          <span aria-hidden="true" className="pt-1 font-mono text-hero leading-none text-line-strong">
-            :
-          </span>
-          <ClockUnit value={ss ?? "--"} accent />
+        <div role="timer" className="text-center text-[44px] font-light leading-none tracking-[-0.01em] tabular-nums">
+          {hh ?? "--"}:{mm ?? "--"}
+          <span className="text-brand-ink">:{ss ?? "--"}</span>
         </div>
 
         <div className="mt-3 space-y-1 text-center">
@@ -134,10 +127,10 @@ export function ZonePreview({ timezone }: { timezone: string }) {
           <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-caption text-foreground-muted">
             {known ? (
               <>
-                <span className="rounded-control bg-brand-soft px-1.5 py-0.5 font-mono text-brand">
+                <span className="rounded-full bg-brand-soft px-2 py-0.5 tabular-nums text-brand-ink">
                   {now ? zoneOffsetLabel(timezone, now) : "GMT"}
                 </span>
-                <span className="font-mono">设备 {deviceZone}</span>
+                <span>设备 {deviceZone}</span>
                 {difference ? <span>{difference}</span> : null}
               </>
             ) : (
@@ -150,7 +143,7 @@ export function ZonePreview({ timezone }: { timezone: string }) {
         <div className="mt-5">
           <div
             aria-hidden="true"
-            className="relative flex h-9 items-stretch gap-px overflow-hidden rounded-control bg-surface-sunken p-px"
+            className="relative flex h-6 items-stretch gap-px overflow-hidden rounded-full bg-surface-sunken p-px"
           >
             {RULER_HOURS.map((hour) => (
               <span key={hour} className={cn("flex-1 rounded-[2px]", hourTone(hour))} />
@@ -169,7 +162,7 @@ export function ZonePreview({ timezone }: { timezone: string }) {
             {RULER_LABELS.map((label) => (
               <span
                 key={label}
-                className="absolute -translate-x-1/2 font-mono text-caption text-foreground-muted first:translate-x-0 last:-translate-x-full"
+                className="absolute -translate-x-1/2 text-caption tabular-nums text-foreground-muted first:translate-x-0 last:-translate-x-full"
                 style={{ left: `${(label / 24) * 100}%` }}
               >
                 {String(label).padStart(2, "0")}
@@ -183,19 +176,5 @@ export function ZonePreview({ timezone }: { timezone: string }) {
         </div>
       </div>
     </section>
-  );
-}
-
-/** 时钟的一位数字块（时 / 分 / 秒）。秒位用品牌色强调，形成节奏感。 */
-function ClockUnit({ value, accent = false }: { value: string; accent?: boolean }) {
-  return (
-    <span
-      className={cn(
-        "min-w-[2.6ch] rounded-control px-1 py-1 text-center font-mono text-hero leading-none tabular-nums",
-        accent ? "bg-brand-soft text-brand" : "text-foreground",
-      )}
-    >
-      {value}
-    </span>
   );
 }

@@ -27,17 +27,17 @@ export function AuthShell({
   className?: string;
 }) {
   return (
-    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-background px-4 py-10">
+    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10">
       <AuthBackdrop />
       <div className={cn("relative w-full max-w-md", className)}>
         <div className="mb-7 flex justify-center">
-          <OrbitWordmark className="text-brand" />
+          <OrbitWordmark />
         </div>
-        <div className="rounded-card border border-line bg-surface p-6 shadow-popover sm:p-8">
+        <div className="glass rounded-overlay p-6 sm:p-8">
           {title || description ? (
             <header className="mb-6 space-y-1.5">
               {title ? (
-                <h1 className="text-page font-semibold tracking-tight text-foreground">
+                <h1 className="text-page font-semibold tracking-[-0.012em] text-foreground">
                   {title}
                 </h1>
               ) : null}
@@ -78,8 +78,6 @@ export function AuthFormFallback() {
 function AuthBackdrop() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-      <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,var(--color-brand-soft),transparent_68%)] opacity-90 blur-2xl" />
-      <div className="absolute -bottom-28 -right-20 h-80 w-80 rounded-full bg-[radial-gradient(circle,var(--color-brand-soft),transparent_70%)] opacity-70 blur-2xl" />
       <svg
         viewBox="0 0 800 800"
         fill="none"
