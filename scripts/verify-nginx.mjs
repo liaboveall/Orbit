@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import assert from "node:assert/strict";
 
-const directory = resolve("artifacts/comprehensive-20260913/nginx");
+const directory = resolve("artifacts/release/nginx");
 await mkdir(directory, { recursive: true });
 const http = await readFile("infra/nginx-http.conf", "utf8");
 const server = await readFile("infra/nginx.conf", "utf8");

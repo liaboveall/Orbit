@@ -20,7 +20,7 @@
 | Testing | Vitest、Playwright | 真 PostgreSQL 做集成测试 |
 | CI/deploy | GitHub Actions、Docker | 单一标准 Node 容器部署路径 |
 
-M0 读取官方版本资料并记录实际依赖到 docs/versions.md（由开发 Agent 创建），提交 pnpm-lock.yaml。上述是选定主版本，不声称全部都是当日最新。Prisma 7 使用相应生成器、driver adapter 和配置文件，不抄 Prisma 6/8 API。若兼容性验证失败，记录具体错误与最小替代决策，不无故整体换栈。
+依赖版本以 [package.json](../package.json) 和 [锁文件](../pnpm-lock.yaml) 为准。
 
 ## 2. 结构
 
@@ -41,33 +41,22 @@ flowchart LR
     C --> O
 ~~~
 
-## 3. 预期目录（M0 建立）
+## 3. 目录
 
 ~~~text
-src/
-  app/                     # 页面和 /api/v1；auth 挂 /api/auth
-  components/ui/           # 通用视觉原语
-  features/
-    auth/ projects/ tasks/ board/ comments/ files/ activity/ today/
-  contracts/               # Zod schema、DTO、错误码；无服务端依赖
-  server/
-    auth/                   # Better Auth、会话、项目授权
-    db/                     # Prisma singleton、事务帮助函数
-    modules/                # project/task/invite/comment/file 等服务
-    modules/                # 业务模块（attachments/storage、invitation、task 等）
-    http/                   # 错误映射、origin 验证、请求 ID、限流
-  lib/                      # 确实跨功能的纯工具，不能成为杂物目录
-  styles/                   # tokens、globals
-prisma/                     # schema、迁移、seed
-tests/unit/ integration/ e2e/ contract/
-scripts/                    # seed、清理、导出测试报告
-Dockerfile / .dockerignore  # 仓库根目录（M6 容器构建）
-infra/                      # compose、nginx、备份脚本、生命周期 JSON
-artifacts/                  # 实际报告与截图（大文件按需忽略）
-docs/ planning/ prompts/ contracts/  # 本规划
+src/app/          Next.js 页面和 HTTP 入口
+src/features/     协作、认证、公开演示和应用外壳
+src/components/   跨功能界面组件
+src/contracts/    Zod 校验、DTO 和客户端
+src/server/       认证、权限、数据库、领域服务和存储
+prisma/           数据模型和迁移
+contracts/        OpenAPI 契约
+infra/            Compose、Nginx、备份和告警
+scripts/          运维与自动化检查
+tests/            单元、契约、集成和浏览器测试
 ~~~
 
-不预创建几十个空服务。只在当前里程碑需要时创建模块。server-only 保护含凭证、数据库和内部授权逻辑的模块。
+公开演示的合成数据位于 src/features/demo。server-only 保护凭证、数据库和内部授权模块。
 
 ## 4. 请求生命周期
 
@@ -112,13 +101,13 @@ V1 不引入数据库 RLS；所有查询必须经过项目授权服务，并用�
 
 认证请求先按实际字节数执行 64KiB 有界读取，再交给 Better Auth 解析；无/偏小 Content-Length 不能绕过限制，超限统一返回 413。读取期间客户端 abort 取消源流；超限取消不等待不合作的源完成。
 
-SMTP 每次发送使用独立可取消连接，TCP/greeting/空闲预算分别 10/10/15 秒，发送总预算 20 秒。总预算到期关闭真实 socket，不能只让 Promise 超时；保留 implicit TLS、生产强制 STARTTLS 和证书校验。同 env 并发发送互不取消。实现对照 [Nodemailer socket 选项](https://nodemailer.com/extras/smtp-connection) 与已安装 10.0.16 源码。
+SMTP 每次发送使用独立可取消连接，TCP/greeting/空闲预算分别 10/10/15 秒，发送总预算 20 秒。总预算到期关闭真实 socket，不能只让 Promise 超时；保留 implicit TLS、生产强制 STARTTLS 和证书校验。同 env 并发发送互不取消。实现对照 [Nodemailer socket 选项](https://nodemailer.com/extras/smtp-connection) 与锁定版本源码。
 
 附件下载获取响应头预算 10 秒，整个响应流预算 120 秒；成功、截断、客户端取消及超时均释放计时器/监听。按存储声明长度检查实际字节，流开始后只结束流并留脱敏事件，不伪造新的 JSON 错误响应。
 
 结构化日志分层：Nginx 安全访问日志记录 requestId、固定标签 route/method、status、bytes、durationSeconds，不记录路径、查询或 Referer，避免路径令牌泄露；代理覆盖 X-Request-Id 后传入应用用于关联。应用记录脱敏 errorClass/errorCode 和认证邮件事件，LOG_LEVEL 控制 debug/info/warn/error。业务 userId/projectId 仅在事件明确需要且完成授权后选取，禁止复制请求或错误原文。
 
-staging/production 使用 PostgreSQL 共享原子固定窗口限流：业务写 60 次/用户/分钟、GET 读取 300 次/用户/分钟、邀请预览/接受合计 20 次/IP/分钟；认证使用 Better Auth 1.7.3 customStorage.consume，并保持敏感端点原阈值。上传采用数据库滑动分钟 10 次和最多 2 个跨副本活跃租约（180 秒，覆盖 120 秒请求截止）；development/test 保留内存实现，真实双池并发测试直接验证共享实现。只信任 TRUSTED_PROXY_COUNT 指定代理链，默认 0 退化共享来源桶。细节与维护见 [M6 运行手册](M6-OPERATIONS.md)。
+staging/production 使用 PostgreSQL 共享原子固定窗口限流：业务写 60 次/用户/分钟、GET 读取 300 次/用户/分钟、邀请预览/接受合计 20 次/IP/分钟；认证使用 Better Auth 的 customStorage.consume，并保持敏感端点原阈值。上传采用数据库滑动分钟 10 次和最多 2 个跨副本活跃租约（180 秒，覆盖 120 秒请求截止）；development/test 保留内存实现，真实双池并发测试直接验证共享实现。只信任 TRUSTED_PROXY_COUNT 指定代理链，默认 0 退化共享来源桶。细节与维护见 [部署与恢复](OCI-DEPLOYMENT.md)。
 
 服务端页面与 API 共用每用户读取额度：每个完整页面请求（首屏、客户端导航、刷新）在读取数据前计 1 次，同一请求的布局与页面只计一次；链接预取只渲染到布局、不执行页面，因此不计费（2026-09-24 实测预取载荷不含页面数据）。超额时跳转 /rate-limited 说明页，显示等待秒数并保留原地址。
 
@@ -127,7 +116,3 @@ staging/production 使用 PostgreSQL 共享原子固定窗口限流：业务写 
 连接池饱和时 Prisma 交互式事务在 maxWait（2 秒）内无法开始会抛出特定 P2028，与 pg-pool 等待超时一样映射为 503 SERVICE_UNAVAILABLE；其余 P2028 仍按 500 上报。
 
 健康检查 /health/live 验证进程；/health/ready 核对构建时生成的迁移名称/checksum/成功状态及所有业务列的存在、类型和可空性，拒绝失败迁移与不兼容结构。检查范围有界，不读取用户行；不是完整索引/约束审计（发布仍运行迁移历史检查）。邮件/存储故障只影响对应操作，不使整个看板不可用；响应不暴露内部信息。
-
-## 9. V1.1 的扩展位置
-
-AI 接口通过 server/integrations/ai 与 server/modules/ai-plan 接入，见 09。需要后台执行时独立 Node worker；选 PostgreSQL 作业租约，V1.1 小规模不默认引入 Redis。只有任务负载或部署需求出现明确证据，才新增队列基础设施。

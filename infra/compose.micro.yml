@@ -1,6 +1,5 @@
-# Single-host deployment; authoritative configuration for docs/AWS-MICRO-DEPLOYMENT.md
-# and docs/OCI-DEPLOYMENT.md. The optional "local-storage" profile runs S3-compatible
-# SeaweedFS on the same host (ADR-030); without it, attachments use external S3.
+# Single-host deployment. The optional local-storage profile runs SeaweedFS.
+# Without it, attachments use an external S3-compatible service.
 # ORBIT_*_MEM_LIMIT come from /opt/orbit/.env on hosts shared with other sites; 0 means no limit.
 name: orbit-showcase
 x-logging: &logging

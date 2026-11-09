@@ -18,7 +18,7 @@ import { registrationTimezone, requireUserName, requireUserTimezone } from "./us
  * 版本纪律（AGENTS.md）：所有配置项名称与认证表字段均对照已安装的
  * `better-auth@1.7.3` / `@better-auth/core@1.7.3` 的类型与 schema 定义，不混用其它版本示例。
  *
- * 设计要点（docs/03 §5、docs/04 §3、docs/08 §3）：
+ * 设计要点（docs/03 §5、docs/04 §3）：
  *  - 数据库会话（无 secondary storage，默认落库到 Session 表），不手动伪造 cookie。
  *  - HttpOnly + SameSite=Lax 为库默认；Secure 由 `advanced.useSecureCookies` 控制，
  *    仅在 baseURL 为 https（生产/staging）时开启，本地 http 开发不强制以免 cookie 无法下发。

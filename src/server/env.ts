@@ -2,14 +2,14 @@ import "server-only";
 import { setDefaultResultOrder } from "node:dns";
 import { z } from "zod";
 
-// compose.dev.yml 按 docs/08 §1 仅绑定 127.0.0.1（IPv4），而 .env.example 默认使用 localhost；
+// compose.dev.yml 仅绑定 127.0.0.1（IPv4），而 .env.example 默认使用 localhost；
 // Node 默认 verbatim 顺序在 Windows 下会先尝试 [::1] 并等待 ~300ms 超时后才回退 127.0.0.1。
 setDefaultResultOrder("ipv4first");
 
 /**
  * Orbit 环境配置校验（M0 / ORB-001）。
  *
- * 设计约束（见 docs/08 §3、AGENTS.md）：
+ * 设计约束（见 docs/OCI-DEPLOYMENT.md、AGENTS.md）：
  *  - 在服务启动期校验必需项（由 src/instrumentation.ts 触发）。
  *  - 校验失败时只暴露「变量名 + 预期格式」，绝不回显任何变量值或秘密。
  *  - 秘密/凭证类变量禁止 NEXT_PUBLIC 前缀（否则会进入客户端 bundle）。
@@ -185,7 +185,7 @@ export const envSchema = z
     }
 
     // TRUSTED_PROXY_COUNT（D1 修复）：默认 0 保留直连场景的安全信任边界（拒绝一切
-    // X-Forwarded-For）；但生产拓扑是「Nginx 受信代理 + 源站不可直连」（docs/08 §3、
+    // X-Forwarded-For）；但生产拓扑是「Nginx 受信代理 + 源站不可直连」（docs/OCI-DEPLOYMENT.md、
     // infra/nginx.conf），0 会使按 IP 限流塌缩为全局单桶（匿名登录/邀请接口全体共享，
     // 一个攻击者即可锁死所有人）。生产环境要求显式配置 ≥ 1，误配在启动期失败
     // （可观测警报），不允许默默退化。

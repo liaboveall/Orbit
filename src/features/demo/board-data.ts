@@ -1,30 +1,13 @@
-// ⚠️ FIXTURE DATA — 非真实后端，仅供 M0 布局样例使用
-import type { MemberDTO, TaskSummaryDTO, UserSummaryDTO } from "@/contracts";
-import { BOARD_PROJECT, PEOPLE } from "@/features/shell/fixtures";
+import type { TaskSummaryDTO, UserSummaryDTO } from "@/contracts";
 
-/**
- * 看板 fixture（ORB-002）。
- *
- * ⚠️ 合成数据，非真实后端。类型标注使用 src/contracts 的 TaskSummaryDTO / MemberDTO。
- * 覆盖三列（待办/进行中/已完成）、四种优先级、逾期与长标题，用于筛选、卡片与六态演示。
- * 参照「今天 = 2026-09-08」。看板本身不做真实拖拽排序（属 M3/ORB-011）。
- */
+export const DEMO_DATE = "2026-09-08";
 
-const PROJECT_ID = BOARD_PROJECT.id;
-
-/** 项目成员（页头头像占位 + 负责人筛选来源）。 */
-export const BOARD_MEMBERS: MemberDTO[] = [
-  { userId: "u_alice", name: "林晓", role: "OWNER", joinedAt: "2026-08-20T08:00:00Z" },
-  { userId: "u_bao", name: "包峥", role: "MEMBER", joinedAt: "2026-08-21T02:11:00Z" },
-  { userId: "u_chen", name: "陈静", role: "MEMBER", joinedAt: "2026-08-22T06:40:00Z" },
-  { userId: "u_dev", name: "Dev Patel", role: "MEMBER", joinedAt: "2026-08-24T09:05:00Z" },
-];
-
-/** 负责人筛选下拉的可选项（含「未分配」由页面单独处理）。 */
-export const BOARD_ASSIGNEES: UserSummaryDTO[] = BOARD_MEMBERS.map((m) => ({
-  id: m.userId,
-  name: m.name,
-}));
+const PEOPLE = {
+  alice: { id: "u_alice", name: "林晓" },
+  bao: { id: "u_bao", name: "包峥" },
+  chen: { id: "u_chen", name: "陈静" },
+  dev: { id: "u_dev", name: "Dev Patel" },
+} satisfies Record<string, UserSummaryDTO>;
 
 let seq = 0;
 
@@ -44,14 +27,14 @@ function task(input: {
   seq += 1;
   return {
     id: `33333333-4444-4555-8666-77777777${String(seq).padStart(4, "0")}`,
-    projectId: PROJECT_ID,
+    projectId: "11111111-2222-4333-8444-555555555501",
     number: input.number,
-    identifier: `${BOARD_PROJECT.key}-${input.number}`,
+    identifier: `CAMP-${input.number}`,
     title: input.title,
     status: input.status,
     priority: input.priority,
     assignee: input.assignee ?? null,
-    creator: PEOPLE.alice!,
+    creator: PEOPLE.alice,
     dueDate: input.dueDate,
     completedAt: input.completedAt ?? null,
     version: 1,
@@ -174,4 +157,3 @@ export const BOARD_TASKS: TaskSummaryDTO[] = [
 ];
 
 /** 筛选无结果态：空数组（页面显示「没有匹配任务」+ 清除筛选）。 */
-export const BOARD_TASKS_EMPTY: TaskSummaryDTO[] = [];

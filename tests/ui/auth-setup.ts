@@ -171,7 +171,7 @@ export async function createProjectAndTask(
     data: {
       name: "UI 测试项目",
       key: `UT${Math.floor(Math.random() * 1e6).toString().padStart(6, "0")}`, // ProjectKeySchema /^[A-Z][A-Z0-9]{1,7}$/：2–8 字符，此处固定 8
-      description: "独立详情页测试用",
+      description: "看板、任务面板和独立详情页的隔离测试",
       color: "BLUE",
     },
   });
@@ -189,9 +189,9 @@ export async function createProjectAndTask(
     headers: { ...headers, "Idempotency-Key": crypto.randomUUID() }, // 新幂等键
     data: {
       title: "UI 测试任务",
-      description: "用于验证独立详情页持久化",
+      description: "用于验证任务详情交互",
       priority: "MEDIUM",
-      status: "IN_PROGRESS",
+      status: "TODO",
     },
   });
   

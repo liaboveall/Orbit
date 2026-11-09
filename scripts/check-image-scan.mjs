@@ -25,7 +25,7 @@ export function assessScan(report, policy) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const paths = process.argv.slice(2);
   if (!paths.length) throw new Error("Supply one or more Trivy JSON reports");
-  const policy = JSON.parse(await readFile("planning/image-security-policy.json", "utf8"));
+  const policy = JSON.parse(await readFile(new URL("../infra/image-security-policy.json", import.meta.url), "utf8"));
   for (const path of paths) {
     const result = assessScan(JSON.parse(await readFile(path, "utf8")), policy);
     console.log(JSON.stringify({ report: path, ...result }));

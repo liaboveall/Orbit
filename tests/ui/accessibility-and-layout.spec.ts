@@ -2,59 +2,39 @@ import {cleanupTestEmails} from "../e2e/support/db";
 import { expect, test, type Cookie, type Locator, type Page } from "@playwright/test";
 import { establishSessionCookies, createProjectAndTask } from "./auth-setup";
 
-const project = "11111111-2222-4333-8444-555555555501";
-const task = "33333333-4444-4555-8666-777777770001";
-const board = `/app/samples/board/${project}`;
-const title = "完成活动详情页的报名表单校验";
-const dialogName = `任务详情：${title}`;
+const title = "UI 测试任务";
+const dialogName = "任务详情";
 
-/**
- * 会话前置：/app/* 受 proxy.ts（session cookie 门禁）+ app/layout.tsx（getSessionUser）双层保护，
- * 未登录访问会被重定向到 /auth/login，导致所有用例失败。这里在用例开始前建立一个真实、已验证
- * 的会话并注入其 cookie。首个用例走完整认证链路（sign-up → Mailpit 验证邮件 → verify-email autoSignIn），
- * 之后缓存 cookie 复用（workers:1 + fullyParallel:false，模块级变量在单进程内顺序保留）。
- *
- * 额外：为最后一条测试（独立详情页）创建真实项目和任务，避免 fixture taskId→404。
- */
-const sessionMeta: {email?: string} = {};
-test.afterAll(async () => { if(sessionMeta.email) await cleanupTestEmails([sessionMeta.email]); });
-let sessionCookies: Cookie[] | null = null;
-let realProjectId: string | null = null;
-let realTaskId: string | null = null;
-let realBoardReady = false;
+const sessionMeta: { email?: string } = {};
+test.afterAll(async () => {
+  if (sessionMeta.email) await cleanupTestEmails([sessionMeta.email]);
+});
+
+let sessionCookies: Cookie[] | undefined;
+let projectId: string;
+let taskId: string;
 
 test.beforeEach(async ({ context, request, baseURL }) => {
   if (!sessionCookies) {
-    if (!baseURL) throw new Error("playwright.ui.config.ts 未提供 baseURL，无法建立会话");
-    sessionCookies = await establishSessionCookies(request, baseURL, sessionMeta);
-    // 创建真实项目和任务供独立详情页测试使用
-    const { projectId: pid, taskId: tid } = await createProjectAndTask(request, baseURL);
-    realProjectId = pid;
-    realTaskId = tid;
+    if (!baseURL) throw new Error("Missing isolated Playwright baseURL");
+    const cookies = await establishSessionCookies(request, baseURL, sessionMeta);
+    ({ projectId, taskId } = await createProjectAndTask(request, baseURL));
+    sessionCookies = cookies;
   }
   await context.addCookies(sessionCookies);
-  // This suite intentionally uses next dev for development-only sample pages.
-  // Compile the real destination before testing keyboard navigation: on a cold
-  // CI runner its first compilation can exceed the interaction's 5s assertion.
-  // A real authenticated HTTP response is required; no sleeps or test retries.
-  if (!realBoardReady) {
-    const destination = `/app/projects/${realProjectId}/board`;
-    const response = await request.get(destination);
-    expect(response.status()).toBe(200);
-    expect(new URL(response.url()).pathname).toBe(destination);
-    realBoardReady = true;
-  }
 });
 
+function boardPath() {
+  return "/app/projects/" + projectId + "/board";
+}
+
+function taskLink(page: Page) {
+  return page.getByRole("link", { name: title, exact: true });
+}
+
 async function openBoard(page: Page) {
-  await page.goto(`${board}?state=data`);
-  await expect(page.getByText("使用 fixture 合成数据", { exact: false })).toBeVisible();
-  // 在应用自身的交互生效后再操作，避免把水合前丢失点击当作功能失败。
-  const search = page.getByRole("searchbox", { name: "搜索任务" });
-  await search.fill("不存在的测试任务");
-  await expect(page.getByRole("button", { name: title, exact: true })).toHaveCount(0);
-  await search.fill("");
-  await expect(page.getByRole("button", { name: title, exact: true })).toBeVisible();
+  await page.goto(boardPath());
+  await expect(taskLink(page)).toBeVisible();
 }
 
 async function expectFocusInside(dialog: Locator) {
@@ -64,12 +44,11 @@ async function expectFocusInside(dialog: Locator) {
 for (const width of [768, 1024, 1440]) {
   test(`${width}px 导航有名称、项目标记可见且键盘可以进入项目`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1024 });
-    await openBoard(page);
+    await page.goto("/app/today");
     const nav = page.getByRole("navigation", { name: "主导航" });
     await expect(nav.getByRole("link", { name: "我的工作台", exact: true })).toBeVisible();
     await expect(nav.getByRole("button", { name: "全部项目", exact: true })).toBeVisible();
     const projects = nav.locator("ul a");
-    // 当前会话只创建一个真实项目；导航不能再展示六个样例项目。
     await expect(projects).toHaveCount(1);
     for (const link of await projects.all()) {
       await expect(link).toHaveAccessibleName(/\S+/);
@@ -80,11 +59,11 @@ for (const width of [768, 1024, 1440]) {
       expect(bounds?.width).toBeGreaterThan(0);
       expect(bounds?.height).toBeGreaterThan(0);
     }
-    const destination = nav.locator(`a[href="/app/projects/${realProjectId}/board"]`);
+    const destination = nav.locator(`a[href="/app/projects/${projectId}/board"]`);
     await destination.focus();
     await expect(destination).toBeFocused();
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(new RegExp(`/app/projects/${realProjectId}/board$`));
+    await expect(page).toHaveURL(new RegExp(`/app/projects/${projectId}/board$`));
   });
 }
 
@@ -105,15 +84,14 @@ for (const width of [390, 768, 1440]) {
   test(`${width}px 任务面板隔离背景、循环焦点并恢复任务卡`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await openBoard(page);
-    const trigger = page.getByRole("button", { name: title, exact: true });
+    const trigger = taskLink(page);
     await trigger.click();
     const dialog = page.getByRole("dialog", { name: dialogName, exact: true });
     await expect(dialog).toBeVisible();
     await expectFocusInside(dialog);
     await expect(page.getByRole("searchbox", { name: "搜索任务" })).toHaveCount(0);
-    const first = dialog.getByRole("button", { name: "复制任务链接", exact: true });
-    const last = dialog.getByRole("button", { name: "发表评论", exact: true });
-    // 底部操作不能被开发态切换器等背景浮层遮挡。
+    const first = dialog.getByRole("button", { name: "复制链接", exact: true });
+    const last = dialog.getByRole("button", { name: "选择文件", exact: true });
     await last.click({ trial: true });
     await last.focus();
     await page.keyboard.press("Tab");
@@ -122,14 +100,14 @@ for (const width of [390, 768, 1440]) {
     await expect(last).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
-    await expect(page).toHaveURL(`${board}?state=data`);
+    await expect(page).toHaveURL(boardPath());
     await expect(trigger).toBeFocused();
   });
 
   test(`${width}px 草稿在 Escape/关闭按钮时确认，保留或放弃后焦点正确`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await openBoard(page);
-    const trigger = page.getByRole("button", { name: title, exact: true });
+    const trigger = taskLink(page);
     await trigger.click();
     const dialog = page.getByRole("dialog", { name: dialogName, exact: true });
     await dialog.getByRole("button", { name: title, exact: true }).click();
@@ -166,7 +144,7 @@ for (const width of [390, 768, 1440]) {
 test("桌面点击遮罩也保护草稿", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openBoard(page);
-  await page.getByRole("button", { name: title, exact: true }).click();
+  await taskLink(page).click();
   const dialog = page.getByRole("dialog", { name: dialogName, exact: true });
   await dialog.getByRole("button", { name: title, exact: true }).click();
   await dialog.getByRole("textbox", { name: "编辑标题" }).fill("遮罩关闭也须确认");
@@ -177,7 +155,7 @@ test("桌面点击遮罩也保护草稿", async ({ page }) => {
 test("面板打开期间跨断点，关闭后焦点不会丢失到隐藏卡片", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openBoard(page);
-  await page.getByRole("button", { name: title, exact: true }).click();
+  await taskLink(page).click();
   const dialog = page.getByRole("dialog", { name: dialogName, exact: true });
   await expect(dialog).toBeVisible();
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -194,19 +172,15 @@ test("直接访问面板关闭后保留其他参数；独立详情页不锁焦�
   page.on("console", message => {
     if (message.text().includes("same key")) duplicateKeyErrors.push(message.text());
   });
-  await page.goto(`${board}?state=data&task=${task}`);
+  await page.goto(`${boardPath()}?q=UI&task=${taskId}`);
   const dialog = page.getByRole("dialog", { name: dialogName, exact: true });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "关闭详情" }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page).toHaveURL(`${board}?state=data`);
+  await expect(page).toHaveURL(`${boardPath()}?q=UI`);
   await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).not.toBe("BODY");
-  
-  // 改用真实合成的项目 + 任务 ID 访问独立详情页（ORB-012 验收项）
-  if (!realProjectId || !realTaskId) {
-    throw new Error("beforeEach 未创建真实项目/任务，无法测试独立详情页");
-  }
-  await page.goto(`/app/projects/${realProjectId}/tasks/${realTaskId}`);
+
+  await page.goto(`/app/projects/${projectId}/tasks/${taskId}`);
   // 独立详情页（variant="page"）应正常渲染且**不锁焦点**：非模态、无面板关闭入口。
   await expect(page.getByRole("link", { name: "返回看板", exact: true })).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);

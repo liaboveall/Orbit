@@ -1,86 +1,56 @@
-# Orbit
+<div align="center">
+  <img src="src/app/icon.svg" width="72" height="72" alt="">
+  <h1>Orbit</h1>
+  <p><strong>Know who's doing what and what comes next.</strong></p>
+  <p>A workspace for coursework, hackathons, and small software projects.<br>Keep tasks, conversations, and files together.</p>
+  <p>
+    <a href="https://smartorbit.tech/demo"><strong>Try the live demo ↗</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://smartorbit.tech">Open Orbit</a>
+    &nbsp;·&nbsp;
+    <a href="README.md">简体中文</a>
+  </p>
+</div>
 
-A project collaboration app for individuals and small student teams. Keep tasks, discussions, and deliverables together for coursework, competitions, and software projects.
+[![Orbit's desktop board and mobile task details showing a fictional campus project](docs/media/orbit-showcase.png)](https://smartorbit.tech/demo)
 
-[简体中文](README.md) · [Documentation](docs/README.md) · [Deployment](docs/OCI-DEPLOYMENT.md)
+<p align="center"><sub>Captured from the public demo, which uses sample data and requires no account. The app interface is in Simplified Chinese.</sub></p>
 
-## Features
+## From assignment to delivery
 
-- Create projects, invite teammates through single-use links, manage members, and archive completed projects.
-- Search and filter task lists and a three-column board, with assignees, priorities, due dates, drag-and-drop, and menu alternatives.
-- Collaborate through Markdown descriptions, subtasks, comments, private attachments, and project activity.
-- Track assigned work in a personal dashboard, restore deleted tasks, and handle editing conflicts with draft protection.
-- Email registration, verification, password recovery, and account timezone settings.
+- **See what’s moving.** Organize work in a board or list, with assignees, priorities, and deadlines. Move cards by dragging or with the keyboard menu.
+- **Collaborate in context.** Invite teammates with single-use links. Add Markdown descriptions, subtasks, comments, and private attachments.
+- **Find your next task.** See assigned work and deadlines across projects. Keep drafts when edits conflict and recover deleted tasks from the trash.
 
-The interface is in Simplified Chinese, with desktop and mobile support for core workflows. Project permissions are enforced on the server.
+## Run locally
 
-## Try it
+Use **Node.js 24+**, **pnpm 10.34.5**, and **Docker Compose**. Clone the repository and run these commands from its root:
 
-After starting the app, open the [read-only demo](http://localhost:3000/demo). It uses synthetic data and needs no login or database seed.
-
-For real collaboration, register, verify your email in [Mailpit](http://localhost:8025), create a project, and share an invitation link with a teammate.
-
-## Getting started
-
-Requires Node.js 24+, pnpm 10.34.5, and running Docker Compose.
-
-```sh
-git clone https://github.com/liaboveall/Orbit.git
-cd Orbit
-npm install -g pnpm@10.34.5
+~~~sh
 pnpm install --frozen-lockfile
-```
+cp .env.example .env.local
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+~~~
 
-1. Copy `.env.example` to `.env.local`: `Copy-Item .env.example .env.local` in PowerShell, or `cp .env.example .env.local` on macOS/Linux.
-2. Generate a local secret and set `BETTER_AUTH_SECRET` in `.env.local`:
+On Windows PowerShell, use `Copy-Item .env.example .env.local`. Set `BETTER_AUTH_SECRET` in `.env.local` to the generated value, then run:
 
-   ```sh
-   node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
-   ```
+~~~sh
+docker compose -f infra/compose.dev.yml up -d --wait
+pnpm db:migrate:deploy
+pnpm dev
+~~~
 
-3. Start PostgreSQL, S3-compatible storage (SeaweedFS) and Mailpit. The private attachment bucket `orbit-dev`, matching `STORAGE_BUCKET`, is created when the storage service starts:
+Open [localhost:3000](http://localhost:3000). Verification emails appear in [Mailpit](http://localhost:8025). The read-only [/demo](http://localhost:3000/demo) is available immediately.
 
-   ```sh
-   docker compose -f infra/compose.dev.yml up -d
-   ```
+## Repository
 
-   When switching from the earlier MinIO setup, run `docker compose -f infra/compose.dev.yml up -d --remove-orphans storage`. It starts only the new storage service and removes the old container without recreating other services; the old `orbit-dev_orbit_minio` volume is left in place.
-4. Apply committed migrations and start Orbit:
-
-   ```sh
-   pnpm db:migrate:deploy
-   pnpm dev
-   ```
-
-Open [Orbit](http://localhost:3000) and register an account. Optional `pnpm db:seed` creates development fixtures, not a login account. Never commit local credentials. See the [environment guide](docs/08-ENVIRONMENT-AND-DEPLOYMENT.md) for port overrides and test database setup.
-
-## Development
-
-| Command | Purpose |
+| Directory | Contents |
 | --- | --- |
-| `pnpm dev` | Development server |
-| `pnpm build` / `pnpm start` | Production build / server |
-| `pnpm check` | Lint, application types, unit and contract tests |
-| `pnpm typecheck:scripts` | Tool script types |
-| `pnpm test:integration` | PostgreSQL integration tests |
-| `pnpm test:e2e` / `pnpm test:ui` | Browser workflows / UI tests |
-| `pnpm db:migrate:dev` | Create development migrations |
-| `pnpm db:migrate:deploy` | Apply committed migrations |
+| `src/` | Next.js pages and APIs, feature UI, authorization and domain services |
+| `prisma/` · `contracts/` | PostgreSQL schema, migrations, and the OpenAPI contract |
+| `infra/` · `scripts/` | Containers, reverse proxy, maintenance and backups |
+| `tests/` | Unit, contract, integration and browser regression tests |
 
-Run database and browser suites sequentially against the separate `orbit_test` database. See [test instructions](tests/README.md).
+**Stack**　Next.js · React · TypeScript · Tailwind CSS · PostgreSQL · Prisma · Better Auth · S3
 
-## Stack and structure
-
-Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, and Radix UI; PostgreSQL 17, Prisma 7, Better Auth, and private S3-compatible storage. Exact versions are in [package.json](package.json) and the lockfile.
-
-- `src/app`: pages and API routes.
-- `src/features`: frontend product features.
-- `src/server`: authentication, authorization, persistence, and business services.
-- `src/contracts` and `contracts`: runtime validation and OpenAPI.
-- `prisma`, `tests`, and `infra`: migrations, verification, and deployment.
-
-## Deployment and status
-
-Orbit runs as a persistent Node.js container. The current target is described in the [Oracle Cloud guide](docs/OCI-DEPLOYMENT.md) (single ARM host with same-host S3-compatible storage); the [AWS guide](docs/AWS-MICRO-DEPLOYMENT.md) remains an alternative, and the [operations manual](docs/M6-OPERATIONS.md) covers PostgreSQL, private storage, email, HTTPS, and backups.
-
-Core collaboration features are implemented and locally verified. Production deployment and external acceptance remain in progress; the AI project planning assistant is not implemented. [PROGRESS](PROGRESS.md) and the [backlog](planning/backlog.json) track current evidence and remaining work. Engineering documentation is primarily in Chinese.
+[Architecture and API](docs/README.md) · [Deploy and restore](docs/OCI-DEPLOYMENT.md) · [Run tests](tests/README.md)
