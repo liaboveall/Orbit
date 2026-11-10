@@ -13,7 +13,7 @@ export const metadata = { title: "我的工作台 · Orbit" };
 
 function InvalidFilters() {
   return (
-    <div className="space-y-3 pt-6">
+    <div className="space-y-3">
       <InlineError>筛选参数不合法。</InlineError>
       <Link href="/app/today" className={buttonVariants({ variant: "secondary" })}>
         清除筛选
@@ -57,7 +57,7 @@ export default async function TodayPage({
     throw error;
   }
   return (
-    <div className="pt-2 md:pt-5">
+    <div className="animate-rise md:pt-3">
       <PageHeader
         eyebrow={formatToday(overview.today)}
         title="我的工作台"

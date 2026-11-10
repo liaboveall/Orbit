@@ -17,7 +17,7 @@ import { InlineError } from "@/components/ui/inline-error";
 import { Input, Label } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/cn";
-import { Spinner } from "@/features/auth/auth-form";
+import { Spinner } from "@/components/ui/spinner";
 import { TimezonePicker } from "./timezone-picker";
 import { ZonePreview } from "./zone-preview";
 import { buildTimezoneOptions, isKnownTimezone } from "./timezones";
@@ -187,7 +187,7 @@ function SettingsFormContent({ user }: { user: UserDTO }) {
           void handleSubmit(event);
         }}
         noValidate
-        className="glass-card overflow-hidden rounded-card"
+        className="surface-card overflow-hidden rounded-card"
       >
         <header className="flex items-center justify-between gap-3 px-5 pt-5">
           <h2 className="text-section font-semibold tracking-[-0.015em] text-foreground">账户偏好</h2>
@@ -313,7 +313,7 @@ function SettingsFormContent({ user }: { user: UserDTO }) {
       {/* 全局错误 / 会话失效：跨列放在网格末尾，两种视口下都在表单之后可读 */}
       <div className="lg:col-span-2 lg:-mt-2">
         {sessionExpired ? (
-          <div className="flex flex-wrap items-center gap-3 rounded-[16px] bg-warning-soft px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3 rounded-tile bg-warning-soft px-4 py-3">
             <p className="min-w-0 flex-1 text-label text-warning">
               会话已失效（可能在其他标签页退出）。更改尚未保存，请重新登录后再试。
             </p>
@@ -362,7 +362,7 @@ function AccountCard({ user }: { user: UserDTO }) {
   return (
     <section
       aria-label="账户信息"
-      className="glass-card overflow-hidden rounded-card"
+      className="surface-card overflow-hidden rounded-card"
     >
       <header className="px-4 pt-3.5 text-label font-semibold text-foreground">账户信息</header>
       <dl>

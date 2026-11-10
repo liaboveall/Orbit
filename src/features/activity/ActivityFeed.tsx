@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { useRouter } from "next/navigation";
 import { Activity as ActivityIcon } from "lucide-react";
 import {
   ActivitySchema,
@@ -16,13 +15,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InlineError } from "@/components/ui/inline-error";
-import { PageHeader } from "@/components/ui/page-header";
-import { Spinner } from "@/features/auth/auth-form";
+import { SectionHeader } from "@/components/ui/page-header";
+import { Spinner } from "@/components/ui/spinner";
 import { STATUS_LABEL } from "@/features/tasks/task-meta";
-import { loginPathWithReturnTo as _loginPathWithReturnTo } from "@/lib/return-to";
 import { useAutoRefresh } from "@/features/tasks/real/use-auto-refresh";
 import { usePermissionLossHandler, PermissionLossOverlay } from "@/features/activity/use-permission-loss-handler";
-import { formatEventDateTime, useUserTimezone } from "@/lib/user-timezone";
+import { formatEventDate, formatEventDateTime, useUserTimezone } from "@/lib/user-timezone";
 
 /**
  * 项目活动时间线（M4 / ORB-011，`/app/projects/[id]/activity`）。
@@ -92,6 +90,14 @@ function formatRelative(iso: string, tz: string): string {
   return formatEventDateTime(iso, tz);
 }
 
+/** 日期分组的标题：今天、昨天，或日期本身。依赖浏览器当前时间，只在挂载后调用。 */
+function dayLabel(date: string, tz: string): string {
+  const now = Date.now();
+  if (date === formatEventDate(new Date(now).toISOString(), tz)) return "今天";
+  if (date === formatEventDate(new Date(now - 86_400_000).toISOString(), tz)) return "昨天";
+  return date;
+}
+
 /**
  * 挂载检测：用 useSyncExternalStore 而非 useState+useEffect，避免在 effect 内同步
  * setState 触发级联渲染（react-hooks/set-state-in-effect）。服务端快照恒为 false
@@ -123,7 +129,6 @@ function dedupeById(items: ActivityDTO[]): ActivityDTO[] {
 
 export type ActivityFeedProps = {
   projectId: string;
-  projectName: string;
   initialActivities: ActivityDTO[];
   nextCursor: string | null;
   hasMore: boolean;
@@ -131,12 +136,10 @@ export type ActivityFeedProps = {
 
 export function ActivityFeed({
   projectId,
-  projectName,
   initialActivities,
   nextCursor: initialCursor,
   hasMore: initialHasMore,
 }: ActivityFeedProps) {
-  const _router = useRouter(); // legacy, now using permission loss handler
   // 数据真源是 Server Component 传入的 initialActivities props：router.refresh()
   // 之后会带来新的 props 引用（后台刷新命中新数据时 initialActivities 的引用与内容都会
   // 变化）。此前只有「加载更多」追加的 extraActivities 是 state，首屏本身从未随新 props
@@ -210,8 +213,6 @@ export function ActivityFeed({
   const cursor = extraActivities.length > 0 ? extraCursor : baseCursor;
   const hasMore = extraActivities.length > 0 ? extraHasMore : baseHasMore;
 
-  const _activity_path = `/app/projects/${projectId}/activity`; // legacy path
-    
   // R11: Background refresh every 30s + on focus/visibility change
   useAutoRefresh();
   
@@ -275,13 +276,18 @@ export function ActivityFeed({
     }
   }
 
+  // 按用户时区的日期分组。
+  const days: { date: string; items: ActivityDTO[] }[] = [];
+  for (const item of activities) {
+    const date = formatEventDate(item.createdAt, tz);
+    const last = days.at(-1);
+    if (last?.date === date) last.items.push(item);
+    else days.push({ date, items: [item] });
+  }
+
   return (
-    <div className="w-full max-w-3xl">
-      <PageHeader
-        eyebrow={projectName}
-        title="项目活动"
-        description="任务、成员与设置的变更记录，按时间倒序排列。"
-      />
+    <div className="mx-auto w-full max-w-3xl">
+      <SectionHeader title="项目活动" description="任务、成员与设置的变更记录，按时间倒序排列。" />
 
       <InlineError className="mb-4">{error}</InlineError>
 
@@ -292,44 +298,48 @@ export function ActivityFeed({
           description="创建任务、邀请成员或修改项目后，变更会记录在这里。"
         />
       ) : (
-        <ol className="glass-card divide-y divide-line overflow-hidden rounded-card">
-          {activities.map((item) => (
-            <li key={item.id} className="flex items-start gap-3 px-4 py-3">
-              <Avatar name={item.actor.name} size="md" />
-              <div className="min-w-0 flex-1">
-                <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-label">
-                  <span className="font-medium text-foreground">{item.actor.name}</span>
-                  <span className="text-foreground-secondary">{ACTION_LABEL[item.action]}</span>
-                  {item.metadata.taskIdentifier ? (
-                    <Badge className="tabular-nums">{item.metadata.taskIdentifier}</Badge>
-                  ) : (
-                    <Badge tone="neutral">{ENTITY_LABEL[item.entityType]}</Badge>
-                  )}
-                  {item.action === "TASK_MOVED" &&
-                  item.metadata.fromStatus &&
-                  item.metadata.toStatus ? (
-                    <span className="text-caption text-foreground-muted">
-                      {STATUS_LABEL[item.metadata.fromStatus]} → {STATUS_LABEL[item.metadata.toStatus]}
-                    </span>
-                  ) : null}
-                </p>
-                <time
-                  dateTime={item.createdAt}
-                  title={formatEventDateTime(item.createdAt, tz)}
-                  className="mt-0.5 block text-caption text-foreground-muted"
-                >
-                  {mounted ? formatRelative(item.createdAt, tz) : formatEventDateTime(item.createdAt, tz)}
-                </time>
-              </div>
-            </li>
+        <div className="space-y-5">
+          {days.map((day) => (
+            <section key={day.date}>
+              <h3 className="mb-2 px-1 text-caption font-medium text-foreground-muted">
+                {mounted ? dayLabel(day.date, tz) : day.date}
+              </h3>
+              <ol className="surface-card divide-y divide-line overflow-hidden rounded-card">
+                {day.items.map((item) => (
+                  <li key={item.id} className="flex items-center gap-3 px-4 py-3">
+                    <Avatar name={item.actor.name} size="md" />
+                    <p className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1 text-label">
+                      <span className="font-medium text-foreground">{item.actor.name}</span>
+                      <span className="text-foreground-secondary">{ACTION_LABEL[item.action]}</span>
+                      {item.metadata.taskIdentifier ? (
+                        <Badge className="tabular-nums">{item.metadata.taskIdentifier}</Badge>
+                      ) : (
+                        <Badge tone="neutral">{ENTITY_LABEL[item.entityType]}</Badge>
+                      )}
+                      {item.action === "TASK_MOVED" && item.metadata.fromStatus && item.metadata.toStatus ? (
+                        <span className="text-caption text-foreground-muted">
+                          {STATUS_LABEL[item.metadata.fromStatus]} → {STATUS_LABEL[item.metadata.toStatus]}
+                        </span>
+                      ) : null}
+                    </p>
+                    <time
+                      dateTime={item.createdAt}
+                      title={formatEventDateTime(item.createdAt, tz)}
+                      className="shrink-0 text-caption tabular-nums text-foreground-muted"
+                    >
+                      {mounted ? formatRelative(item.createdAt, tz) : formatEventDateTime(item.createdAt, tz)}
+                    </time>
+                  </li>
+                ))}
+              </ol>
+            </section>
           ))}
-        </ol>
+        </div>
       )}
 
       {hasMore ? (
         <div className="mt-6 flex justify-center">
           <Button
-            type="button"
             variant="secondary"
             disabled={loadingMore}
             aria-busy={loadingMore || undefined}
@@ -343,7 +353,7 @@ export function ActivityFeed({
         </div>
       ) : null}
 
-      {/* 权限丢失恢复遮罩（F22：Dialog 焦点隔离，401/403 分流，无自动强跳） */}
+      {/* 权限丢失后的恢复对话框：会话过期去登录，被移出项目则离开，不自动跳转。 */}
       {hasPermissionError && permissionLossReason ? (
         <PermissionLossOverlay
           isVisible={hasPermissionError}

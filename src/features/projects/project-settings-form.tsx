@@ -22,7 +22,7 @@ import {
 import { InlineError } from "@/components/ui/inline-error";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
-import { Spinner } from "@/features/auth/auth-form";
+import { Spinner } from "@/components/ui/spinner";
 import { loginPathWithReturnTo } from "@/lib/return-to";
 
 /**
@@ -275,11 +275,9 @@ function ProjectSettingsFormContent({ project }: ProjectSettingsFormProps) {
   return (
     <div className="space-y-6">
       {/* 项目资料 */}
-      <section className="glass-card overflow-hidden rounded-card">
+      <section className="surface-card overflow-hidden rounded-card">
         <header className="px-5 pt-5">
-          <h2 className="text-section font-semibold tracking-[-0.015em] text-foreground">
-            项目资料
-          </h2>
+          <h3 className="text-title font-semibold tracking-[-0.01em] text-foreground">项目资料</h3>
         </header>
 
         <div className="space-y-5 px-5 py-5">
@@ -327,7 +325,7 @@ function ProjectSettingsFormContent({ project }: ProjectSettingsFormProps) {
           {profileError ? <InlineError id="project-settings-error">{profileError}</InlineError> : null}
 
           {conflictPending ? (
-            <div className="space-y-3 rounded-[16px] bg-warning-soft p-4 text-label">
+            <div className="space-y-3 rounded-tile bg-warning-soft p-4 text-label">
               <InlineError>{remoteFetchError}</InlineError>
               <Button type="button" variant="secondary" disabled={fetchingRemote || savingProfile} onClick={() => void handleRetryFetchRemote()}>
                 {fetchingRemote ? "正在获取远端内容…" : "重新获取远端内容"}
@@ -380,11 +378,11 @@ function ProjectSettingsFormContent({ project }: ProjectSettingsFormProps) {
       </section>
 
       {/* 归档 / 恢复 */}
-      <section className="glass-card overflow-hidden rounded-card">
+      <section className="surface-card overflow-hidden rounded-card">
         <header className="px-5 pt-5">
-          <h2 className="text-section font-semibold tracking-[-0.015em] text-foreground">
+          <h3 className="text-title font-semibold tracking-[-0.01em] text-foreground">
             {archived ? "恢复项目" : "归档项目"}
-          </h2>
+          </h3>
         </header>
         <div className="space-y-4 px-5 pb-5 pt-2">
           <p className="text-label leading-relaxed text-foreground-secondary">

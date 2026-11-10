@@ -198,7 +198,7 @@ export function CommentItem({
 
   if (unavailable && !editing) return null;
   return (
-    <li className="group/comment relative flex items-start gap-2.5 rounded-[12px] px-2 py-2 transition-colors hover:bg-surface-sunken">
+    <li className="group/comment relative flex items-start gap-2.5 rounded-control px-2.5 py-2.5 transition-colors hover:bg-surface-sunken">
       <Avatar name={comment.author.name} size="sm" />
 
       <div className="min-w-0 flex-1 space-y-1">
@@ -248,7 +248,7 @@ export function CommentItem({
             {conflict && (
               <div
                 role="alert"
-                className="space-y-2 rounded-[12px] bg-surface-sunken p-2.5 text-caption"
+                className="space-y-2 rounded-control bg-surface-sunken p-2.5 text-caption"
               >
                 <p className="font-medium text-foreground">
                   该评论已被更新（版本 {comment.version}）

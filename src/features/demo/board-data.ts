@@ -3,9 +3,9 @@ import type { TaskSummaryDTO, UserSummaryDTO } from "@/contracts";
 export const DEMO_DATE = "2026-09-08";
 
 const PEOPLE = {
-  alice: { id: "u_alice", name: "林晓" },
-  bao: { id: "u_bao", name: "包峥" },
-  chen: { id: "u_chen", name: "陈静" },
+  alice: { id: "u_alice", name: "林夏" },
+  bao: { id: "u_bao", name: "陈墨" },
+  chen: { id: "u_chen", name: "苏晴" },
   dev: { id: "u_dev", name: "Dev Patel" },
 } satisfies Record<string, UserSummaryDTO>;
 

@@ -151,7 +151,7 @@ export function SubtaskList({
   return (
     <section className="space-y-3" aria-label="子任务">
       {forbidden && <p role="status">任务已不可用，未保存的内容仅供复制。</p>}
-      <h2 className="flex items-center gap-2 text-label font-semibold text-foreground">
+      <h2 className="flex items-center gap-2 px-1 text-label font-semibold text-foreground">
         <ListChecks
           className="h-4 w-4 text-foreground-muted"
           aria-hidden="true"
@@ -183,9 +183,9 @@ export function SubtaskList({
         <>
           {loadError && <div role="alert"><InlineError>{loadError}</InlineError><Button size="sm" variant="secondary" onClick={() => void load()}>重新加载</Button></div>}
           {total === 0 && !adding && !subtasks?.some(s => s.unavailable) ? (
-            <p className="text-caption text-foreground-muted">暂无子任务。</p>
+            <p className="px-1 text-caption text-foreground-muted">暂无子任务。</p>
           ) : (
-            <ul className="-mx-2 space-y-0.5" role="list">
+            <ul className="rounded-tile bg-surface shadow-[inset_0_0_0_0.5px_var(--color-line)] space-y-0.5 p-1" role="list">
               {(subtasks ?? []).map((subtask) => (
                 <SubtaskItem
                   key={subtask.id}

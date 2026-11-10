@@ -1,58 +1,41 @@
 "use client";
 
-import { Ellipsis, LogOut, Settings } from "lucide-react";
-import type { UserDTO } from "@/contracts";
-import { useToast } from "@/components/ui/toast";
+import { ChevronsUpDown, LogOut, Settings } from "lucide-react";
 import { useRef } from "react";
+import type { UserDTO } from "@/contracts";
 import {
+  Avatar,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  IconButton,
+  useToast,
 } from "@/components/ui";
-import { Avatar } from "@/components/ui/avatar";
 import { useSignOut } from "@/features/auth/use-auth";
-import { confirmLeave, navigateAfterConfirmedLeave, useGuardedNavigate } from "@/features/tasks/unsaved-changes";
 import { clearUserDrafts } from "@/features/tasks/draft-storage";
+import { confirmLeave, navigateAfterConfirmedLeave, useGuardedNavigate } from "@/features/tasks/unsaved-changes";
+import { cn } from "@/lib/cn";
 
 /**
- * 个人菜单（M1 / ORB-006）：AppShell 侧栏底部与平板 rail 态的用户入口。
+ * 账户入口：侧栏底部的一行，点开是个人设置和退出登录。
  *
- * ORB-006 变更：
- *  - 用户信息改为 `user` prop（layout 用 getSessionUser 取真实会话后经 AppShell 传入），
- *    不再引用 fixture 的 CURRENT_USER —— 姓名/邮箱/时区都是账户真实数据；
- *  - 「个人设置」从占位 toast 改为真实导航 `router.push("/app/settings")`；
- *  - 「退出登录」保持整页硬跳转（`window.location.assign`）：signOut 清除 httpOnly 会话
- *    cookie 后，先删除该用户的本机任务草稿，再用硬跳转销毁全部客户端内存态（React 状态、
- *    模块级缓存、表单草稿），这是验收标准 #3「退出/换账号不泄露上一账户私有缓存」的关键一环；
- *    服务端侧再由 /me 的 `Cache-Control: private, no-store` 保证浏览器/共享缓存不留副本。
- *
- * 边界：客户端组件，只依赖 @/components/ui、@/features/auth 与 @/contracts（均客户端安全），
- * 不导入 @/server。
+ * 退出登录走整页跳转：清除会话后先删除该用户的本机草稿，再销毁全部客户端内存态，
+ * 保证换账号不会看到上一个账户的内容。退出失败时草稿原样保留。
  */
-
-type UserMenuVariant = "settings" | "avatar";
-
-type UserMenuProps = {
-  /** settings：展开/抽屉态的齿轮按钮；avatar：rail 收起态的头像按钮。 */
-  variant: UserMenuVariant;
-  /** 当前会话用户（真实数据，来自服务端 layout）。 */
-  user: UserDTO;
-  /** 菜单弹出方向（底部侧栏默认向上/向右）。 */
-  side?: "top" | "right" | "bottom" | "left";
-  align?: "start" | "center" | "end";
-};
-
 export function UserMenu({
-  variant,
   user,
-  side = "top",
-  align = "start",
-}: UserMenuProps) {
-  // B6 修复：程序化导航同样受未保存草稿保护。
+  collapsible = false,
+  active = false,
+}: {
+  user: UserDTO;
+  /** 收窄的侧栏里只显示头像，宽屏再展开姓名。 */
+  collapsible?: boolean;
+  /** 当前在个人设置页。 */
+  active?: boolean;
+}) {
+  // 程序化导航同样受未保存草稿保护。
   const guardedNavigate = useGuardedNavigate();
   const { signOut, pending } = useSignOut();
   const { toast } = useToast();
@@ -64,16 +47,9 @@ export function UserMenu({
     try {
       const result = await signOut();
       if (result?.error) {
-        // Sign out failed - show error toast and don't navigate
-        toast({
-          title: "退出失败",
-          description: result.error,
-          variant: "danger",
-          duration: 4000,
-        });
+        toast({ title: "退出失败", description: result.error, variant: "danger" });
         return;
       }
-      // 成功退出才清除该用户的本机草稿（取消/失败保留），共享浏览器不残留私有文字。
       clearUserDrafts(user.id);
       navigateAfterConfirmedLeave("/auth/login");
     } finally {
@@ -81,61 +57,54 @@ export function UserMenu({
     }
   }
 
-  function handleSettings(): void {
-    // 客户端软导航即可：设置页由服务端读取会话与账户档案（force-dynamic），
-    // 每次进入都拿到最新数据，不存在跨账号的客户端缓存残留。
-    guardedNavigate.push("/app/settings");
-  }
-
-  const trigger =
-    variant === "avatar" ? (
-      <button
-        type="button"
-        aria-label={`${user.name} · 账户菜单`}
-        className="flex h-11 w-11 items-center justify-center rounded-full outline-none transition-colors hover:bg-surface-sunken data-[state=open]:bg-surface-sunken"
-      >
-        <Avatar name={user.name} size="md" />
-      </button>
-    ) : (
-      <IconButton label="账户菜单" size="sm">
-        <Ellipsis className="h-4 w-4" />
-      </IconButton>
-    );
+  const detail = cn("min-w-0 flex-1 text-left", collapsible && "hidden xl:block");
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
-      <DropdownMenuContent side={side} align={align} className="min-w-60">
-        <DropdownMenuLabel className="space-y-1">
-          <span className="flex items-center gap-2">
-            <Avatar name={user.name} size="sm" />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-label font-medium text-foreground">
-                {user.name}
-              </span>
-              <span className="block truncate text-caption font-normal text-foreground-muted">
-                {user.email}
-              </span>
-            </span>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="账户菜单"
+          title={user.name}
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded-item p-1.5 outline-none",
+            "transition-[background-color,transform] duration-200 ease-standard active:scale-[0.98]",
+            "hover:bg-surface-sunken data-[state=open]:bg-surface-sunken",
+            collapsible && "max-xl:justify-center",
+            active && "surface-selected hover:bg-[var(--selected-fill)]",
+          )}
+        >
+          <Avatar name={user.name} size="md" />
+          <span className={detail}>
+            <span className="block truncate text-label font-medium text-foreground">{user.name}</span>
+            <span className="block truncate text-caption text-foreground-muted">{user.email}</span>
+          </span>
+          <ChevronsUpDown
+            className={cn("mr-1 h-4 w-4 shrink-0 text-foreground-muted", collapsible && "hidden xl:block")}
+            aria-hidden="true"
+          />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="start" className="min-w-60">
+        <DropdownMenuLabel className="flex items-center gap-2.5 py-2">
+          <Avatar name={user.name} size="md" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-label font-medium text-foreground">{user.name}</span>
+            <span className="block truncate text-caption font-normal text-foreground-muted">{user.email}</span>
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onSelect={(event) => {
-            event.preventDefault();
-            handleSettings();
-          }}
-        >
-          <Settings className="h-4 w-4" aria-hidden="true" />
+        <DropdownMenuItem onSelect={() => guardedNavigate.push("/app/settings")}>
+          <Settings className="h-4 w-4 text-foreground-muted" aria-hidden="true" />
           个人设置
         </DropdownMenuItem>
         <DropdownMenuItem
+          destructive
           disabled={pending}
           onSelect={(event) => {
             event.preventDefault();
             void handleSignOut();
           }}
-          className="text-danger data-[highlighted]:bg-danger-fill data-[highlighted]:text-foreground-invert"
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />
           {pending ? "正在退出…" : "退出登录"}

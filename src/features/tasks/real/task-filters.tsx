@@ -1,18 +1,11 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {
-  useCallback,
-  useEffect,
-  useOptimistic,
-  useState,
-  useTransition,
-  type ReactNode,
-} from "react";
-import { Loader2, Search, X } from "lucide-react";
-import { NativeSelect } from "@/components/ui/input";
-import { TASK_STATUS, TASK_PRIORITY, type MemberDTO } from "@/contracts";
+import { useCallback, useEffect, useOptimistic, useState, useTransition, type ReactNode } from "react";
+import { X } from "lucide-react";
+import { NativeSelect, SearchField, pillClass } from "@/components/ui/input";
 import { cn } from "@/lib/cn";
+import { TASK_STATUS, TASK_PRIORITY, type MemberDTO } from "@/contracts";
 import { STATUS_LABEL, PRIORITY_LABEL } from "../task-meta";
 
 const SEARCH_DEBOUNCE_MS = 320;
@@ -26,6 +19,7 @@ type FilterValues = {
 };
 
 const DEFAULT_SORT = "updated_desc";
+const EMPTY: FilterValues = { status: "", priority: "", assignee: "", sort: DEFAULT_SORT, overdue: false };
 
 /** 只把用户真正设置的条件写进 URL，地址保持干净，也便于分享。 */
 function toParams(q: string, values: FilterValues): URLSearchParams {
@@ -41,15 +35,20 @@ function toParams(q: string, values: FilterValues): URLSearchParams {
 }
 
 /**
- * 任务筛选条：改动立即生效，搜索在停止输入后生效，回车立即生效。
+ * 任务工具条：搜索、筛选，右端是页面的主操作。
+ * 筛选改动立即生效，搜索在停止输入后生效，回车立即生效。
  * URL 是唯一真源；筛选在途时用 useOptimistic 让控件先显示新值。
  */
 export function TaskFilters({
   members,
   board = false,
+  action,
 }: {
   members: MemberDTO[];
+  /** 看板固定按手动顺序排列，不提供排序。 */
   board?: boolean;
+  /** 工具条右端的主操作，例如「新建任务」。 */
+  action?: ReactNode;
 }) {
   const router = useRouter();
   const path = usePathname();
@@ -106,46 +105,32 @@ export function TaskFilters({
       (!board && values.sort !== DEFAULT_SORT),
   );
 
-  const clear = () => {
-    setTyped("");
-    navigate("", { status: "", priority: "", assignee: "", sort: DEFAULT_SORT, overdue: false });
-  };
-
-  const pill = (on: boolean) => (on ? "bg-brand-soft text-brand-ink" : "");
-
   return (
     <form
       role="search"
       aria-label="筛选任务"
-      className="mb-5 flex flex-wrap items-center gap-2"
+      className="mb-4 flex flex-wrap items-center gap-2"
       onSubmit={(event) => {
         event.preventDefault();
         navigate(typed.trim(), values);
       }}
     >
-      <label className="glass-chip relative flex h-11 min-w-48 flex-1 basis-full items-center rounded-full pl-9 pr-3 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring sm:basis-56 sm:flex-none md:h-9 lg:w-64">
-        <span className="sr-only">搜索任务</span>
-        {pending ? (
-          <Loader2 className="absolute left-3 h-4 w-4 animate-spin text-foreground-muted" aria-hidden="true" />
-        ) : (
-          <Search className="absolute left-3 h-4 w-4 text-foreground-muted" aria-hidden="true" />
-        )}
-        <input
-          className="field w-full min-w-0 bg-transparent text-body text-foreground outline-none placeholder:text-foreground-muted md:text-label [&::-webkit-search-cancel-button]:appearance-none"
-          type="search"
-          name="q"
-          aria-label="搜索任务"
-          placeholder="搜索标题或编号"
-          maxLength={100}
-          value={typed}
-          onChange={(event) => setTyped(event.target.value)}
-        />
-      </label>
+      <SearchField
+        name="q"
+        aria-label="搜索任务"
+        placeholder="搜索标题或编号"
+        maxLength={100}
+        pending={pending}
+        value={typed}
+        onChange={(event) => setTyped(event.target.value)}
+        className="order-1 min-w-0 flex-1 sm:w-56 sm:flex-none lg:w-64"
+      />
 
-      <FilterRow>
+      {/* 手机上筛选项横向滑动，不换成多行堆叠；滑动区左右延伸到屏幕边缘。 */}
+      <div className="no-scrollbar order-3 -mx-4 flex min-w-0 basis-[calc(100%+2rem)] items-center gap-2 overflow-x-auto px-4 py-0.5 sm:order-2 sm:mx-0 sm:flex-1 sm:basis-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:py-0 [&>*]:shrink-0">
         <NativeSelect
           aria-label="筛选状态"
-          className={pill(Boolean(values.status))}
+          data-active={values.status ? "" : undefined}
           value={values.status}
           onChange={(event) => change({ status: event.target.value })}
         >
@@ -156,19 +141,19 @@ export function TaskFilters({
         </NativeSelect>
         <NativeSelect
           aria-label="筛选优先级"
-          className={pill(Boolean(values.priority))}
+          data-active={values.priority ? "" : undefined}
           value={values.priority}
           onChange={(event) => change({ priority: event.target.value })}
         >
           <option value="">全部优先级</option>
           {TASK_PRIORITY.map((x) => (
-            <option key={x} value={x}>{PRIORITY_LABEL[x]}</option>
+            <option key={x} value={x}>{PRIORITY_LABEL[x]}优先级</option>
           ))}
         </NativeSelect>
         <NativeSelect
           aria-label="筛选负责人"
           wrapperClassName="max-w-44"
-          className={pill(Boolean(values.assignee))}
+          data-active={values.assignee ? "" : undefined}
           value={values.assignee}
           onChange={(event) => change({ assignee: event.target.value })}
         >
@@ -181,6 +166,7 @@ export function TaskFilters({
         {!board && (
           <NativeSelect
             aria-label="排序"
+            data-active={values.sort !== DEFAULT_SORT ? "" : undefined}
             value={values.sort}
             onChange={(event) => change({ sort: event.target.value })}
           >
@@ -190,9 +176,12 @@ export function TaskFilters({
           </NativeSelect>
         )}
         <label
+          data-active={values.overdue ? "" : undefined}
           className={cn(
-            "glass-chip relative inline-flex h-11 shrink-0 cursor-pointer items-center rounded-full px-3.5 text-body font-normal text-foreground transition-colors duration-200 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring md:h-9 md:text-label",
-            pill(values.overdue),
+            pillClass,
+            // relative：隐藏的复选框以这颗胶囊定位，留在横向滑动区里，不把页面撑宽。
+            "relative inline-flex cursor-pointer items-center px-3.5",
+            "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring",
           )}
         >
           <input
@@ -206,23 +195,19 @@ export function TaskFilters({
         {active ? (
           <button
             type="button"
-            onClick={clear}
-            className="inline-flex h-11 shrink-0 items-center gap-1 rounded-full px-3 text-body text-foreground-secondary outline-none transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground md:h-9 md:text-label"
+            onClick={() => {
+              setTyped("");
+              navigate("", EMPTY);
+            }}
+            className="inline-flex h-11 items-center gap-1 rounded-full px-3 text-body text-foreground-secondary outline-none transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground md:h-9 md:text-label"
           >
             <X className="h-3.5 w-3.5" aria-hidden="true" />
             清除
           </button>
         ) : null}
-      </FilterRow>
-    </form>
-  );
-}
+      </div>
 
-/** 手机上筛选项横向滑动，不换成多行堆叠。 */
-function FilterRow({ children }: { children: ReactNode }) {
-  return (
-    <div className="no-scrollbar -mx-4 flex min-w-0 max-w-[100vw] flex-1 basis-full items-center gap-2 overflow-x-auto px-4 py-1 sm:mx-0 sm:basis-auto sm:flex-wrap sm:overflow-visible sm:px-0 sm:py-0 [&>*]:shrink-0">
-      {children}
-    </div>
+      {action ? <div className="order-2 shrink-0 sm:order-3">{action}</div> : null}
+    </form>
   );
 }

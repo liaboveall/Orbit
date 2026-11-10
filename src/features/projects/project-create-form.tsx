@@ -23,7 +23,7 @@ import {
 import { InlineError } from "@/components/ui/inline-error";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
-import { Spinner } from "@/features/auth/auth-form";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/cn";
 import { PROJECT_COLOR_DOT, PROJECT_COLOR_LABEL } from "@/lib/project-color";
 

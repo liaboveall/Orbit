@@ -101,7 +101,7 @@ export function ZonePreview({ timezone }: { timezone: string }) {
   return (
     <section
       aria-label="所选时区预览"
-      className="overflow-hidden glass-card rounded-card"
+      className="overflow-hidden surface-card rounded-card"
     >
       <header className="flex items-center justify-between gap-2 px-4 pt-3.5">
         <span className="inline-flex items-center gap-1.5 text-label font-semibold text-foreground">

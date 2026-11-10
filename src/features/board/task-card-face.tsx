@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { TaskSummaryDTO } from "@/contracts";
 import { Avatar } from "@/components/ui/avatar";
-import { DueBadge, PriorityBadge } from "@/features/tasks/priority-badge";
+import { DueBadge, PriorityMark } from "@/features/tasks/priority-badge";
 import { getDueMeta } from "@/features/tasks/task-meta";
 import { TaskResourceCounts } from "./task-resource-counts";
 
@@ -27,21 +27,22 @@ export function TaskCardFace({
   return (
     <div className="flex items-start gap-2.5">
       {status}
-      <div className="min-w-0 flex-1 space-y-2">
+      <div className="min-w-0 flex-1">
         <div className="flex items-start gap-1">
           <div className="min-w-0 flex-1">{title}</div>
           {corner}
         </div>
-        <div className="flex items-end gap-2">
+        <div className="mt-2 flex min-h-6 items-center gap-2">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1 text-caption text-foreground-muted">
             <span className="tabular-nums">{task.identifier}</span>
-            {task.priority !== "NONE" ? <PriorityBadge priority={task.priority} /> : null}
+            <PriorityMark priority={task.priority} />
             {due.tone !== "none" ? <DueBadge meta={due} /> : null}
             <TaskResourceCounts task={task} />
           </div>
           {task.assignee ? (
             <span title={task.assignee.name} className="inline-flex shrink-0">
               <Avatar name={task.assignee.name} size="sm" />
+              <span className="sr-only">负责人：{task.assignee.name}</span>
             </span>
           ) : null}
         </div>

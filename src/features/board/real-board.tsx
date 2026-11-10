@@ -1,6 +1,6 @@
 "use client";
-import { loginPathWithReturnTo } from "@/lib/return-to";
-import { useState, useRef, useEffect, useId, useSyncExternalStore, type CSSProperties } from "react";
+
+import { useState, useRef, useEffect, useId, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
@@ -39,14 +39,14 @@ import {
   type TaskStatus,
   type TaskSummaryDTO,
 } from "@/contracts";
-import { Button, InlineError, PageHeader, Segments } from "@/components/ui";
-import { ProjectGlyph } from "@/features/projects/project-glyph";
+import { Button, IconButton, InlineError, Segments } from "@/components/ui";
 import { TaskCreateDialog } from "@/features/tasks/real/task-create-form";
 import { TaskFilters } from "@/features/tasks/real/task-filters";
 import { STATUS_LABEL } from "@/features/tasks/task-meta";
 import { StatusGlyph } from "@/features/tasks/status-glyph";
 import { useAutoRefresh } from "@/features/tasks/real/use-auto-refresh";
 import { cn } from "@/lib/cn";
+import { loginPathWithReturnTo } from "@/lib/return-to";
 import { TaskCardFace } from "./task-card-face";
 
 const api = createApiClient();
@@ -58,6 +58,10 @@ function subscribeMobile(callback: () => void) {
 }
 const readMobile = () => window.matchMedia(mobileQuery).matches;
 const serverMobile = () => false;
+
+const goToLogin = () => window.location.assign(loginPathWithReturnTo(location.pathname + location.search));
+
+/** 刷新后把每一列补读到刷新前已加载的长度，页面高度和滚动位置保持不变。 */
 async function refillBoard(endpoint: string, query: BoardQueryDTO, first: BoardDTO, previous: BoardDTO, signal?: AbortSignal): Promise<BoardDTO> {
   let board = first;
   for (const old of previous.columns) {
@@ -75,6 +79,9 @@ async function refillBoard(endpoint: string, query: BoardQueryDTO, first: BoardD
   }
   return board;
 }
+
+type MoveTask = (task: TaskSummaryDTO, status: TaskStatus, before: string | null) => Promise<void>;
+
 export function RealBoard({
   initial,
   project,
@@ -90,6 +97,8 @@ export function RealBoard({
 }) {
   const router = useRouter();
   const tabPrefix = useId();
+  // dnd-kit 默认用模块级计数器生成无障碍说明的 id，服务端和浏览器数到的值不同。
+  const dndId = useId();
   const isMobile = useSyncExternalStore(subscribeMobile, readMobile, serverMobile);
   useAutoRefresh();
   const context = JSON.stringify([project.id, today, query]);
@@ -114,12 +123,13 @@ export function RealBoard({
     }
     return () => controller.abort();
   }, [state.refreshing, state.source, state.previous, project.id, queryKey]);
-  const [creating, setCreating] = useState(false);
+  /** 新建任务对话框：值是新任务的初始状态，null 表示关闭。 */
+  const [creating, setCreating] = useState<TaskStatus | null>(null);
   const [dragging, setDragging] = useState<TaskSummaryDTO | null>(null);
   const [dropTarget, setDropTarget] = useState<{ id: string; status: TaskStatus | null } | null>(null);
-  // B8 修复：手机（<md）用状态 tab 单列查看，避免三列纵向长页堆叠；桌面保持三列。
+  // 手机用状态 tab 一次看一列，桌面保持三列。
   const [mobileStatus, setMobileStatus] = useState<TaskStatus>(query.status ?? "TODO");
-  const selectedStatus = board.columns.some(column => column.status === mobileStatus) ? mobileStatus : board.columns[0]?.status;
+  const selectedStatus = board.columns.some((column) => column.status === mobileStatus) ? mobileStatus : board.columns[0]?.status;
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true;
@@ -128,42 +138,23 @@ export function RealBoard({
     };
   }, []);
   const filtered = Boolean(
-    query.q ||
-      query.status ||
-      query.priority ||
-      query.assigneeId ||
-      query.unassigned ||
-      query.overdue,
+    query.q || query.status || query.priority || query.assigneeId || query.unassigned || query.overdue,
   );
-  const complete =
-    board.columns.length === 3 &&
-    board.columns.every((c) => c.nextCursor === null);
+  const complete = board.columns.length === 3 && board.columns.every((c) => c.nextCursor === null);
   const writable = project.archivedAt === null;
   const canDrag = writable && !busy && !state.refreshing && !filtered && complete;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, {
-      activationConstraint: { delay: 180, tolerance: 5 },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   function commit(value: BoardDTO) {
-    if (alive.current)
-      setState((prev) =>
-        prev.source === initial ? { ...prev, board: value } : prev,
-      );
+    if (alive.current) setState((prev) => (prev.source === initial ? { ...prev, board: value } : prev));
   }
   async function fresh() {
-    const result = await api.get(`/projects/${project.id}/board`, BoardSchema, {
-      query,
-    });
+    const result = await api.get(`/projects/${project.id}/board`, BoardSchema, { query });
     if (!result.ok) {
-      if (result.status === 401)
-        window.location.assign(
-          loginPathWithReturnTo(location.pathname + location.search),
-        );
+      if (result.status === 401) goToLogin();
       if (result.status === 404) router.refresh();
       throw new Error(result.error.message);
     }
@@ -178,21 +169,15 @@ export function RealBoard({
     setError(null);
     let next = board;
     try {
-      for (const column of board.columns.filter(
-        (c) => !status || c.status === status,
-      )) {
+      for (const column of board.columns.filter((c) => !status || c.status === status)) {
         let cursor = column.nextCursor;
         while (cursor) {
-          const result = await api.get(
-            `/projects/${project.id}/board`,
-            BoardSchema,
-            { query: { ...query, status: column.status, cursor, limit: 100 } },
-          );
+          const result = await api.get(`/projects/${project.id}/board`, BoardSchema, {
+            query: { ...query, status: column.status, cursor, limit: 100 },
+          });
           if (!result.ok) {
             if (result.status === 401) {
-              window.location.assign(
-                loginPathWithReturnTo(location.pathname + location.search),
-              );
+              goToLogin();
               return;
             }
             // 顺序集合或筛选集合在分页之间变化（BOARD_CONFLICT），或过滤指纹随日期失效
@@ -207,16 +192,12 @@ export function RealBoard({
             await fresh();
             throw new Error("看板已更新，已重新加载。");
           }
-          const page = result.data.columns.find(
-            (c) => c.status === column.status,
-          );
+          const page = result.data.columns.find((c) => c.status === column.status);
           if (!page) throw new Error("看板响应缺少目标列。");
           next = {
             ...next,
             columns: next.columns.map((c) =>
-              c.status === column.status
-                ? { ...page, items: [...c.items, ...page.items] }
-                : c,
+              c.status === column.status ? { ...page, items: [...c.items, ...page.items] } : c,
             ),
           };
           commit(next);
@@ -231,11 +212,7 @@ export function RealBoard({
       setBusy(false);
     }
   }
-  async function move(
-    task: TaskSummaryDTO,
-    status: TaskStatus,
-    beforeTaskId: string | null,
-  ) {
+  const move: MoveTask = async (task, status, beforeTaskId) => {
     if (lock.current || state.refreshing || !writable) return;
     lock.current = true;
     setBusy(true);
@@ -249,34 +226,23 @@ export function RealBoard({
     }));
     const target = columns.find((c) => c.status === status);
     if (target) {
-      const index = beforeTaskId
-        ? target.items.findIndex((t) => t.id === beforeTaskId)
-        : -1;
-      target.items.splice(index < 0 ? target.items.length : index, 0, {
-        ...task,
-        status,
-      });
+      const index = beforeTaskId ? target.items.findIndex((t) => t.id === beforeTaskId) : -1;
+      target.items.splice(index < 0 ? target.items.length : index, 0, { ...task, status });
       target.total++;
     }
     commit({ ...board, columns });
     try {
-      const result = await api.post(
-        `/tasks/${task.id}/move`,
-        MoveResultSchema,
-        {
-          expectedVersion: task.version,
-          expectedBoardVersion: board.boardVersion,
-          toStatus: status,
-          beforeTaskId,
-        },
-      );
+      const result = await api.post(`/tasks/${task.id}/move`, MoveResultSchema, {
+        expectedVersion: task.version,
+        expectedBoardVersion: board.boardVersion,
+        toStatus: status,
+        beforeTaskId,
+      });
       if (!result.ok) {
         commit(old);
         rollback = false;
         if (result.status === 401) {
-          window.location.assign(
-            loginPathWithReturnTo(location.pathname + location.search),
-          );
+          goToLogin();
           return;
         }
         if (result.status === 409) await fresh();
@@ -287,24 +253,18 @@ export function RealBoard({
       router.refresh();
     } catch (e) {
       if (rollback) commit(old);
-      setError(
-        e instanceof Error ? e.message : "移动失败，已恢复原顺序，请重试。",
-      );
+      setError(e instanceof Error ? e.message : "移动失败，已恢复原顺序，请重试。");
     } finally {
       lock.current = false;
       setBusy(false);
     }
-  }
+  };
   function dragEnd(event: DragEndEvent) {
     if (!canDrag || !event.over || event.active.id === event.over.id) return;
-    const task = board.columns
-      .flatMap((c) => c.items)
-      .find((t) => t.id === event.active.id);
+    const task = board.columns.flatMap((c) => c.items).find((t) => t.id === event.active.id);
     if (!task) return;
     const column = board.columns.find(
-      (c) =>
-        c.status === event.over?.id ||
-        c.items.some((t) => t.id === event.over?.id),
+      (c) => c.status === event.over?.id || c.items.some((t) => t.id === event.over?.id),
     );
     if (!column) return;
     const overIndex = column.items.findIndex((t) => t.id === event.over?.id);
@@ -339,43 +299,39 @@ export function RealBoard({
       over ? `${taskById(active.id)?.identifier ?? "任务"} 已放入${STATUS_LABEL[columnOf(over.id)?.status ?? "TODO"]}列。` : "已取消移动。",
     onDragCancel: () => "已取消移动。",
   };
+
   return (
     <div
       className="outline-none"
       data-project-content
       tabIndex={-1}
       data-task-saving={busy || undefined}
-      data-task-editing={creating || undefined}
+      data-task-editing={creating !== null || undefined}
     >
-      <PageHeader
-        leading={<ProjectGlyph name={project.name} color={project.color} size="lg" />}
-        eyebrow={`${project.key} · ${project.memberCount} 名成员${writable ? "" : " · 已归档，只读"}`}
-        title={project.name}
-        actions={
+      <TaskFilters
+        members={members}
+        board
+        action={
           writable ? (
-            <Button onClick={() => setCreating(true)}>
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              新建任务
+            <Button onClick={() => setCreating("TODO")} className="max-sm:h-11 max-sm:w-11 max-sm:px-0">
+              <Plus className="h-4 w-4 max-sm:h-5 max-sm:w-5" aria-hidden="true" />
+              <span className="max-sm:sr-only">新建任务</span>
             </Button>
           ) : null
         }
       />
-      <TaskFilters members={members} board />
       {writable && (
         <TaskCreateDialog
-          open={creating}
-          onOpenChange={setCreating}
+          open={creating !== null}
+          onOpenChange={(open) => setCreating(open ? "TODO" : null)}
           projectId={project.id}
+          defaultStatus={creating ?? "TODO"}
           onCreated={async () => {
-            setCreating(false);
+            setCreating(null);
             await fresh();
             router.refresh();
           }}
-          onUnauthorized={() =>
-            window.location.assign(
-              loginPathWithReturnTo(location.pathname + location.search),
-            )
-          }
+          onUnauthorized={goToLogin}
         />
       )}
       {error ? (
@@ -395,19 +351,10 @@ export function RealBoard({
         </div>
       ) : null}
       {writable && (filtered || !complete) && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 text-caption text-foreground-muted">
-          <p>
-            {filtered
-              ? "筛选视图下可通过任务状态菜单移动。"
-              : "加载全部后可排序；也可以使用任务状态菜单。"}
-          </p>
+        <div className="mb-3 flex flex-wrap items-center gap-2 px-1 text-caption text-foreground-muted">
+          <p>{filtered ? "筛选视图下可通过任务状态菜单移动。" : "加载全部后可排序；也可以使用任务状态菜单。"}</p>
           {!filtered && !complete && (
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={busy}
-              onClick={() => void load(undefined, true)}
-            >
+            <Button size="sm" variant="secondary" disabled={busy} onClick={() => void load(undefined, true)}>
               {busy ? "加载中…" : "加载全部后排序"}
             </Button>
           )}
@@ -418,8 +365,7 @@ export function RealBoard({
         role="tablist"
         aria-label="看板状态"
         activeKey={selectedStatus}
-        className="mb-4 flex rounded-full bg-surface-sunken p-1 md:hidden"
-        style={{ "--segment-inset": "4px" } as CSSProperties}
+        className="mb-3 flex rounded-full bg-surface-sunken p-1 md:hidden"
       >
         {board.columns.map((column) => {
           const active = column.status === selectedStatus;
@@ -433,7 +379,7 @@ export function RealBoard({
               data-active={active || undefined}
               tabIndex={active ? 0 : -1}
               onKeyDown={(event) => {
-                const index = board.columns.findIndex(item => item.status === column.status);
+                const index = board.columns.findIndex((item) => item.status === column.status);
                 const count = board.columns.length;
                 const target = event.key === "ArrowRight" ? (index + 1) % count
                   : event.key === "ArrowLeft" ? (index + count - 1) % count
@@ -457,6 +403,7 @@ export function RealBoard({
         })}
       </Segments>
       <DndContext
+        id={dndId}
         sensors={sensors}
         collisionDetection={closestCorners}
         accessibility={{
@@ -482,6 +429,7 @@ export function RealBoard({
               today={today}
               onMove={move}
               onLoad={() => void load(column.status)}
+              onAdd={() => setCreating(column.status)}
               mobileVisible={column.status === selectedStatus}
               isMobile={isMobile}
               tabPrefix={tabPrefix}
@@ -490,9 +438,9 @@ export function RealBoard({
             />
           ))}
         </div>
-        <DragOverlay dropAnimation={{ duration: 240, easing: "cubic-bezier(0.32, 0.72, 0, 1)" }}>
+        <DragOverlay dropAnimation={{ duration: 260, easing: "cubic-bezier(0.32, 0.72, 0, 1)" }}>
           {dragging ? (
-            <div className="glass-thick cursor-grabbing rounded-[18px] p-3 shadow-drag">
+            <div data-lens="" className="glass cursor-grabbing rounded-tile p-3">
               <TaskCardFace
                 task={dragging}
                 today={today}
@@ -515,61 +463,62 @@ function Column({
   today,
   onMove,
   onLoad,
-  mobileVisible = true,
+  onAdd,
+  mobileVisible,
   isMobile,
   tabPrefix,
   isTarget,
   insertBefore,
 }: {
-  isMobile: boolean;
-  tabPrefix: string;
   column: BoardColumnDTO;
   canDrag: boolean;
   writable: boolean;
   busy: boolean;
   today: string;
-  onMove: (
-    task: TaskSummaryDTO,
-    status: TaskStatus,
-    before: string | null,
-  ) => Promise<void>;
+  onMove: MoveTask;
   onLoad: () => void;
-  /** 手机 tab 下仅选中列可见（md 以上三列不受影响）。 */
-  mobileVisible?: boolean;
+  onAdd: () => void;
+  /** 手机 tab 下只有选中的列可见，桌面三列不受影响。 */
+  mobileVisible: boolean;
+  isMobile: boolean;
+  tabPrefix: string;
   isTarget: boolean;
   /** 跨列拖拽时显示插入线的任务 id。 */
   insertBefore?: string;
 }) {
-  const { setNodeRef } = useDroppable({
-    id: column.status,
-    disabled: !canDrag,
-  });
+  const { setNodeRef } = useDroppable({ id: column.status, disabled: !canDrag });
+  const label = STATUS_LABEL[column.status];
   return (
     <section
       ref={setNodeRef}
       id={`${tabPrefix}-${column.status}-panel`}
       role={isMobile ? "tabpanel" : undefined}
       aria-labelledby={isMobile ? `${tabPrefix}-${column.status}-tab` : undefined}
-      aria-label={isMobile ? undefined : STATUS_LABEL[column.status] + "列"}
+      aria-label={isMobile ? undefined : label + "列"}
       tabIndex={isMobile ? 0 : undefined}
       className={cn(
-        "min-h-40 rounded-card bg-surface-tray p-2 outline-none transition-[background-color,box-shadow] duration-200 ease-standard",
+        "min-h-40 rounded-card bg-surface-tray p-1.5 outline-none shadow-[inset_0_0_0_0.5px_var(--color-line)]",
+        "transition-[background-color,box-shadow] duration-200 ease-standard",
         isTarget && "bg-brand-soft shadow-[inset_0_0_0_1.5px_var(--color-brand)]",
         mobileVisible ? "" : "hidden md:block",
       )}
     >
-      <h2 className="mb-1.5 flex items-center justify-between px-2 py-1 text-label font-semibold max-md:sr-only">
-        <span className="flex items-center gap-2">
+      <div className="flex items-center gap-1 pb-1.5 pl-2.5 pr-1 pt-1 max-md:contents">
+        <h2 className="flex min-w-0 flex-1 items-center gap-2 text-label font-semibold max-md:sr-only">
           <StatusGlyph status={column.status} className="h-4 w-4" />
-          {STATUS_LABEL[column.status]}
-        </span>
-        <span className="tabular-nums font-medium text-foreground-muted">{column.total}</span>
-      </h2>
-      <SortableContext
-        items={column.items.map((t) => t.id)}
-        strategy={verticalListSortingStrategy}
-      >
-        <div className="space-y-2">
+          {label}
+          <span className="font-medium tabular-nums text-foreground-muted">{column.total}</span>
+        </h2>
+        {writable ? (
+          <IconButton label={`添加到${label}`} size="sm" className="max-md:hidden" onClick={onAdd}>
+            <Plus className="h-4 w-4" />
+          </IconButton>
+        ) : (
+          <span aria-hidden="true" className="h-8 max-md:hidden" />
+        )}
+      </div>
+      <SortableContext items={column.items.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+        <div className="space-y-1.5">
           {column.items.map((task) => (
             <Card
               key={task.id}
@@ -585,19 +534,11 @@ function Column({
         </div>
       </SortableContext>
       {column.items.length === 0 && (
-        <p className="py-10 text-center text-caption text-foreground-muted">
-          暂无任务
-        </p>
+        <p className="py-10 text-center text-caption text-foreground-muted">暂无任务</p>
       )}
       {column.nextCursor && (
-        <Button
-          className="mt-2 w-full"
-          size="sm"
-          variant="ghost"
-          disabled={busy}
-          onClick={onLoad}
-        >
-          加载更多（{STATUS_LABEL[column.status]}）
+        <Button className="mt-1.5 w-full" size="sm" variant="ghost" disabled={busy} onClick={onLoad}>
+          加载更多（{label}）
         </Button>
       )}
     </section>
@@ -618,26 +559,17 @@ function Card({
   writable: boolean;
   busy: boolean;
   today: string;
-  onMove: (
-    task: TaskSummaryDTO,
-    status: TaskStatus,
-    before: string | null,
-  ) => Promise<void>;
+  onMove: MoveTask;
   showInsertLine: boolean;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    setActivatorNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: task.id, disabled: !canDrag });
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id: task.id, disabled: !canDrag });
   const path = usePathname();
   const search = useSearchParams();
   const target = new URLSearchParams(search.toString());
   target.set("task", task.id);
+  // 详情面板打开期间，对应的卡片保持可辨识。
+  const open = search.get("task") === task.id;
   return (
     <article
       ref={setNodeRef}
@@ -649,14 +581,15 @@ function Card({
         listeners?.onPointerDown?.(event);
       }}
       className={cn(
-        "glass-card group relative rounded-[18px] p-3",
+        "surface-card group relative rounded-tile p-3",
         !isDragging && "lift",
         isDragging && "opacity-35",
         canDrag && "cursor-grab",
+        open && "shadow-[inset_0_0_0_1.5px_var(--color-brand),var(--shadow-card)]",
       )}
     >
       {showInsertLine ? (
-        <span aria-hidden="true" className="absolute inset-x-2 -top-[5px] h-0.5 rounded-full bg-brand" />
+        <span aria-hidden="true" className="absolute inset-x-2 -top-1 h-0.5 rounded-full bg-brand" />
       ) : null}
       <TaskCardFace
         task={task}
@@ -700,7 +633,7 @@ function Card({
             {...listeners}
             disabled={!canDrag}
             aria-label={`排序 ${task.identifier}`}
-            className="-mr-1 -mt-0.5 shrink-0 touch-none cursor-grab rounded-[8px] p-0.5 text-foreground-muted opacity-0 outline-none transition-opacity duration-150 focus-visible:opacity-100 group-hover:opacity-100 disabled:!opacity-0 [@media(hover:none)]:opacity-100"
+            className="-mr-1 -mt-0.5 shrink-0 cursor-grab touch-none rounded-[8px] p-0.5 text-foreground-muted opacity-0 outline-none transition-opacity duration-150 focus-visible:opacity-100 group-hover:opacity-100 disabled:!opacity-0 [@media(hover:none)]:opacity-100"
           >
             <GripVertical className="h-4 w-4" aria-hidden="true" />
           </button>

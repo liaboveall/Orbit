@@ -2,22 +2,13 @@
 
 import * as ToastPrimitive from "@radix-ui/react-toast";
 import { CircleAlert, CircleCheck, Info, X } from "lucide-react";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
-import { cn } from "@/lib/cn";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 
 /**
- * Toast（ORB-002，基于 @radix-ui/react-toast）+ 轻量 Provider/useToast。
+ * Toast（基于 Radix）与轻量的 Provider / useToast。
  *
- * 约束（docs/02 §7、任务规格）：Toast 不能作为唯一错误反馈手段——
- * 错误同时应由 InlineError 驻留展示；Toast 仅用于「样例模式」等瞬时提示。
- * Radix 管理 aria-live 宣告、自动消失、焦点不受影响。
+ * Toast 只用于瞬时确认，不能是唯一的错误反馈：错误同时由 InlineError 驻留显示。
+ * Radix 管理 aria-live 宣告和自动消失，不抢焦点。
  */
 
 export type ToastVariant = "info" | "success" | "danger";
@@ -77,19 +68,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => (
           <ToastPrimitive.Root
             key={t.id}
+            data-lens=""
             duration={t.duration}
             onOpenChange={(open) => {
               if (!open) dismiss(t.id);
             }}
-            className={cn(
-              "glass-thick relative flex w-[min(92vw,360px)] animate-pop-in items-start gap-3 rounded-[22px] py-3 pl-4 pr-10 text-foreground",
-            )}
+            className="glass-menu relative flex w-[min(92vw,360px)] animate-pop-in items-start gap-3 rounded-card py-3 pl-4 pr-10 text-foreground"
           >
             <span className="mt-0.5 shrink-0">{variantIcon[t.variant]}</span>
             <div className="min-w-0 flex-1 space-y-0.5">
-              <ToastPrimitive.Title className="text-label font-semibold">
-                {t.title}
-              </ToastPrimitive.Title>
+              <ToastPrimitive.Title className="text-label font-semibold">{t.title}</ToastPrimitive.Title>
               {t.description ? (
                 <ToastPrimitive.Description className="text-caption text-foreground-secondary [overflow-wrap:anywhere]">
                   {t.description}

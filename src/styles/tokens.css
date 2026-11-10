@@ -1,29 +1,29 @@
 /**
- * Orbit 设计 tokens：视觉的唯一真源（规范见 docs/02-UX-AND-DESIGN.md §2）。
+ * Orbit 设计变量：视觉的唯一真源（规则见 docs/02-UX-AND-DESIGN.md §2）。
  *
- * `@theme` 中的变量同时是 :root 自定义属性和 Tailwind 工具类
- * （`--color-brand` → `bg-brand` / `border-brand`）。深色模式跟随系统，
- * 只在下方 `@layer base` 里覆盖变量，组件不写 `dark:` 分支。
+ * `@theme` 里的变量同时是 :root 自定义属性和 Tailwind 工具类
+ * （`--color-brand` → `bg-brand` / `text-brand`）。深色模式跟随系统，
+ * 只在下方 `@layer base` 覆盖变量，组件不写 `dark:` 分支。
  *
- * 填充色与文字色分开：`brand` / `*-fill` 用作白字的底，`brand-ink` 和
- * success / warning / danger 用作文字与图标。
+ * 填充色与文字色分开：`brand`、`danger-fill` 是白字的底，
+ * `brand-ink`、`success`、`warning`、`danger` 用于文字和图标。
  *
- * 对比度实测（scripts 外的一次性计算，内容卡合成在 aurora 背景上的最差情况）：
+ * 对比度（内容卡合成在背景光斑上的最差情况）：
  *   浅色  foreground 15.9  secondary 8.6  muted 5.7  brand-ink 5.7
  *         success 5.1  warning 6.3  danger 5.7  line-strong 3.4（控件边界）
- *         tinted badge 文字 4.7 以上；白字压 brand 4.7，压 danger-fill 5.4
+ *         白字压 brand 4.7，压 danger-fill 5.4
  *   深色  foreground 13.4  secondary 8.7  muted 5.7  brand-ink 6.6
  *         success 7.8  warning 8.2  danger 5.8  line-strong 4.5
  */
 
 @theme {
   /* 表面 */
-  --color-background: #f5f5f7;
-  --color-surface: rgb(255 255 255 / 0.72); /* 内容层：卡片、列表 */
-  --color-surface-solid: #ffffff; /* 需要完全不透明的输入底色 */
-  --color-surface-sunken: rgb(118 118 128 / 0.12); /* 填充、hover、分组底 */
-  --color-surface-tray: rgb(255 255 255 / 0.36); /* 看板列 */
-  --color-overlay: rgb(10 14 26 / 0.26);
+  --color-background: #f2f3f7;
+  --color-surface: rgb(255 255 255 / 0.78); /* 内容层：卡片、列表 */
+  --color-surface-solid: #ffffff; /* 输入框等必须不透明的底 */
+  --color-surface-sunken: rgb(118 118 128 / 0.12); /* 填充、悬停、分组底 */
+  --color-surface-tray: rgb(255 255 255 / 0.34); /* 看板列 */
+  --color-overlay: rgb(12 16 28 / 0.28);
 
   /* 前景 */
   --color-foreground: #1d1d1f;
@@ -32,7 +32,7 @@
   --color-foreground-invert: #ffffff; /* 彩色填充上的文字 */
 
   /* 边界 */
-  --color-line: rgb(60 60 67 / 0.14);
+  --color-line: rgb(60 60 67 / 0.13);
   --color-line-strong: #86868b;
 
   /* 品牌与语义 */
@@ -50,10 +50,10 @@
   --color-danger-fill: #d70015;
   --color-danger-soft: rgb(255 59 48 / 0.13);
 
-  --color-tooltip: rgb(29 29 31 / 0.92);
+  --color-tooltip: rgb(29 29 31 / 0.9);
   --color-tooltip-foreground: #ffffff;
 
-  /* 项目标记：只用于项目图标，不表达状态或权限 */
+  /* 项目标记：只用于识别，不表达状态或权限。上面的首字是装饰，项目名由相邻文本提供 */
   --color-project-blue: #0a72e8;
   --color-project-purple: #8e44d6;
   --color-project-teal: #0e8a9a;
@@ -64,18 +64,22 @@
   /* 字号 */
   --text-caption: 12px;
   --text-caption--line-height: 1.45;
+  --text-footnote: 13px;
+  --text-footnote--line-height: 1.45;
   --text-label: 14px;
   --text-label--line-height: 1.45;
   --text-body: 16px;
   --text-body--line-height: 1.6;
+  --text-title: 17px;
+  --text-title--line-height: 1.3;
   --text-section: 20px;
   --text-section--line-height: 1.25;
-  --text-page: clamp(28px, 1.6rem + 0.7vw, 34px);
-  --text-page--line-height: 1.14;
-  --text-hero: clamp(44px, 1.6rem + 5.2vw, 84px);
-  --text-hero--line-height: 1.06;
+  --text-page: clamp(26px, 1.5rem + 0.5vw, 32px);
+  --text-page--line-height: 1.16;
+  --text-hero: clamp(40px, 1.4rem + 5vw, 80px);
+  --text-hero--line-height: 1.07;
 
-  /* 系统字体：macOS / iOS 走 SF 与苹方，Windows 走 Segoe 与微软雅黑 */
+  /* 系统字体：macOS / iOS 用 SF 与苹方，Windows 用 Segoe 与微软雅黑 */
   --font-sans:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
     "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI",
@@ -85,34 +89,34 @@
 
   --spacing: 4px;
 
-  /* 圆角：同心递进，控件 12 → 卡片 20 → 浮层 28 */
-  --radius-control: 12px;
-  --radius-card: 20px;
-  --radius-panel: 26px;
-  --radius-overlay: 28px;
+  /* 圆角同心递进：内层 = 外层 − 间距 */
+  --radius-control: 12px; /* 输入框 */
+  --radius-item: 14px; /* 菜单项、侧栏项 */
+  --radius-tile: 16px; /* 任务卡、面板里的分组 */
+  --radius-card: 22px; /* 内容卡、看板列、菜单 */
+  --radius-panel: 28px; /* 侧栏、对话框、任务面板 */
 
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.03), 0 10px 28px -18px rgb(0 0 0 / 0.16);
-  --shadow-card-hover: 0 2px 6px rgb(0 0 0 / 0.05), 0 18px 40px -20px rgb(0 0 0 / 0.26);
-  --shadow-popover: 0 1px 2px rgb(0 0 0 / 0.05), 0 16px 40px -12px rgb(0 0 0 / 0.22);
-  --shadow-overlay: 0 2px 6px rgb(0 0 0 / 0.05), 0 32px 80px -20px rgb(0 0 0 / 0.34);
-  --shadow-drag: 0 6px 14px rgb(0 0 0 / 0.08), 0 28px 56px -14px rgb(0 0 0 / 0.36);
+  --shadow-card: 0 0 0 0.5px rgb(0 0 0 / 0.05), 0 1px 2px rgb(0 0 0 / 0.03), 0 10px 26px -18px rgb(15 25 55 / 0.2);
+  --shadow-card-hover: 0 0 0 0.5px rgb(0 0 0 / 0.06), 0 2px 6px rgb(0 0 0 / 0.05), 0 20px 40px -20px rgb(15 25 55 / 0.3);
+  --shadow-overlay: 0 2px 6px rgb(0 0 0 / 0.05), 0 32px 80px -20px rgb(10 20 50 / 0.36);
+  --shadow-drag: 0 6px 14px rgb(0 0 0 / 0.08), 0 30px 60px -16px rgb(10 20 50 / 0.4);
 
   --ease-standard: cubic-bezier(0.25, 0.1, 0.25, 1);
   --ease-fluid: cubic-bezier(0.32, 0.72, 0, 1);
-  --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 
-  --animate-fade-in: fade-in 180ms var(--ease-standard);
-  --animate-dialog-in: dialog-in 280ms var(--ease-fluid);
-  --animate-sheet-right: sheet-right 360ms var(--ease-fluid);
-  --animate-sheet-up: sheet-up 360ms var(--ease-fluid);
-  --animate-pop-in: pop-in 200ms var(--ease-fluid);
-  --animate-rise: rise 420ms var(--ease-fluid) both;
+  --animate-fade-in: fade-in 200ms var(--ease-standard);
+  --animate-dialog-in: dialog-in 320ms var(--ease-fluid);
+  --animate-sheet-right: sheet-right 420ms var(--ease-fluid);
+  --animate-sheet-up: sheet-up 420ms var(--ease-fluid);
+  --animate-pop-in: pop-in 240ms var(--ease-fluid);
+  --animate-rise: rise 480ms var(--ease-fluid) both;
 
   @keyframes fade-in {
     from { opacity: 0; }
   }
   @keyframes dialog-in {
-    from { opacity: 0; transform: scale(0.94); }
+    from { opacity: 0; transform: scale(0.92); filter: blur(6px); }
   }
   @keyframes sheet-right {
     from { transform: translateX(calc(100% + 16px)); }
@@ -121,10 +125,10 @@
     from { transform: translateY(calc(100% + 16px)); }
   }
   @keyframes pop-in {
-    from { opacity: 0; transform: scale(0.96); }
+    from { opacity: 0; transform: scale(0.9); filter: blur(4px); }
   }
   @keyframes rise {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(12px); }
   }
 }
 
@@ -133,7 +137,7 @@
     color-scheme: light;
 
     /* 背景光斑：给玻璃提供可折射的颜色，内容层保持安静 */
-    --aurora-1: rgb(0 122 255 / 0.16);
+    --aurora-1: rgb(0 122 255 / 0.17);
     --aurora-2: rgb(175 82 222 / 0.13);
     --aurora-3: rgb(48 176 199 / 0.15);
     --aurora-4: rgb(255 149 0 / 0.07);
@@ -141,26 +145,26 @@
     /* 外壳尺寸 */
     --shell-inset: 12px;
     --shell-rail: 72px;
-    --shell-sidebar: 248px;
-    --task-panel-width: 600px;
+    --shell-sidebar: 252px;
+    --task-panel-width: 620px;
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
       color-scheme: dark;
 
-      --color-background: #0c0c10;
-      --color-surface: rgb(44 44 46 / 0.6);
+      --color-background: #0b0b0f;
+      --color-surface: rgb(44 44 48 / 0.62);
       --color-surface-solid: #1c1c1e;
       --color-surface-sunken: rgb(118 118 128 / 0.24);
-      --color-surface-tray: rgb(255 255 255 / 0.045);
-      --color-overlay: rgb(0 0 0 / 0.52);
+      --color-surface-tray: rgb(255 255 255 / 0.04);
+      --color-overlay: rgb(0 0 0 / 0.54);
 
       --color-foreground: #f5f5f7;
       --color-foreground-secondary: #c7c7cc;
       --color-foreground-muted: #a1a1a8;
 
-      --color-line: rgb(235 235 245 / 0.14);
+      --color-line: rgb(235 235 245 / 0.13);
       --color-line-strong: #8e8e93;
 
       --color-brand-ink: #6cb2ff;
@@ -174,18 +178,17 @@
       --color-danger: #ff7a70;
       --color-danger-soft: rgb(255 69 58 / 0.2);
 
-      --color-tooltip: rgb(72 72 74 / 0.94);
+      --color-tooltip: rgb(72 72 76 / 0.92);
 
-      --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 28px -18px rgb(0 0 0 / 0.7);
-      --shadow-card-hover: 0 2px 6px rgb(0 0 0 / 0.35), 0 20px 44px -20px rgb(0 0 0 / 0.85);
-      --shadow-popover: 0 1px 2px rgb(0 0 0 / 0.4), 0 18px 44px -12px rgb(0 0 0 / 0.75);
+      --shadow-card: 0 0 0 0.5px rgb(0 0 0 / 0.5), 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 28px -18px rgb(0 0 0 / 0.7);
+      --shadow-card-hover: 0 0 0 0.5px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.35), 0 20px 44px -20px rgb(0 0 0 / 0.85);
       --shadow-overlay: 0 2px 6px rgb(0 0 0 / 0.4), 0 36px 90px -20px rgb(0 0 0 / 0.85);
       --shadow-drag: 0 8px 16px rgb(0 0 0 / 0.4), 0 32px 64px -14px rgb(0 0 0 / 0.9);
 
-      --aurora-1: rgb(10 132 255 / 0.2);
-      --aurora-2: rgb(191 90 242 / 0.16);
-      --aurora-3: rgb(64 200 224 / 0.12);
-      --aurora-4: rgb(255 159 10 / 0.05);
+      --aurora-1: rgb(10 132 255 / 0.22);
+      --aurora-2: rgb(191 90 242 / 0.17);
+      --aurora-3: rgb(64 200 224 / 0.13);
+      --aurora-4: rgb(255 159 10 / 0.06);
     }
   }
 
@@ -204,10 +207,10 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    font-feature-settings: "cv11", "ss03";
+    -webkit-tap-highlight-color: transparent;
   }
 
-  /* 固定在视口的光斑层。玻璃层下面始终有颜色，滚动时不重绘。 */
+  /* 固定在视口的光斑层。玻璃下面始终有颜色，滚动时不重绘。 */
   body::before {
     content: "";
     position: fixed;
@@ -215,10 +218,10 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(60vmax 46vmax at 6% -6%, var(--aurora-1), transparent 68%),
-      radial-gradient(56vmax 44vmax at 100% 2%, var(--aurora-2), transparent 66%),
-      radial-gradient(64vmax 50vmax at 78% 108%, var(--aurora-3), transparent 68%),
-      radial-gradient(48vmax 40vmax at -4% 100%, var(--aurora-4), transparent 66%);
+      radial-gradient(62vmax 48vmax at 4% -8%, var(--aurora-1), transparent 68%),
+      radial-gradient(56vmax 44vmax at 102% 0%, var(--aurora-2), transparent 66%),
+      radial-gradient(64vmax 50vmax at 80% 110%, var(--aurora-3), transparent 68%),
+      radial-gradient(48vmax 40vmax at -6% 102%, var(--aurora-4), transparent 66%);
   }
 
   ::selection {
@@ -238,7 +241,7 @@
 }
 
 /* 焦点环刻意不进 @layer，保证压过组件上的 outline-none 工具类。
-   .field 是文本输入框，在组件内画 2px 同色焦点环，不再叠加 outline。 */
+   .field 是文本输入框，在组件内画同色焦点环，不再叠加 outline。 */
 :where(a, button, input:not(.field), textarea:not(.field), select, summary, [tabindex]):focus-visible {
   outline: 2px solid var(--color-ring);
   outline-offset: 2px;

@@ -12,23 +12,19 @@ import { IconButton } from "./button";
  */
 
 export const Drawer = DialogPrimitive.Root;
-export const DrawerTrigger = DialogPrimitive.Trigger;
-export const DrawerClose = DialogPrimitive.Close;
 
 export type DrawerContentProps = ComponentProps<typeof DialogPrimitive.Content> & {
   children: ReactNode;
   side?: "right" | "bottom";
   closeLabel?: string;
-  /** 内容已有自己的关闭入口时隐藏默认按钮，仍由 Root 处理 Escape/遮罩关闭。 */
+  /** 内容已有自己的关闭入口时隐藏默认按钮，仍由 Root 处理 Escape 和遮罩关闭。 */
   showCloseButton?: boolean;
   className?: string;
 };
 
 const sideClass: Record<NonNullable<DrawerContentProps["side"]>, string> = {
-  right:
-    "inset-y-0 right-0 animate-sheet-right sm:inset-y-2 sm:right-2 sm:rounded-overlay",
-  bottom:
-    "inset-x-2 bottom-[max(8px,env(safe-area-inset-bottom))] max-h-[82dvh] animate-sheet-up rounded-overlay",
+  right: "inset-y-0 right-0 animate-sheet-right sm:inset-y-2.5 sm:right-2.5 sm:rounded-panel",
+  bottom: "inset-x-2 bottom-[max(8px,env(safe-area-inset-bottom))] max-h-[84dvh] animate-sheet-up rounded-panel",
 };
 
 export function DrawerContent({
@@ -48,7 +44,7 @@ export function DrawerContent({
       >
         {showCloseButton ? (
           <DialogPrimitive.Close asChild>
-            <IconButton label={closeLabel} size="sm" className="absolute right-3 top-3 z-10">
+            <IconButton label={closeLabel} size="sm" className="absolute right-3.5 top-3.5 z-10 bg-surface-sunken">
               <X className="h-4 w-4" />
             </IconButton>
           </DialogPrimitive.Close>
@@ -59,24 +55,11 @@ export function DrawerContent({
   );
 }
 
-export function DrawerTitle({
-  className,
-  ...props
-}: ComponentProps<typeof DialogPrimitive.Title>) {
-  return (
-    <DialogPrimitive.Title
-      className={cn("text-label font-semibold text-foreground", className)}
-      {...props}
-    />
-  );
+export function DrawerTitle({ className, ...props }: ComponentProps<typeof DialogPrimitive.Title>) {
+  return <DialogPrimitive.Title className={cn("text-label font-semibold text-foreground", className)} {...props} />;
 }
 
 /** 视觉隐藏但保留可访问名称的 Description。 */
-export function DrawerDescription({
-  className,
-  ...props
-}: ComponentProps<typeof DialogPrimitive.Description>) {
-  return (
-    <DialogPrimitive.Description className={cn("sr-only", className)} {...props} />
-  );
+export function DrawerDescription({ className, ...props }: ComponentProps<typeof DialogPrimitive.Description>) {
+  return <DialogPrimitive.Description className={cn("sr-only", className)} {...props} />;
 }

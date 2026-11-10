@@ -25,7 +25,7 @@ export type DemoTaskCardProps = {
 /** 演示任务卡：与真实看板共用排版，所有写操作都只给出提示。 */
 export function DemoTaskCard({ task, onOpen, onChangeStatus }: DemoTaskCardProps) {
   return (
-    <article className="glass-card lift group relative rounded-[18px] p-3">
+    <article className="surface-card lift group relative rounded-tile p-3">
       <TaskCardFace
         task={task}
         today={DEMO_DATE}
@@ -40,7 +40,7 @@ export function DemoTaskCard({ task, onOpen, onChangeStatus }: DemoTaskCardProps
           </button>
         }
         corner={
-          <div className="-mr-1 -mt-1 transition-opacity duration-150 md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100">
+          <div className="-mr-1 -mt-1 transition-opacity duration-150 max-sm:-m-2.5 md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <IconButton label={`更多操作：${task.title}`} size="sm" className="sm:h-6 sm:w-6">

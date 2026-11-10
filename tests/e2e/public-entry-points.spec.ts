@@ -36,7 +36,11 @@ test("首页返回 200 并渲染 Orbit 基线", async ({ page }) => {
   await expect(page).toHaveTitle(/Orbit/);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("有序向前");
   await expect(page.getByRole("link", { name: "体验只读演示" })).toHaveAttribute("href", "/demo");
-  const preview = page.getByRole("img", { name: /Orbit 只读演示的实际页面截图/ });
-  await preview.scrollIntoViewIfNeeded();
-  await expect.poll(() => preview.evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  // 界面预览由真实组件渲染：对辅助技术是一张图，内部整体 inert，不引用图片文件。
+  const preview = page.getByRole("img", { name: /Orbit 看板界面预览/ });
+  await expect(preview).toBeVisible();
+  await expect(preview.locator("p", { hasText: "校园活动报名系统" })).toBeVisible();
+  expect(
+    await preview.evaluate((el) => ({ images: el.querySelectorAll("img").length, inert: el.querySelector("[inert]") !== null })),
+  ).toEqual({ images: 0, inert: true });
 });

@@ -17,12 +17,13 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InlineError } from "@/components/ui/inline-error";
-import { PageHeader } from "@/components/ui/page-header";
+import { SectionHeader } from "@/components/ui/page-header";
 import { useToast } from "@/components/ui/toast";
-import { Spinner } from "@/features/auth/auth-form";
+import { Spinner } from "@/components/ui/spinner";
 import { formatEventDate, useUserTimezone } from "@/lib/user-timezone";
 import { loginPathWithReturnTo } from "@/lib/return-to";
 import { clearProjectDrafts } from "@/features/tasks/draft-storage";
+import { MemberTabs } from "./member-tabs";
 
 /**
  * 项目成员列表（M4 / ORB-014，`/app/projects/[id]/members`）。
@@ -48,7 +49,6 @@ type PendingAction =
 
 export type MembersListProps = {
   projectId: string;
-  projectName: string;
   currentUserId: string;
   /** 当前用户是否为项目 owner（决定「移除」按钮可见性；服务端仍权威复核）。 */
   isOwner: boolean;
@@ -57,7 +57,6 @@ export type MembersListProps = {
 
 export function MembersList({
   projectId,
-  projectName,
   currentUserId,
   isOwner,
   members,
@@ -117,11 +116,11 @@ export function MembersList({
   }
 
   return (
-    <div className="w-full max-w-4xl">
-      <PageHeader
-        eyebrow={projectName}
+    <div className="mx-auto w-full max-w-3xl">
+      <SectionHeader
         title="项目成员"
         description={`共 ${members.length} 名成员。${isOwner ? "作为所有者，你可以移除非所有者成员。" : "你可以选择退出该项目。"}`}
+        actions={isOwner ? <MemberTabs projectId={projectId} active="members" /> : null}
       />
 
       <InlineError className="mb-4">{error}</InlineError>
@@ -145,7 +144,7 @@ export function MembersList({
           }
         />
       ) : (
-        <ul className="glass-card divide-y divide-line overflow-hidden rounded-card">
+        <ul className="surface-card divide-y divide-line overflow-hidden rounded-card">
           {members.map((member) => {
             const isSelf = member.userId === currentUserId;
             const isOwnerRow = member.role === "OWNER";
@@ -155,9 +154,9 @@ export function MembersList({
             return (
               <li
                 key={member.userId}
-                className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3"
+                className="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-4 py-3"
               >
-                <Avatar name={member.name} size="md" />
+                <Avatar name={member.name} size="lg" />
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-2 text-label font-medium text-foreground">
                     <span className="truncate">{member.name}</span>

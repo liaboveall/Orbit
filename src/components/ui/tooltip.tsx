@@ -5,43 +5,22 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 /**
- * Tooltip（ORB-002，基于 @radix-ui/react-tooltip）。
- *
- * docs/02 §4：侧栏收窄(72px)与长项目名截断时保留完整标签的 tooltip/可访问名称。
- * Radix 保证 hover 与键盘 focus 均可触发，并管理 aria。Provider 在 AppShell 挂载一次。
+ * Tooltip（基于 Radix）：悬停和键盘聚焦都能触发。
+ * 用于收窄的侧栏和被截断的长名称。Provider 在 AppProviders 挂载一次。
  */
 
-export function TooltipProvider({
-  children,
-  delayDuration = 200,
-}: {
-  children: ReactNode;
-  delayDuration?: number;
-}) {
-  return (
-    <TooltipPrimitive.Provider delayDuration={delayDuration}>
-      {children}
-    </TooltipPrimitive.Provider>
-  );
+export function TooltipProvider({ children, delayDuration = 200 }: { children: ReactNode; delayDuration?: number }) {
+  return <TooltipPrimitive.Provider delayDuration={delayDuration}>{children}</TooltipPrimitive.Provider>;
 }
 
-export type TooltipProps = Omit<
-  ComponentProps<typeof TooltipPrimitive.Trigger>,
-  "content" | "children"
-> & {
-  /** 提示内容（同时作为无障碍补充说明）。 */
+export type TooltipProps = Omit<ComponentProps<typeof TooltipPrimitive.Trigger>, "content" | "children"> & {
+  /** 提示内容，同时是无障碍的补充说明。 */
   content: ReactNode;
   side?: "top" | "right" | "bottom" | "left";
   children: ReactNode;
 };
 
-export function Tooltip({
-  content,
-  side = "top",
-  children,
-  className,
-  ...triggerProps
-}: TooltipProps) {
+export function Tooltip({ content, side = "top", children, className, ...triggerProps }: TooltipProps) {
   return (
     <TooltipPrimitive.Root>
       <TooltipPrimitive.Trigger asChild {...triggerProps}>
@@ -52,7 +31,7 @@ export function Tooltip({
           side={side}
           sideOffset={8}
           className={cn(
-            "z-50 max-w-64 animate-pop-in rounded-full bg-tooltip px-3 py-1.5 text-caption text-tooltip-foreground shadow-popover backdrop-blur-md",
+            "z-50 max-w-64 animate-pop-in rounded-full bg-tooltip px-3 py-1.5 text-caption text-tooltip-foreground shadow-[0_8px_24px_-8px_rgb(0_0_0/0.4)] backdrop-blur-md",
             className,
           )}
         >

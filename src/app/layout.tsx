@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { GlassLight } from "@/components/ui/glass-light";
+import { LiquidGlass } from "@/components/ui/liquid-glass";
 import "@/styles/globals.css";
 
 export const metadata: Metadata = {
@@ -12,8 +12,8 @@ export const viewport: Viewport = {
   // iOS 上让玻璃标签栏延伸到安全区，并让浏览器工具栏跟随主题色。
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f5f5f7" },
-    { media: "(prefers-color-scheme: dark)", color: "#0c0c10" },
+    { media: "(prefers-color-scheme: light)", color: "#f2f3f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0b0f" },
   ],
 };
 
@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="zh-CN">
       <body>
-        <GlassLight />
+        <LiquidGlass />
         {children}
       </body>
     </html>

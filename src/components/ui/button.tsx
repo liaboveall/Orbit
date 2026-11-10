@@ -1,8 +1,9 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 /**
  * Button / IconButton。胶囊形，按下时轻微回弹；高度 sm=32、md=40、lg=44。
+ * 主按钮是着色玻璃，次要按钮是内容层上的浅色胶囊。
  * 焦点环由 tokens.css 的全局 :focus-visible 规则提供。
  */
 
@@ -10,12 +11,10 @@ export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
 
 const variantClass: Record<ButtonVariant, string> = {
-  primary:
-    "btn-tint bg-brand text-foreground-invert hover:bg-brand-hover active:bg-brand-hover",
-  secondary: "glass-chip text-foreground",
-  ghost:
-    "bg-transparent text-foreground-secondary hover:bg-surface-sunken hover:text-foreground",
-  danger: "btn-tint bg-danger-fill text-foreground-invert hover:brightness-95",
+  primary: "glass-tint text-foreground-invert",
+  secondary: "surface-chip text-foreground",
+  ghost: "bg-transparent text-foreground-secondary hover:bg-surface-sunken hover:text-foreground",
+  danger: "glass-tint text-foreground-invert [--tint:var(--color-danger-fill)]",
 };
 
 const sizeClass: Record<ButtonSize, string> = {
@@ -25,8 +24,8 @@ const sizeClass: Record<ButtonSize, string> = {
 };
 
 const motionClass =
-  "transition-[background-color,color,opacity,transform,filter] duration-200 ease-standard " +
-  "active:scale-[0.965] disabled:pointer-events-none disabled:opacity-45";
+  "transition-[background-color,color,opacity,transform,filter,box-shadow] duration-200 ease-standard " +
+  "active:scale-[0.96] disabled:pointer-events-none disabled:opacity-45";
 
 /** 生成按钮样式类，供 Button 与需要按钮外观的 Link 复用。 */
 export function buttonVariants({
@@ -52,20 +51,8 @@ export type ButtonProps = ComponentProps<"button"> & {
   size?: ButtonSize;
 };
 
-export function Button({
-  variant = "primary",
-  size = "md",
-  className,
-  type = "button",
-  ...props
-}: ButtonProps) {
-  return (
-    <button
-      type={type}
-      className={buttonVariants({ variant, size, className })}
-      {...props}
-    />
-  );
+export function Button({ variant = "primary", size = "md", className, type = "button", ...props }: ButtonProps) {
+  return <button type={type} className={buttonVariants({ variant, size, className })} {...props} />;
 }
 
 const iconSizeClass: Record<ButtonSize, string> = {
@@ -80,7 +67,7 @@ export type IconButtonProps = Omit<ComponentProps<"button">, "children"> & {
   size?: ButtonSize;
   /** 可访问名称：IconButton 没有可见文本，必须提供。 */
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 export function IconButton({

@@ -217,7 +217,7 @@ export function SubtaskItem({
 
   if (unavailable && !editing) return null;
   return (
-    <li className="group/row flex items-start gap-2.5 rounded-[12px] px-2 py-1.5 transition-colors hover:bg-surface-sunken">
+    <li className="group/row flex items-start gap-2.5 rounded-control px-2.5 py-2 transition-colors hover:bg-surface-sunken">
       <button
         type="button"
         onClick={handleToggle}
@@ -277,7 +277,7 @@ export function SubtaskItem({
             {conflict && (
               <div
                 role="alert"
-                className="space-y-2 rounded-[12px] bg-surface-sunken p-2.5 text-caption"
+                className="space-y-2 rounded-control bg-surface-sunken p-2.5 text-caption"
               >
                 <p className="font-medium text-foreground">
                   该子任务已被他人更新（版本 {subtask.version}）

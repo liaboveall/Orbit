@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, ArchiveRestore, FolderPlus, LayoutGrid, ListChecks, Plus, Users } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowUpRight, FolderPlus, LayoutGrid, ListChecks, Plus, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -18,9 +18,8 @@ import { InlineError } from "@/components/ui/inline-error";
 import { LinkLabel } from "@/components/ui/link-label";
 import { PageHeader } from "@/components/ui/page-header";
 import { Segments } from "@/components/ui/segments";
-import { Spinner } from "@/features/auth/auth-form";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/cn";
-import type { CSSProperties } from "react";
 import { loginPathWithReturnTo } from "@/lib/return-to";
 import { projectColorAria } from "@/lib/project-color";
 import { ProjectCreateDialog } from "./project-create-form";
@@ -200,69 +199,65 @@ export function ProjectListClient({
 
   const tabClass = (active: boolean) =>
     cn(
-      "inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-label font-medium outline-none transition-colors duration-200",
+      "inline-flex h-8 items-center gap-1.5 rounded-full px-4 text-label font-medium outline-none transition-colors duration-200",
       active ? "text-foreground" : "text-foreground-secondary hover:text-foreground",
     );
+  const openCreate = () => {
+    setListError(null);
+    setCreating(true);
+  };
 
   return (
-    <div className="w-full pt-2 md:pt-5">
+    <div className="w-full animate-rise md:pt-3">
       <PageHeader
         title="全部项目"
         description={`${archived === "only" ? "已归档的项目（只读）" : "你拥有或参与的项目"}，共 ${projects.length}${hasMore ? "+" : ""} 个`}
         actions={
-          archived === "exclude" && projects.length > 0 ? (
-            <Button
-              type="button"
-              onClick={() => {
-                setListError(null);
-                setCreating(true);
-              }}
+          <>
+            <Segments
+              role="tablist"
+              aria-label="项目归档筛选"
+              activeKey={archived}
+              className="inline-flex rounded-full bg-surface-sunken p-1"
             >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              新建项目
-            </Button>
-          ) : null
+              <button
+                type="button"
+                role="tab"
+                aria-selected={archived === "exclude"}
+                data-active={archived === "exclude" || undefined}
+                onClick={() => switchTab("exclude")}
+                className={tabClass(archived === "exclude")}
+              >
+                未归档
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={archived === "only"}
+                data-active={archived === "only" || undefined}
+                onClick={() => switchTab("only")}
+                className={tabClass(archived === "only")}
+              >
+                <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+                已归档
+              </button>
+            </Segments>
+            {archived === "exclude" && projects.length > 0 ? (
+              <Button onClick={openCreate}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                新建项目
+              </Button>
+            ) : null}
+          </>
         }
       />
-
-      <Segments
-        role="tablist"
-        aria-label="项目归档筛选"
-        activeKey={archived}
-        className="mb-6 inline-flex rounded-full bg-surface-sunken p-1"
-        style={{ "--segment-inset": "4px" } as CSSProperties}
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={archived === "exclude"}
-          data-active={archived === "exclude" || undefined}
-          onClick={() => switchTab("exclude")}
-          className={tabClass(archived === "exclude")}
-        >
-          未归档
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={archived === "only"}
-          data-active={archived === "only" || undefined}
-          onClick={() => switchTab("only")}
-          className={tabClass(archived === "only")}
-        >
-          <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-          已归档
-        </button>
-      </Segments>
 
       {archived === "exclude" ? (
         <ProjectCreateDialog
           open={creating}
           onOpenChange={setCreating}
           onCreated={async () => {
-            // toast（「项目已创建」）由表单在成功分支自行发出（含项目名）。
             setCreating(false);
-            // await：等新 props 流入后再由表单解除 loading，避免用旧数据再次提交。
             await router.refresh();
           }}
           onUnauthorized={goToLogin}
@@ -284,24 +279,15 @@ export function ProjectListClient({
             title="还没有项目"
             description="项目是任务与看板的家。创建第一个项目，就能开始分派任务、追踪进度。"
             action={
-              <Button
-                type="button"
-                size="lg"
-                onClick={() => {
-                  setListError(null);
-                  setCreating(true);
-                }}
-              >
+              <Button onClick={openCreate}>
                 <FolderPlus className="h-4 w-4" aria-hidden="true" />
                 创建第一个项目
               </Button>
             }
           />
         )
-      ) : null}
-
-      {projects.length > 0 ? (
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      ) : (
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 xl:gap-4">
           {projects.map((project) => (
             <li key={project.id}>
               <ProjectCard
@@ -315,12 +301,11 @@ export function ProjectListClient({
             </li>
           ))}
         </ul>
-      ) : null}
+      )}
 
       {hasMore ? (
         <div className="mt-6 flex justify-center">
           <Button
-            type="button"
             variant="secondary"
             disabled={loadingMore}
             aria-busy={loadingMore || undefined}
@@ -349,40 +334,42 @@ function ProjectCard({
   restoring: boolean;
   onRestore: () => void;
 }) {
-  const archived = project.archivedAt !== null;
-
   return (
-    <article className="glass-card lift relative flex h-full min-h-40 flex-col gap-3 rounded-card p-4 has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-ring">
-      <div className="flex min-w-0 items-center gap-3">
-        <ProjectGlyph name={project.name} color={project.color} size="md" />
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-body font-semibold tracking-[-0.01em] text-foreground">
-            <Link
-              href={`/app/projects/${project.id}/board`}
-              className="outline-none after:absolute after:inset-0 after:rounded-card after:content-['']"
-            >
-              <LinkLabel>{project.name}</LinkLabel>
-            </Link>
-          </h2>
-          <p className="text-caption tabular-nums text-foreground-muted">
-            {project.key} · {project.role === "OWNER" ? "所有者" : "成员"}
-            <span className="sr-only">，{projectColorAria(project.color)}</span>
-          </p>
-        </div>
-        {archived ? (
+    <article className="surface-card lift group relative flex h-full min-h-44 flex-col rounded-card p-5 has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-ring">
+      <div className="flex items-start justify-between gap-3">
+        <ProjectGlyph name={project.name} color={project.color} size="lg" />
+        {project.archivedAt !== null ? (
           <Badge tone="warning" icon={<Archive className="h-3 w-3" />}>
             已归档
           </Badge>
-        ) : null}
+        ) : (
+          <ArrowUpRight
+            className="h-4 w-4 text-foreground-muted opacity-0 transition-[opacity,transform] duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100"
+            aria-hidden="true"
+          />
+        )}
       </div>
 
+      <h2 className="mt-4 truncate text-title font-semibold tracking-[-0.01em] text-foreground">
+        <Link
+          href={`/app/projects/${project.id}/board`}
+          className="outline-none after:absolute after:inset-0 after:rounded-card after:content-['']"
+        >
+          <LinkLabel>{project.name}</LinkLabel>
+        </Link>
+      </h2>
+      <p className="mt-0.5 text-caption tabular-nums text-foreground-muted">
+        {project.key} · {project.role === "OWNER" ? "所有者" : "成员"}
+        <span className="sr-only">，{projectColorAria(project.color)}</span>
+      </p>
+
       {project.description.trim().length > 0 ? (
-        <p className="line-clamp-2 text-label leading-relaxed text-foreground-secondary">
+        <p className="mt-2.5 line-clamp-2 text-label leading-relaxed text-foreground-secondary">
           {project.description}
         </p>
       ) : null}
 
-      <p className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-foreground-muted">
+      <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 pt-4 text-caption text-foreground-muted">
         <span className="inline-flex items-center gap-1.5">
           <Users className="h-3.5 w-3.5" aria-hidden="true" />
           {project.memberCount} 名成员
@@ -391,22 +378,20 @@ function ProjectCard({
           <ListChecks className="h-3.5 w-3.5" aria-hidden="true" />
           {project.openTaskCount} 个未完成任务
         </span>
-      </p>
-
-      {showRestore && project.role === "OWNER" ? (
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          className="relative z-10 self-start"
-          disabled={restoring}
-          aria-busy={restoring || undefined}
-          onClick={onRestore}
-        >
-          {restoring ? <Spinner /> : <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />}
-          <span>{restoring ? "正在恢复…" : "恢复项目"}</span>
-        </Button>
-      ) : null}
+        {showRestore && project.role === "OWNER" ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="relative z-10 ml-auto"
+            disabled={restoring}
+            aria-busy={restoring || undefined}
+            onClick={onRestore}
+          >
+            {restoring ? <Spinner /> : <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />}
+            <span>{restoring ? "正在恢复…" : "恢复项目"}</span>
+          </Button>
+        ) : null}
+      </div>
     </article>
   );
 }

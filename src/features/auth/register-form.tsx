@@ -2,18 +2,18 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { CircleCheck } from "lucide-react";
+import { MailCheck } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import { InlineError } from "@/components/ui/inline-error";
-import { PasswordField, SubmitButton, TextField } from "./auth-form";
+import { AuthNotice, PasswordField, SubmitButton, TextField, textLink } from "./auth-form";
 import { useSignUp } from "./use-auth";
 import { isValidEmail, isValidName, isValidPasswordLength, NAME_MAX } from "./validation";
 
 /**
- * 注册表单（M1 / ORB-005，/auth/register）。
+ * 注册表单（/auth/register）。
  *
- * 字段：姓名 + 邮箱 + 密码 + 确认密码。requireEmailVerification 下注册**不建会话**，
- * 成功后切换到「验证邮件已发送」态，引导用户去邮箱点击验证链接（链接指向 /api/auth/verify-email，
- * 验证通过自动登录并重定向到 /auth/verify）。客户端即时校验，服务端为权威。
+ * 字段：姓名、邮箱、密码、确认密码。注册不直接建立会话：成功后切换到「验证邮件已发送」，
+ * 用户点击邮件里的链接完成验证并自动登录。客户端即时校验，服务端是权威。
  */
 export function RegisterForm() {
   const { signUp, pending, error } = useSignUp();
@@ -31,33 +31,27 @@ export function RegisterForm() {
 
   if (submitted) {
     return (
-      <div className="space-y-4 text-center">
-        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success-soft text-success">
-          <CircleCheck className="h-6 w-6" aria-hidden="true" />
-        </span>
-        <h2 className="text-section font-semibold text-foreground">验证邮件已发送</h2>
-        <p className="text-label leading-relaxed text-foreground-secondary">
-          我们已向 <span className="font-medium text-foreground">{email}</span> 发送了一封验证邮件。
-          请点击邮件中的按钮完成验证，验证后会自动为你登录。
+      <AuthNotice
+        tone="success"
+        icon={<MailCheck />}
+        title="验证邮件已发送"
+        actions={
+          <>
+            <Link href="/auth/verify" className={buttonVariants({ variant: "secondary", size: "lg", className: "w-full" })}>
+              前往验证页
+            </Link>
+            <Link href="/auth/login" className={textLink}>
+              返回登录
+            </Link>
+          </>
+        }
+      >
+        <p>
+          我们已向 <span className="font-medium text-foreground [overflow-wrap:anywhere]">{email}</span> 发送了一封验证邮件。
+          点击邮件中的按钮完成验证，验证后会自动为你登录。
         </p>
-        <p className="text-caption text-foreground-muted">
-          没收到？检查垃圾邮件，或前往验证页重新发送。
-        </p>
-        <div className="flex flex-col gap-2 pt-1">
-          <Link
-            href="/auth/verify"
-            className="inline-flex h-11 items-center justify-center rounded-control border border-line-strong bg-surface text-label font-medium text-foreground transition-colors duration-150 ease-standard hover:bg-surface-sunken"
-          >
-            前往验证页
-          </Link>
-          <Link
-            href="/auth/login"
-            className="text-label text-brand-ink underline-offset-4 hover:text-brand-hover hover:underline"
-          >
-            返回登录
-          </Link>
-        </div>
-      </div>
+        <p className="text-caption text-foreground-muted">没收到？检查垃圾邮件，或前往验证页重新发送。</p>
+      </AuthNotice>
     );
   }
 
@@ -73,14 +67,9 @@ export function RegisterForm() {
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    // Clear previous errors on new submission
-    setFieldErrors({});
-    
+    // 失败时错误由 useSignUp 给出，输入保持不变。
     const ok = await signUp({ name: name.trim(), email: email.trim(), password });
-    if (ok) {
-      setSubmitted(true);
-    }
-    // Error is already set by useSignUp hook - don't clear it here as it shows validation/network errors
+    if (ok) setSubmitted(true);
   }
 
   return (
@@ -131,23 +120,15 @@ export function RegisterForm() {
         disabled={pending}
       />
 
-      {/* Error from server/API validation or other issues */}
       {error && <InlineError role="alert">{error}</InlineError>}
 
-      <SubmitButton 
-        pending={pending} 
-        disabled={pending}
-        pendingText="注册中…"
-      >
-        {pending ? "注册中…" : "注册"}
+      <SubmitButton pending={pending} pendingText="注册中…">
+        注册
       </SubmitButton>
 
       <p className="text-center text-label text-foreground-secondary">
         已有账号？
-        <Link
-          href="/auth/login"
-          className="ml-1 text-brand-ink underline-offset-4 transition-colors duration-150 ease-standard hover:text-brand-hover hover:underline"
-        >
+        <Link href="/auth/login" className={`ml-1 ${textLink}`}>
           登录
         </Link>
       </p>

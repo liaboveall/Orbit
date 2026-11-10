@@ -180,7 +180,7 @@ export function UploadButton({
 
       <div
         className={cn(
-          "flex items-center justify-between gap-3 rounded-[16px] bg-surface-sunken p-3 transition-colors",
+          "flex items-center justify-between gap-3 rounded-tile bg-surface p-3 shadow-[inset_0_0_0_0.5px_var(--color-line)] transition-colors",
           hasError && "bg-danger-soft",
         )}
       >

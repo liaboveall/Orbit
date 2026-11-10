@@ -47,7 +47,8 @@ for (const width of [768, 1024, 1440]) {
     await page.goto("/app/today");
     const nav = page.getByRole("navigation", { name: "主导航" });
     await expect(nav.getByRole("link", { name: "我的工作台", exact: true })).toBeVisible();
-    await expect(nav.getByRole("button", { name: "全部项目", exact: true })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "全部项目", exact: true })).toBeVisible();
+    // 列表里只有最近项目；工作台和全部项目是列表之外的两个固定入口。
     const projects = nav.locator("ul a");
     await expect(projects).toHaveCount(1);
     for (const link of await projects.all()) {

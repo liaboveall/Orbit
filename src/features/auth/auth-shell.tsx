@@ -1,108 +1,83 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { OrbitWordmark } from "@/features/shell/orbit-logo";
 import { Skeleton, SkeletonBlock } from "@/components/ui/skeleton";
 
 /**
- * 认证页面共享外壳（M1 / ORB-005）。
+ * 认证页面共用的外壳：居中的一片玻璃卡片，上方是字标，背后是两条轨道线。
+ * 登录、注册、找回密码、邮箱验证和邀请页都用它。
  *
- * 设计（docs/02 + 任务规格）：居中卡片、Orbit 字标、简洁背景。为在 token 体系内做出
- * Orbit 辨识度，背景叠加两处极淡的品牌光晕与一条倾斜轨道环（呼应 OrbitMark 的椭圆轨道），
- * 全部用 tokens 的 CSS 变量（--color-brand-soft / --color-line），不引入外部素材或额外字体。
- *
- * 无 "use client"：作为服务端组件承载静态布局，表单本身是各自的客户端组件子节点。
+ * 表单提交后换成结果说明（AuthNotice）时，卡片里的静态标题自动隐藏，
+ * 由结果说明自己的标题充当页面标题，不出现两个标题。
  */
 export function AuthShell({
   title,
   description,
   children,
-  footer,
   className,
 }: {
-  /** 页面标题（h1）。状态化页面（验证/重设/注册/找回）可省略，由内部各状态自管标题。 */
+  /** 页面标题（h1）。内容自带标题的页面（邮箱验证、邀请）不传。 */
   title?: string;
   description?: ReactNode;
   children: ReactNode;
-  footer?: ReactNode;
   className?: string;
 }) {
   return (
     <main className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10">
       <AuthBackdrop />
-      <div className={cn("relative w-full max-w-md", className)}>
-        <div className="mb-7 flex justify-center">
-          <OrbitWordmark />
+      <div className={cn("relative w-full max-w-[420px] animate-rise", className)}>
+        <div className="mb-6 flex justify-center">
+          <Link href="/" aria-label="Orbit 首页" className="rounded-control outline-none">
+            <OrbitWordmark />
+          </Link>
         </div>
-        <div className="glass rounded-overlay p-6 sm:p-8">
+        <div data-lens="" className="group/card glass rounded-panel p-6 sm:p-8">
           {title || description ? (
-            <header className="mb-6 space-y-1.5">
+            <header className="mb-6 space-y-1.5 group-has-[[data-auth-notice]]/card:hidden">
               {title ? (
-                <h1 className="text-page font-semibold tracking-[-0.012em] text-foreground">
-                  {title}
-                </h1>
+                <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.015em] text-foreground">{title}</h1>
               ) : null}
               {description ? (
-                <p className="text-label leading-relaxed text-foreground-secondary">
-                  {description}
-                </p>
+                <p className="text-label leading-relaxed text-foreground-secondary">{description}</p>
               ) : null}
             </header>
           ) : null}
           {children}
         </div>
-        {footer ? (
-          <div className="mt-5 text-center text-label text-foreground-secondary">
-            {footer}
-          </div>
-        ) : null}
       </div>
     </main>
   );
 }
 
-/**
- * 表单 Suspense 回退：认证表单是客户端组件（部分用 useSearchParams，需 Suspense 边界）。
- * 加载时用与表单同形的骨架占位，保持卡片尺寸稳定（docs/02 §4）。
- */
+/** 表单加载时的占位，尺寸与表单相近，卡片不跳动。 */
 export function AuthFormFallback() {
   return (
     <SkeletonBlock label="加载表单中" className="space-y-4">
-      <Skeleton className="h-10 w-full" />
-      <Skeleton className="h-10 w-full" />
       <Skeleton className="h-11 w-full" />
+      <Skeleton className="h-11 w-full" />
+      <Skeleton className="h-11 w-full rounded-full" />
     </SkeletonBlock>
   );
 }
 
-/** 背景装饰：两处柔和品牌光晕 + 一条倾斜轨道环（纯装饰，aria-hidden，不拦截交互）。 */
+/** 两条轨道的路径：与字标里的轨道同一倾角，行星沿外圈缓慢运行。 */
+const OUTER_ORBIT = "M 40 400 a 360 150 0 1 0 720 0 a 360 150 0 1 0 -720 0";
+
+/** 背景装饰：倾斜的轨道线和一颗行星，呼应字标。纯装饰，不拦截交互。 */
 function AuthBackdrop() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0">
       <svg
         viewBox="0 0 800 800"
         fill="none"
-        className="absolute left-1/2 top-1/2 h-[140vmin] w-[140vmin] -translate-x-1/2 -translate-y-1/2 text-line"
+        className="absolute left-1/2 top-1/2 h-[150vmin] min-h-[720px] w-[150vmin] min-w-[720px] -translate-x-1/2 -translate-y-1/2"
       >
-        <ellipse
-          cx="400"
-          cy="400"
-          rx="360"
-          ry="150"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          transform="rotate(-28 400 400)"
-          opacity="0.5"
-        />
-        <ellipse
-          cx="400"
-          cy="400"
-          rx="260"
-          ry="108"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          transform="rotate(-28 400 400)"
-          opacity="0.35"
-        />
+        <g transform="rotate(-28 400 400)">
+          <ellipse cx="400" cy="400" rx="360" ry="150" className="stroke-line" strokeWidth="1.5" />
+          <ellipse cx="400" cy="400" rx="250" ry="104" className="stroke-line" strokeWidth="1.5" opacity="0.6" />
+          <circle r="6" className="orbit-planet fill-brand" opacity="0.55" style={{ offsetPath: `path("${OUTER_ORBIT}")` }} />
+        </g>
       </svg>
     </div>
   );

@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
+import { StatusGlyph } from "@/features/tasks/status-glyph";
 import { STATUS_LABEL } from "@/features/tasks/task-meta";
 
 /**
@@ -100,7 +101,7 @@ export function TaskStatusSelect({ task, disabled, onUnauthorized, mutation }: T
       disabled={disabled || pending}
     >
       <SelectTrigger
-        className="h-11 w-auto rounded-full bg-transparent! pl-3 pr-2.5 shadow-none! hover:bg-surface-sunken! md:h-8 md:text-label"
+        className="-ml-2.5 h-11 w-auto rounded-full bg-transparent! pl-2.5 pr-2 shadow-none! hover:bg-surface-sunken! md:h-8 md:text-label"
         aria-label={`任务 ${task.identifier} 的状态${pending ? "（更新中）" : ""}`}
       >
         <SelectValue />
@@ -108,7 +109,10 @@ export function TaskStatusSelect({ task, disabled, onUnauthorized, mutation }: T
       <SelectContent>
         {TASK_STATUS.map((option) => (
           <SelectItem key={option} value={option}>
-            {STATUS_LABEL[option]}
+            <span className="flex items-center gap-2">
+              <StatusGlyph status={option} className="h-4 w-4" />
+              {STATUS_LABEL[option]}
+            </span>
           </SelectItem>
         ))}
       </SelectContent>

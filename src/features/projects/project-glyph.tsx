@@ -5,8 +5,8 @@ import { PROJECT_COLOR_DOT } from "@/lib/project-color";
 const sizeClass = {
   xs: "h-5 w-5 rounded-[6px] text-[11px]",
   sm: "h-6 w-6 rounded-[7px] text-caption",
-  md: "h-10 w-10 rounded-[12px] text-body",
-  lg: "h-12 w-12 rounded-[14px] text-section",
+  md: "h-10 w-10 rounded-control text-body",
+  lg: "h-12 w-12 rounded-item text-section",
 } as const;
 
 /** 项目图标：标记色圆角方块加项目名首字，装饰性，名称由相邻文本提供。 */
@@ -25,7 +25,7 @@ export function ProjectGlyph({
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex shrink-0 select-none items-center justify-center font-semibold text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.32),0_1px_2px_rgb(0_0_0/0.14)]",
+        "inline-flex shrink-0 select-none items-center justify-center bg-linear-to-b from-white/20 to-transparent font-semibold text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.4),inset_0_0_0_0.5px_rgb(0_0_0/0.12),0_1px_2px_rgb(0_0_0/0.16)]",
         PROJECT_COLOR_DOT[color],
         sizeClass[size],
         className,

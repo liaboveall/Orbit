@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
-import { Spinner } from "@/features/auth/auth-form";
+import { Spinner } from "@/components/ui/spinner";
 import { PRIORITY_LABEL, STATUS_LABEL } from "@/features/tasks/task-meta";
 
 /**
@@ -64,6 +64,8 @@ type FieldErrors = { title?: string; description?: string; dueDate?: string };
 
 export type TaskCreateFormProps = {
   projectId: string;
+  /** 新任务的初始状态，例如从看板某一列发起时。 */
+  defaultStatus?: TaskStatus;
   /** 创建成功（toast 已发出）后回调：父组件收起表单并发起路由刷新。可返回 Promise，用于等待额外的提交后操作。 */
   onCreated: () => void | Promise<void>;
   onCancelled: () => void;
@@ -109,6 +111,7 @@ export function TaskCreateForm(props: TaskCreateFormProps) {
 
 function TaskCreateFormContent({
   projectId,
+  defaultStatus = "TODO",
   onCreated,
   onCancelled,
   onUnauthorized,
@@ -122,7 +125,7 @@ function TaskCreateFormContent({
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [status, setStatus] = useState<TaskStatus>("TODO");
+  const [status, setStatus] = useState<TaskStatus>(defaultStatus);
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   /** date input 的值（YYYY-MM-DD 或空 = 无截止日）。 */
   const [dueDate, setDueDate] = useState("");
@@ -143,7 +146,7 @@ function TaskCreateFormContent({
   useUnsavedChanges(
     trimmedTitle.length > 0 ||
       trimmedDescription.length > 0 ||
-      status !== "TODO" ||
+      status !== defaultStatus ||
       priority !== "MEDIUM" ||
       dueDate.length > 0,
     pending,
