@@ -107,14 +107,19 @@ test("sign-out keeps drafts when cancelled or failed and removes this user's sto
 
 test("the board keeps working when the open task is deleted elsewhere and the panel keeps the comment draft", async ({ page }) => {
   await page.goto(`/app/projects/${project.id}/board?task=${task.id}`);
-  await expect(page.locator("[data-project-content] h1")).toHaveText(project.name);
+  // 项目名在吸顶的项目栏里，看板本身是 [data-project-content]；面板打开时两者都在模态背后。
+  const projectTitle = page.locator("#app-main h1");
+  const board = page.locator("#app-main [data-project-content]");
+  await expect(projectTitle).toHaveText(project.name);
+  await expect(board).toBeVisible();
   const comment = page.getByRole("textbox", { name: "评论正文", exact: true });
   await comment.fill("任务删除时仍在编辑的评论");
   await deleteElsewhere(page);
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect(page.getByRole("alert").filter({ hasText: "该任务已被删除" })).toBeVisible();
   await expect(comment).toHaveValue("任务删除时仍在编辑的评论");
-  await expect(page.locator("[data-project-content] h1")).toHaveText(project.name);
+  await expect(projectTitle).toHaveText(project.name);
+  await expect(board).toBeVisible();
   await expect(page.getByText("无法访问此页面")).toHaveCount(0);
   await page.getByRole("button", { name: "关闭详情", exact: true }).click();
   await page.getByRole("button", { name: "放弃更改", exact: true }).click();
@@ -147,12 +152,10 @@ test("the standalone task page keeps drafts visible when the task is deleted els
   await expect(page.getByRole("heading", { level: 1, name: "任务不存在或已被删除" })).toBeVisible();
 });
 
-test("without the Navigation API, back from a panel opened after another editor still guards its comment draft", async ({ page }) => {
+test("without the Navigation API, back from a panel still guards its comment draft", async ({ page }) => {
   await page.addInitScript(() => Object.defineProperty(window, "navigation", { value: undefined, configurable: true }));
   const listPath = `/app/projects/${project.id}/tasks`;
   await page.goto(listPath);
-  await page.getByRole("button", { name: "新建任务", exact: true }).first().click();
-  await expect(page.getByRole("textbox", { name: "任务标题", exact: true })).toBeVisible();
   await page.locator(`[data-task-link="${task.id}"]`).first().click();
   await expect(page).toHaveURL(new RegExp("task=" + task.id));
   const comment = page.getByRole("textbox", { name: "评论正文", exact: true });

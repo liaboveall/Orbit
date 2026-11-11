@@ -17,7 +17,7 @@ import { InlineError } from "@/components/ui/inline-error";
 import { Input, Label } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/cn";
-import { Spinner } from "@/features/auth/auth-form";
+import { Spinner } from "@/components/ui/spinner";
 import { TimezonePicker } from "./timezone-picker";
 import { ZonePreview } from "./zone-preview";
 import { buildTimezoneOptions, isKnownTimezone } from "./timezones";
@@ -180,29 +180,19 @@ function SettingsFormContent({ user }: { user: UserDTO }) {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
       {/* ── 左列：编辑区 ─────────────────────────────────────────────── */}
       <form
         onSubmit={(event) => {
           void handleSubmit(event);
         }}
         noValidate
-        className="overflow-hidden rounded-card border border-line bg-surface"
+        className="surface-card overflow-hidden rounded-card"
       >
-        <header className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
-          <div className="min-w-0">
-            <h2 className="text-section font-semibold tracking-tight text-foreground">
-              账户偏好
-            </h2>
-            <p className="mt-0.5 text-label text-foreground-secondary">
-              姓名与时区决定 Orbit 如何显示任务日期与截止时刻。
-            </p>
-          </div>
+        <header className="flex items-center justify-between gap-3 px-5 pt-5">
+          <h2 className="text-section font-semibold tracking-[-0.015em] text-foreground">账户偏好</h2>
           <span
-            className={cn(
-              "shrink-0 font-mono text-caption uppercase tracking-widest transition-colors duration-150 ease-standard",
-              dirty ? "text-brand" : "text-foreground-muted",
-            )}
+            className={cn("shrink-0 text-caption", dirty ? "text-brand-ink" : "text-foreground-muted")}
             aria-live="polite"
           >
             {pending ? "保存中…" : dirty ? "未保存" : "已保存"}
@@ -210,7 +200,7 @@ function SettingsFormContent({ user }: { user: UserDTO }) {
         </header>
 
         {/* 01 姓名 */}
-        <FieldRow index="01" title="姓名" caption="1—40 个字符，向队友展示">
+        <FieldRow title="姓名">
           <div className="space-y-1.5">
             <Label htmlFor={nameId} className="sr-only">
               姓名
@@ -246,7 +236,7 @@ function SettingsFormContent({ user }: { user: UserDTO }) {
               <span
                 aria-hidden="true"
                 className={cn(
-                  "pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-caption tabular-nums",
+                  "pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-caption tabular-nums",
                   trimmedName.length > NAME_MAX
                     ? "text-danger"
                     : "text-foreground-muted",
@@ -263,7 +253,7 @@ function SettingsFormContent({ user }: { user: UserDTO }) {
         </FieldRow>
 
         {/* 02 时区 */}
-        <FieldRow index="02" title="时区" caption="决定日期与时间的显示">
+        <FieldRow title="时区">
           <div className="space-y-1.5">
             <Label htmlFor={timezoneId} className="sr-only">
               时区
@@ -286,18 +276,16 @@ function SettingsFormContent({ user }: { user: UserDTO }) {
               }}
             />
             <p id={timezoneHintId} className="text-caption text-foreground-muted">
-              影响「逾期 / 今天到期 / 未来 7 天」的日期边界；服务端按此时区计算，
-              客户端显示相同结果。
+              影响「逾期 / 今天到期 / 未来 7 天」的日期边界。
             </p>
             <InlineError id={`${timezoneId}-error`}>{fieldErrors.timezone}</InlineError>
           </div>
         </FieldRow>
 
         {/* 操作条 */}
-        <footer className="flex flex-wrap items-center gap-3 border-t border-line bg-surface-sunken px-5 py-4">
+        <footer className="flex flex-wrap items-center gap-2 px-5 pb-5 pt-2">
           <Button
             type="submit"
-            size="lg"
             disabled={!dirty || pending}
             aria-busy={pending || undefined}
           >
@@ -307,21 +295,17 @@ function SettingsFormContent({ user }: { user: UserDTO }) {
           <Button
             type="button"
             variant="ghost"
-            size="lg"
             disabled={!dirty || pending}
             onClick={handleReset}
           >
             <RotateCcw className="h-4 w-4" aria-hidden="true" />
             放弃更改
           </Button>
-          <p className="ml-auto text-caption text-foreground-muted" aria-live="polite">
-            {dirty ? "有未保存的更改" : "所有更改已保存"}
-          </p>
         </footer>
       </form>
 
       {/* ── 右列：实时预览 + 账户信息（桌面 sticky，移动端顺延到下方）────── */}
-      <div className="space-y-4 lg:sticky lg:top-24">
+      <div className="space-y-3 lg:sticky lg:top-5">
         <ZonePreview timezone={draft.timezone} />
         <AccountCard user={user} />
       </div>
@@ -329,7 +313,7 @@ function SettingsFormContent({ user }: { user: UserDTO }) {
       {/* 全局错误 / 会话失效：跨列放在网格末尾，两种视口下都在表单之后可读 */}
       <div className="lg:col-span-2 lg:-mt-2">
         {sessionExpired ? (
-          <div className="flex flex-wrap items-center gap-3 rounded-card border border-warning/30 bg-warning-soft px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3 rounded-tile bg-warning-soft px-4 py-3">
             <p className="min-w-0 flex-1 text-label text-warning">
               会话已失效（可能在其他标签页退出）。更改尚未保存，请重新登录后再试。
             </p>
@@ -358,37 +342,12 @@ function firstOf(values: readonly string[] | undefined): string | undefined {
   return values[0];
 }
 
-/**
- * 编号字段行：`01 / 02` 序号 + 标题 + mono 字段名，右侧留给控件。
- * 编辑式控制台的视觉骨架 —— 用序号与 mono 微标签建立「配置项」的秩序感，
- * 全部走 tokens（无自定义颜色、无外部字体）。
- */
-function FieldRow({
-  index,
-  title,
-  caption,
-  children,
-}: {
-  index: string;
-  title: string;
-  caption: string;
-  children: ReactNode;
-}) {
+/** 表单的一行：左侧字段名，右侧控件，窄屏上下排列。 */
+function FieldRow({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="border-b border-line px-5 py-5 last-of-type:border-b-0">
-      <div className="grid gap-4 md:grid-cols-[160px_minmax(0,1fr)] md:gap-6">
-        <div className="flex items-baseline gap-3 md:block">
-          <span
-            aria-hidden="true"
-            className="font-mono text-caption tabular-nums text-line-strong"
-          >
-            {index}
-          </span>
-          <p className="text-label font-semibold text-foreground">{title}</p>
-          <p className="mt-0.5 text-caption text-foreground-muted">
-            {caption}
-          </p>
-        </div>
+    <div className="px-5 py-4">
+      <div className="grid gap-2 md:grid-cols-[96px_minmax(0,1fr)] md:gap-4">
+        <p className="text-label font-medium text-foreground md:pt-2.5">{title}</p>
         <div className="min-w-0">{children}</div>
       </div>
     </div>
@@ -403,14 +362,10 @@ function AccountCard({ user }: { user: UserDTO }) {
   return (
     <section
       aria-label="账户信息"
-      className="overflow-hidden rounded-card border border-line bg-surface shadow-popover"
+      className="surface-card overflow-hidden rounded-card"
     >
-      <header className="border-b border-line bg-surface-sunken px-4 py-2.5">
-        <span className="font-mono text-caption uppercase tracking-widest text-foreground-muted">
-          账户信息
-        </span>
-      </header>
-      <dl className="divide-y divide-line">
+      <header className="px-4 pt-3.5 text-label font-semibold text-foreground">账户信息</header>
+      <dl>
         <Row term="邮箱" icon={<Mail className="h-3.5 w-3.5" aria-hidden="true" />}>
           <dd className="min-w-0 flex-1 truncate text-label text-foreground" title={user.email}>
             {user.email}
@@ -427,14 +382,9 @@ function AccountCard({ user }: { user: UserDTO }) {
             )}
           </dd>
         </Row>
-        <Row term="账户 ID">
-          <dd className="min-w-0 flex-1 truncate font-mono text-caption text-foreground-secondary">
-            {user.id}
-          </dd>
-        </Row>
       </dl>
-      <p className="border-t border-line px-4 py-3 text-caption text-foreground-muted">
-        V1 不支持在此修改邮箱、删除账户或使用社交登录。
+      <p className="px-4 pb-3.5 text-caption text-foreground-muted">
+        暂不支持在此修改邮箱或删除账户。
       </p>
     </section>
   );

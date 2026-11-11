@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "邮箱验证" };
 
 export default function VerifyPage() {
   return (
-    <AuthShell title="邮箱验证">
+    <AuthShell>
       <Suspense fallback={<AuthFormFallback />}>
         <VerifyStatus />
       </Suspense>

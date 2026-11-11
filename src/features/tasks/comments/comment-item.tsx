@@ -198,10 +198,10 @@ export function CommentItem({
 
   if (unavailable && !editing) return null;
   return (
-    <li className="group/comment flex items-start gap-3 rounded-control border border-transparent p-2 transition-colors hover:bg-surface-sunken">
+    <li className="group/comment relative flex items-start gap-2.5 rounded-control px-2.5 py-2.5 transition-colors hover:bg-surface-sunken">
       <Avatar name={comment.author.name} size="sm" />
 
-      <div className="min-w-0 flex-1 space-y-2">
+      <div className="min-w-0 flex-1 space-y-1">
         <p className="flex flex-wrap items-baseline gap-2 text-caption">
           <span className="font-medium text-foreground">
             {comment.author.name}
@@ -248,7 +248,7 @@ export function CommentItem({
             {conflict && (
               <div
                 role="alert"
-                className="space-y-2 rounded-control border border-line bg-surface-sunken p-2 text-caption"
+                className="space-y-2 rounded-control bg-surface-sunken p-2.5 text-caption"
               >
                 <p className="font-medium text-foreground">
                   该评论已被更新（版本 {comment.version}）
@@ -319,11 +319,12 @@ export function CommentItem({
             )}
 
             {(canEdit || canDelete) && (
-              <div className="flex items-center gap-1 opacity-100 transition-opacity sm:opacity-0 focus-within:opacity-100 group-hover/comment:opacity-100">
+              <div className="flex items-center gap-1 transition-opacity sm:absolute sm:right-1.5 sm:top-1.5 sm:opacity-0 focus-within:opacity-100 group-hover/comment:opacity-100">
                 {canEdit && (
                   <IconButton
                     label="编辑评论"
                     size="sm"
+                    className="sm:h-6 sm:w-6"
                     onClick={begin}
                     disabled={disabled}
                   >
@@ -334,6 +335,7 @@ export function CommentItem({
                   <IconButton
                     label="删除评论"
                     size="sm"
+                    className="sm:h-6 sm:w-6"
                     onClick={() => {
                       captureFocus();
                       setError(null);

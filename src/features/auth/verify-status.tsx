@@ -4,8 +4,10 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CircleAlert, CircleCheck, MailCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { InlineError } from "@/components/ui/inline-error";
-import { Spinner, SubmitButton, TextField } from "./auth-form";
+import { Spinner } from "@/components/ui/spinner";
+import { AuthNotice, SubmitButton, TextField, textLink } from "./auth-form";
 import { useResendVerification, useSession } from "./use-auth";
 import { isValidEmail } from "./validation";
 
@@ -40,48 +42,42 @@ export function VerifyStatus() {
   return <ResendVerificationState />;
 }
 
-/** 验证成功：展示已验证邮箱并引导进入应用（整页跳转，确保服务端读到会话）。 */
+/** 验证成功：显示已验证的邮箱并引导进入应用。 */
 function VerifySuccessState({ email }: { email: string }) {
   function goToApp(): void {
-    // 认证态变更需整页跳转：httpOnly 会话 cookie 的变化对客户端路由不可见，
-    // 硬跳转确保 proxy/服务端重新评估会话（router.push 可能命中过期缓存态）。
+    // 会话 cookie 是 httpOnly 的，客户端路由看不到它的变化；整页跳转让服务端重新判断会话。
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.assign("/app/today");
   }
   return (
-    <div className="space-y-4 text-center">
-      <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success-soft text-success">
-        <CircleCheck className="h-6 w-6" aria-hidden="true" />
-      </span>
-      <h2 className="text-section font-semibold text-foreground">邮箱验证成功</h2>
-      <p className="text-label leading-relaxed text-foreground-secondary">
-        <span className="font-medium text-foreground">{email}</span> 已验证，并已为你登录。
+    <AuthNotice
+      tone="success"
+      icon={<CircleCheck />}
+      title="邮箱验证成功"
+      actions={
+        <Button size="lg" className="w-full" onClick={goToApp}>
+          进入 Orbit
+        </Button>
+      }
+    >
+      <p>
+        <span className="font-medium text-foreground [overflow-wrap:anywhere]">{email}</span> 已验证，并已为你登录。
       </p>
-      <button
-        type="button"
-        onClick={goToApp}
-        className="inline-flex h-11 w-full items-center justify-center rounded-control bg-brand text-label font-medium text-foreground-invert transition-colors duration-150 ease-standard hover:bg-brand-hover"
-      >
-        进入 Orbit
-      </button>
-    </div>
+    </AuthNotice>
   );
 }
 
-/** 验证失败/过期：给出可读文案并提供重发入口。 */
+/** 验证失败或过期：说明原因，并提供重新发送。 */
 function VerifyErrorState({ errorCode }: { errorCode: string }) {
-  const message = describeVerifyError(errorCode);
   return (
-    <div className="space-y-4">
-      <div className="space-y-3 text-center">
-        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-danger-soft text-danger">
-          <CircleAlert className="h-6 w-6" aria-hidden="true" />
-        </span>
-        <h2 className="text-section font-semibold text-foreground">
-          {errorCode === "TOKEN_EXPIRED" ? "验证链接已过期" : "验证未成功"}
-        </h2>
-        <p className="text-label leading-relaxed text-foreground-secondary">{message}</p>
-      </div>
+    <div className="space-y-6">
+      <AuthNotice
+        tone="danger"
+        icon={<CircleAlert />}
+        title={errorCode === "TOKEN_EXPIRED" ? "验证链接已过期" : "验证未成功"}
+      >
+        <p>{describeVerifyError(errorCode)}</p>
+      </AuthNotice>
       <ResendVerificationState compact />
     </div>
   );
@@ -100,7 +96,7 @@ function describeVerifyError(code: string): string {
   }
 }
 
-/** 重发验证邮件表单（输入邮箱 → POST /send-verification-email）。 */
+/** 重新发送验证邮件。compact 时只有表单，标题由上方的错误说明提供。 */
 function ResendVerificationState({ compact = false }: { compact?: boolean }) {
   const { resend, pending, error } = useResendVerification();
   const [email, setEmail] = useState("");
@@ -119,70 +115,64 @@ function ResendVerificationState({ compact = false }: { compact?: boolean }) {
   }
 
   if (sent) {
-    return (
-      <div className="space-y-4 text-center">
-        {!compact ? (
-          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft text-brand">
-            <MailCheck className="h-6 w-6" aria-hidden="true" />
-          </span>
-        ) : null}
-        <div className="space-y-1.5">
-          <h2 className={compact ? "text-label font-semibold text-foreground" : "text-section font-semibold text-foreground"}>
-            验证邮件已重新发送
-          </h2>
-          <p className="text-label leading-relaxed text-foreground-secondary">
-            我们已向 <span className="font-medium text-foreground">{email}</span> 重新发送验证邮件。
-            请点击邮件中的按钮完成验证；验证后会自动登录。
-          </p>
+    const message = (
+      <p>
+        我们已向 <span className="font-medium text-foreground [overflow-wrap:anywhere]">{email}</span> 重新发送验证邮件。
+        点击邮件中的按钮完成验证，验证后会自动登录。
+      </p>
+    );
+    const back = (
+      <Link href="/auth/login" className={textLink}>
+        返回登录
+      </Link>
+    );
+    if (compact) {
+      return (
+        <div role="status" className="space-y-3 rounded-tile bg-success-soft px-4 py-3.5 text-center text-label leading-relaxed text-foreground-secondary">
+          <p className="font-semibold text-success">验证邮件已重新发送</p>
+          {message}
+          {back}
         </div>
-        <Link
-          href="/auth/login"
-          className="text-label text-brand underline-offset-4 hover:text-brand-hover hover:underline"
-        >
-          返回登录
-        </Link>
-      </div>
+      );
+    }
+    return (
+      <AuthNotice tone="success" icon={<MailCheck />} title="验证邮件已重新发送" actions={back}>
+        {message}
+      </AuthNotice>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-4">
+    <div className="space-y-6">
       {!compact ? (
-        <div className="space-y-3 text-center">
-          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft text-brand">
-            <MailCheck className="h-6 w-6" aria-hidden="true" />
-          </span>
-          <h2 className="text-section font-semibold text-foreground">验证你的邮箱</h2>
-          <p className="text-label leading-relaxed text-foreground-secondary">
-            注册后需要验证邮箱才能登录。输入你的邮箱，我们会（重新）发送验证邮件。
-          </p>
-        </div>
+        <AuthNotice icon={<MailCheck />} title="验证你的邮箱">
+          <p>注册后需要验证邮箱才能登录。输入你的邮箱，我们会重新发送验证邮件。</p>
+        </AuthNotice>
       ) : null}
-      <TextField
-        label="邮箱"
-        type="email"
-        name="email"
-        autoComplete="email"
-        inputMode="email"
-        placeholder="you@example.com"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        error={fieldError}
-        disabled={pending}
-        autoFocus
-      />
-      <InlineError>{error}</InlineError>
-      <SubmitButton pending={pending} pendingText="发送中…">
-        {compact ? "重新发送验证邮件" : "发送验证邮件"}
-      </SubmitButton>
-      <p className="text-center text-label text-foreground-secondary">
-        <Link
-          href="/auth/login"
-          className="text-brand underline-offset-4 hover:text-brand-hover hover:underline"
-        >
-          返回登录
-        </Link>
-      </p>
-    </form>
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        <TextField
+          label="邮箱"
+          type="email"
+          name="email"
+          autoComplete="email"
+          inputMode="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          error={fieldError}
+          disabled={pending}
+          autoFocus
+        />
+        <InlineError>{error}</InlineError>
+        <SubmitButton pending={pending} pendingText="发送中…">
+          {compact ? "重新发送验证邮件" : "发送验证邮件"}
+        </SubmitButton>
+        <p className="text-center text-label">
+          <Link href="/auth/login" className={textLink}>
+            返回登录
+          </Link>
+        </p>
+      </form>
+    </div>
   );
 }

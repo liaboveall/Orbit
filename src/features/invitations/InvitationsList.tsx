@@ -24,10 +24,14 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InlineError } from "@/components/ui/inline-error";
+import { SectionHeader } from "@/components/ui/page-header";
 import { useToast } from "@/components/ui/toast";
-import { Spinner } from "@/features/auth/auth-form";
+import { Spinner } from "@/components/ui/spinner";
 import { formatEventDateTime, useUserTimezone } from "@/lib/user-timezone";
 import { loginPathWithReturnTo } from "@/lib/return-to";
+import { MemberTabs } from "@/features/members/member-tabs";
+import { Segments } from "@/components/ui/segments";
+import { cn } from "@/lib/cn";
 
 /**
  * 邀请管理列表（M4 / ORB-013，`/app/projects/[id]/invitations`）。
@@ -204,34 +208,28 @@ export function InvitationsList({
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl">
-      <header className="mb-6">
-        <p className="font-mono text-caption uppercase tracking-[0.18em] text-foreground-muted">
-          邀请协作
-        </p>
-        <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="text-page font-semibold tracking-tight text-foreground">
-              邀请管理
-            </h1>
-            <p className="mt-1.5 text-label text-foreground-secondary">
-              创建邀请链接分享给同事，他们接受后即成为项目成员。链接有效期 7 天，明文令牌仅在创建时显示一次。
-            </p>
-          </div>
-          {userIsOwner ? (
-            <Button
-              type="button"
-              onClick={() => {
-                setError(null);
-                setCreateOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              创建邀请
-            </Button>
-          ) : null}
-        </div>
-      </header>
+    <div className="mx-auto w-full max-w-3xl">
+      <SectionHeader
+        title="邀请管理"
+        description="对方打开链接并接受后成为项目成员。链接 7 天内有效，只在创建时显示一次。"
+        actions={
+          userIsOwner ? (
+            <>
+              {/* 和成员页保持同一位置，来回切换时不会从指针下跳走：操作靠右排成一行时在最右，换行靠左时在最左。 */}
+              <MemberTabs projectId={projectId} active="invitations" className="sm:order-last" />
+              <Button
+                onClick={() => {
+                  setError(null);
+                  setCreateOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                创建邀请
+              </Button>
+            </>
+          ) : null
+        }
+      />
 
       <InlineError className="mb-4">{error}</InlineError>
 
@@ -239,13 +237,13 @@ export function InvitationsList({
       {createdLink ? (
         <section
           aria-label="新创建的邀请链接"
-          className="mb-6 space-y-3 rounded-card border border-brand/30 bg-brand-soft px-4 py-4"
+          className="mb-6 animate-rise space-y-3 rounded-card bg-brand-soft p-4"
         >
           <p className="text-label font-medium text-foreground">
             邀请链接已生成，请立即复制分享（关闭后无法再次查看明文令牌）：
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <code className="min-w-0 flex-1 break-all rounded-control border border-line bg-surface px-3 py-2 font-mono text-caption text-foreground">
+            <code className="min-w-0 flex-1 break-all rounded-control bg-surface-solid px-3 py-2.5 font-mono text-caption text-foreground">
               {createdLink}
             </code>
             <Button
@@ -268,21 +266,28 @@ export function InvitationsList({
 
       {/* 状态过滤器 */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="text-caption font-medium text-foreground-muted">状态</span>
-        <div className="flex flex-wrap gap-1" role="group" aria-label="按状态筛选邀请">
+        <Segments
+          role="group"
+          aria-label="按状态筛选邀请"
+          activeKey={filter}
+          className="no-scrollbar flex max-w-full overflow-x-auto rounded-full bg-surface-sunken p-1"
+        >
           {FILTERS.map((option) => (
-            <Button
+            <button
               key={option}
               type="button"
-              size="sm"
-              variant={filter === option ? "primary" : "ghost"}
               aria-pressed={filter === option}
+              data-active={filter === option || undefined}
               onClick={() => setFilter(option)}
+              className={cn(
+                "h-8 shrink-0 rounded-full px-3.5 text-label font-medium outline-none transition-colors duration-200",
+                filter === option ? "text-foreground" : "text-foreground-secondary hover:text-foreground",
+              )}
             >
               {FILTER_LABEL[option]}
-            </Button>
+            </button>
           ))}
-        </div>
+        </Segments>
         <span className="ml-auto text-caption text-foreground-muted">
           共 {visible.length} 个邀请
         </span>
@@ -315,7 +320,7 @@ export function InvitationsList({
           }
         />
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface shadow-popover">
+        <ul className="surface-card divide-y divide-line overflow-hidden rounded-card">
           {visible.map((invitation) => {
             const canRevoke = userIsOwner && invitation.state === "ACTIVE";
             return (
@@ -323,7 +328,7 @@ export function InvitationsList({
                 key={invitation.id}
                 className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3"
               >
-                <Badge tone={STATE_TONE[invitation.state]} className="shrink-0">
+                <Badge tone={STATE_TONE[invitation.state]} className="min-w-[3.25rem] shrink-0 justify-center">
                   {STATE_LABEL[invitation.state]}
                 </Badge>
                 <div className="min-w-0 flex-1 space-y-0.5">

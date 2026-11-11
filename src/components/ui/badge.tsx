@@ -17,7 +17,7 @@ export type BadgeTone =
 
 const toneClass: Record<BadgeTone, string> = {
   neutral: "bg-surface-sunken text-foreground-secondary",
-  brand: "bg-brand-soft text-brand",
+  brand: "bg-brand-soft text-brand-ink",
   success: "bg-success-soft text-success",
   warning: "bg-warning-soft text-warning",
   danger: "bg-danger-soft text-danger",
@@ -39,7 +39,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-control px-2 py-0.5 text-caption font-medium whitespace-nowrap",
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption font-medium whitespace-nowrap",
         toneClass[tone],
         className,
       )}

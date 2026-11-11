@@ -116,7 +116,7 @@ export function AttachmentList({
 
   return (
     <section className="space-y-3" aria-label="附件">
-      <h2 className="flex items-center gap-2 text-label font-semibold text-foreground">
+      <h2 className="flex items-center gap-2 px-1 text-label font-semibold text-foreground">
         <Paperclip
           className="h-4 w-4 text-foreground-muted"
           aria-hidden="true"
@@ -156,7 +156,7 @@ export function AttachmentList({
             </div>
           )}
           {total === 0 ? (
-            <p className="text-caption text-foreground-muted">暂无附件。</p>
+            <p className="px-1 text-caption text-foreground-muted">暂无附件。</p>
           ) : (
             <ul className="space-y-2" role="list">
               {attachments!.map((attachment) => (
@@ -280,13 +280,11 @@ function AttachmentItem({
   return (
     <li
       className={cn(
-        "group/row flex items-start gap-3 rounded-control border p-2 transition-colors",
-        isFailed
-          ? "border-danger bg-danger-soft"
-          : "border-line hover:bg-surface-sunken",
+        "group/row flex items-center gap-3 rounded-tile p-2.5 transition-colors",
+        isFailed ? "bg-danger-soft" : "bg-surface shadow-[inset_0_0_0_0.5px_var(--color-line)]",
       )}
     >
-      <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-sunken text-foreground-secondary">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-surface-sunken text-foreground-secondary">
         {iconType === "image" ? (
           <ImageIcon className="h-5 w-5" aria-hidden="true" />
         ) : iconType === "text" ? (

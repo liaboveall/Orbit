@@ -1,27 +1,23 @@
 import type { ReactNode } from "react";
-import { ProjectNav } from "@/features/projects/project-nav";
+import { ProjectBar } from "@/features/projects/project-bar";
+import { loadProject } from "./_data";
 
 /**
- * /app/projects/[id]/layout —— 项目分区布局（M4 / Part 7）。
- *
- * 在项目全部子页（任务 / 看板 / 成员 / 邀请 / 活动 / 回收站 / 设置）顶部渲染统一的
- * 分区导航 ProjectNav（客户端组件，用 usePathname 高亮当前 section）。
- *
- * 保持轻量：仅从 params 取 projectId，不做数据读取（授权与数据由各子页 Server
- * Component 权威负责，getProject 在页面内调用），避免与子页重复查询。
+ * 项目内所有页面共用的框架：顶部一行是项目名和分区导航，吸顶；下面是各分区的内容。
+ * 项目由 loadProject 读取，与页面共用同一次查询。
  */
-
-type LayoutProps = {
+export default async function ProjectLayout({
+  params,
+  children,
+}: {
   params: Promise<{ id: string }>;
   children: ReactNode;
-};
-
-export default async function ProjectLayout({ params, children }: LayoutProps) {
-  const { id } = await params;
+}) {
+  const { project } = await loadProject((await params).id);
   return (
-    <>
-      <ProjectNav projectId={id} />
-      {children}
-    </>
+    <div className="md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-x-5">
+      <ProjectBar project={project} />
+      <div className="md:col-span-2">{children}</div>
+    </div>
   );
 }

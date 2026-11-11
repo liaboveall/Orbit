@@ -1,12 +1,8 @@
 @import "tailwindcss";
 @import "./tokens.css";
+@import "./glass.css";
 
 /*
- * Orbit 全局样式入口（M0 / ORB-002）。
- * - `tailwindcss`：Tailwind CSS 4 运行时（CSS-first，无 tailwind.config.js）。
- * - `./tokens.css`：设计 tokens（@theme → :root 变量 + 工具类）与 base 层
- *   （body 排版、统一焦点环、prefers-reduced-motion），是视觉的唯一真源。
- *
- * 具体控件外观在各 UI 组件内用 Tailwind 工具类（消费 tokens）实现，
- * 不在此处硬编码颜色/间距值。
+ * 全局样式入口。tokens.css 定义变量与 base 层，glass.css 定义液态玻璃材质。
+ * 控件外观写在各 UI 组件内，消费这里的变量，不硬编码颜色。
  */

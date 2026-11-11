@@ -117,7 +117,7 @@ test("390px: list → panel, exact draft recovery, persistent edits, URL filters
   await page.getByRole("button", { name: "关闭详情", exact: true }).click();
   await expect(page).not.toHaveURL(/task=/);
   await page.getByRole("searchbox", { name: "搜索任务" }).fill(t.identifier);
-  await page.getByRole("button", { name: "应用筛选", exact: true }).click();
+  await page.getByRole("searchbox", { name: "搜索任务" }).press("Enter");
   await expect(page).toHaveURL(/q=/);
   await page.reload();
   await expect(
@@ -407,7 +407,7 @@ test("1000 real tasks: paged board, stale snapshot recovery and complete-view so
   await page
     .getByRole("searchbox", { name: "搜索任务", exact: true })
     .fill("分页 001");
-  await page.getByRole("button", { name: "应用筛选", exact: true }).click();
+  await page.getByRole("searchbox", { name: "搜索任务", exact: true }).press("Enter");
   await expect(page.locator("[data-task-card]")).toHaveCount(1);
   await expect(
     page.getByRole("button", { name: /^排序 / }).first(),

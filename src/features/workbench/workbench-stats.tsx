@@ -1,24 +1,12 @@
-"use client";
 import Link from "next/link";
+import { AlarmClock, CalendarDays, CircleDot, Inbox, Sun, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { MyTasksQueryDTO, OverviewDTO } from "@/contracts";
 
 /**
- * 工作台统计卡（docs/02 §5 可点击筛选卡）。
- *
- * N02 修复：`rounded-panel` 不是已定义的圆角 token（tokens 只有 control/card/overlay），
- * 统一改用 `rounded-card`（卡片语义，12px）。
- *
- * N03 修复：卡片链接与下方分类 nav 统一口径——保留当前筛选（q/projectId/priority/
- * sort/limit），只替换 bucket，并丢弃旧 cursor（分页随筛选变化失效）。此前卡片仅写
- * bucket，会悄悄丢掉用户已设置的搜索/排序/项目筛选。
- *
- * F32 修复：接受 activeBucket，当前分类的卡片有视觉选中态 + aria-current="true"，
- * 与下方分类 nav 的选中语义一致（读屏可识别）。
- *
- * 统计数字口径：overview 由服务端按用户全量未完成/逾期等口径计算（不受 q/projectId
- * 等筛选影响），卡片上方的筛选状态不改变这些全局计数；选中卡片只表示「当前查看的
- * 分类」，不代表数字已被筛选。
+ * 工作台的分类磁贴：每一格既是数字，也是筛选入口。
+ * 这些集合互相重叠（逾期的任务也在「全部未完成」里），所以不画合计或占比。
+ * 「已完成」没有计数，也不是待办，入口放在筛选条里（见 WorkbenchFilters）。
  */
 export function WorkbenchStats({
   overview,
@@ -26,61 +14,61 @@ export function WorkbenchStats({
   activeBucket,
 }: {
   overview: OverviewDTO;
-  /** 当前工作台筛选（用于构造与分类 nav 一致的链接）。 */
   query: MyTasksQueryDTO;
-  /** 当前选中的分类（aria-current + 视觉选中态）。 */
   activeBucket: string;
 }) {
-  const cards = [
-    ["逾期任务", overview.overdue, "overdue"],
-    ["今天到期", overview.dueToday, "today"],
-    ["未来 7 天", overview.upcoming, "upcoming"],
-    ["进行中", overview.inProgress, "in_progress"],
-  ] as const;
+  const tiles: { bucket: string; label: string; count: number; icon: LucideIcon; fill: string }[] = [
+    { bucket: "all_open", label: "全部未完成", count: overview.totalOpen, icon: Inbox, fill: "bg-project-blue" },
+    { bucket: "overdue", label: "逾期", count: overview.overdue, icon: AlarmClock, fill: "bg-danger-fill" },
+    { bucket: "today", label: "今天到期", count: overview.dueToday, icon: Sun, fill: "bg-project-orange" },
+    { bucket: "upcoming", label: "未来 7 天", count: overview.upcoming, icon: CalendarDays, fill: "bg-project-purple" },
+    { bucket: "in_progress", label: "进行中", count: overview.inProgress, icon: CircleDot, fill: "bg-project-teal" },
+  ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {cards.map(([title, count, bucket]) => {
-        const active = activeBucket === bucket;
-        return (
-          <Link
-            key={bucket}
-            href={"/app/today?" + bucketQuery(query, bucket).toString()}
-            aria-current={active ? "true" : undefined}
-            className={cn(
-              "rounded-card border p-5 outline-none focus-visible:ring-2 focus-visible:ring-brand",
-              active
-                ? "border-brand bg-brand-soft"
-                : "border-line bg-surface hover:border-line-strong",
-            )}
-          >
-            <p className={cn("text-caption", active ? "text-brand" : "text-foreground-muted")}>
-              {title}
-              {active ? <span className="sr-only">（当前分类）</span> : null}
-            </p>
-            <p
-              className={cn(
-                "mt-2 text-3xl font-semibold",
-                active ? "text-brand" : "text-foreground",
-              )}
-            >
-              {count}
-            </p>
-          </Link>
-        );
-      })}
-    </div>
+    <nav aria-label="任务分类" className="mb-6">
+      <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-5 xl:gap-3">
+        {tiles.map(({ bucket, label, count, icon: Icon, fill }, index) => {
+          const active = activeBucket === bucket;
+          return (
+            // 手机两列放五格：第一格占满一行，其余两两成对。
+            <li key={bucket} className={cn(index === 0 && "max-sm:col-span-2")}>
+              <Link
+                href={"/app/today?" + bucketQuery(query, bucket).toString()}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "surface-card flex h-full flex-col gap-3 rounded-card p-3.5 outline-none active:scale-[0.98]",
+                  active
+                    ? "bg-surface-solid shadow-[inset_0_0_0_1.5px_var(--color-brand),var(--shadow-card)]"
+                    : "lift",
+                )}
+              >
+                <span className="flex items-start justify-between">
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "flex h-9 w-9 items-center justify-center rounded-full text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.35),0_2px_6px_-2px_rgb(0_0_0/0.3)]",
+                      fill,
+                    )}
+                  >
+                    <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                  </span>
+                  <span className="text-[28px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-foreground">
+                    {count}
+                  </span>
+                </span>
+                <span className="text-label font-medium text-foreground-secondary">{label}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
 }
 
-/**
- * 构造分类链接查询串：保留 q/projectId/priority/sort/limit，替换 bucket，删除旧 cursor。
- * 与 today/page.tsx 下方分类 nav 的构造逻辑保持一致（N03）。
- */
-export function bucketQuery(
-  query: MyTasksQueryDTO,
-  bucket: string,
-): URLSearchParams {
+/** 分类链接的查询串：保留筛选，替换 bucket，去掉旧的 cursor。 */
+export function bucketQuery(query: MyTasksQueryDTO, bucket: string): URLSearchParams {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
     if (key === "cursor" || key === "bucket" || value === undefined) continue;

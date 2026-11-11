@@ -217,7 +217,7 @@ export function SubtaskItem({
 
   if (unavailable && !editing) return null;
   return (
-    <li className="group/row flex items-start gap-2 rounded-control border border-transparent p-2 transition-colors hover:bg-surface-sunken">
+    <li className="group/row flex items-start gap-2.5 rounded-control px-2.5 py-2 transition-colors hover:bg-surface-sunken">
       <button
         type="button"
         onClick={handleToggle}
@@ -225,7 +225,7 @@ export function SubtaskItem({
         aria-label={subtask.isCompleted ? "标记为未完成" : "标记为完成"}
         aria-pressed={subtask.isCompleted}
         className={cn(
-          "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border outline-none transition-all",
+          "mt-px flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-[1.75px] outline-none transition-all",
           subtask.isCompleted
             ? "border-success bg-success text-foreground-invert"
             : "border-line-strong hover:border-brand",
@@ -277,7 +277,7 @@ export function SubtaskItem({
             {conflict && (
               <div
                 role="alert"
-                className="space-y-2 rounded-control border border-line bg-surface-sunken p-2 text-caption"
+                className="space-y-2 rounded-control bg-surface-sunken p-2.5 text-caption"
               >
                 <p className="font-medium text-foreground">
                   该子任务已被他人更新（版本 {subtask.version}）
@@ -351,6 +351,7 @@ export function SubtaskItem({
                 <IconButton
                   label="编辑子任务"
                   size="sm"
+                  className="sm:h-6 sm:w-6"
                   onClick={begin}
                   disabled={disabled}
                 >
@@ -359,6 +360,7 @@ export function SubtaskItem({
                 <IconButton
                   label="删除子任务"
                   size="sm"
+                  className="sm:h-6 sm:w-6"
                   onClick={() => {
                     captureFocus();
                     setError(null);

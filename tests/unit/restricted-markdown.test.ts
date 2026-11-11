@@ -33,7 +33,7 @@ const PRE_OPEN =
   '<pre class="overflow-x-auto rounded-card bg-surface-sunken p-3 font-mono text-caption text-foreground [overflow-wrap:anywhere]">';
 /** 链接的固定安全属性：新窗口打开 + 阻断 window.opener + nofollow。 */
 const LINK_SAFE_ATTRS =
-  'target="_blank" rel="noopener noreferrer nofollow" class="text-brand underline underline-offset-2"';
+  'target="_blank" rel="noopener noreferrer nofollow" class="text-brand-ink underline underline-offset-2"';
 
 /** HEADING_SIZE_CLASS 的完整映射（h1–h6），断言即锁定该设计变量契约。 */
 const HEADING_CLASS: ReadonlyArray<{ level: number; className: string }> = [
@@ -234,7 +234,7 @@ describe("renderRestrictedMarkdown", () => {
       expect(render("```\n```")).toBe(`${ROOT_OPEN}${PRE_OPEN}<code></code></pre></div>`);
     });
 
-    test("https 链接：真实 href + target=_blank + rel=noopener noreferrer nofollow + text-brand", () => {
+    test("https 链接：真实 href + target=_blank + rel=noopener noreferrer nofollow + text-brand-ink", () => {
       expect(render("Check [Orbit](https://example.test) now")).toBe(
         `${ROOT_OPEN}${P_OPEN}Check <a href="https://example.test" ${LINK_SAFE_ATTRS}>Orbit</a> now</p></div>`,
       );

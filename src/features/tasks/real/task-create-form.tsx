@@ -1,6 +1,5 @@
 "use client";
 
-import { Plus, X } from "lucide-react";
 import { useId, useState, type FormEvent } from "react";
 import { UnsavedChangesProvider, useUnsavedChanges, confirmLeave } from "../unsaved-changes";
 import {
@@ -14,6 +13,14 @@ import {
   type TaskStatus,
 } from "@/contracts";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { InlineError } from "@/components/ui/inline-error";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import {
@@ -24,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
-import { Spinner } from "@/features/auth/auth-form";
+import { Spinner } from "@/components/ui/spinner";
 import { PRIORITY_LABEL, STATUS_LABEL } from "@/features/tasks/task-meta";
 
 /**
@@ -57,12 +64,37 @@ type FieldErrors = { title?: string; description?: string; dueDate?: string };
 
 export type TaskCreateFormProps = {
   projectId: string;
+  /** 新任务的初始状态，例如从看板某一列发起时。 */
+  defaultStatus?: TaskStatus;
   /** 创建成功（toast 已发出）后回调：父组件收起表单并发起路由刷新。可返回 Promise，用于等待额外的提交后操作。 */
   onCreated: () => void | Promise<void>;
   onCancelled: () => void;
   /** 401（会话失效）→ 父组件负责硬跳转登录页。 */
   onUnauthorized: () => void;
 };
+
+/** 新建任务对话框。Escape、遮罩、关闭按钮都走同一个未保存确认。 */
+export function TaskCreateDialog({
+  open,
+  onOpenChange,
+  ...form
+}: Omit<TaskCreateFormProps, "onCancelled"> & {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next || confirmLeave()) onOpenChange(next);
+      }}
+    >
+      <DialogContent className="sm:max-w-xl">
+        <TaskCreateForm {...form} onCancelled={() => onOpenChange(false)} />
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 /**
  * B6 修复：任务创建草稿保护。Provider 安装链接点击/关闭/前进后退守卫；
@@ -79,6 +111,7 @@ export function TaskCreateForm(props: TaskCreateFormProps) {
 
 function TaskCreateFormContent({
   projectId,
+  defaultStatus = "TODO",
   onCreated,
   onCancelled,
   onUnauthorized,
@@ -92,7 +125,7 @@ function TaskCreateFormContent({
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [status, setStatus] = useState<TaskStatus>("TODO");
+  const [status, setStatus] = useState<TaskStatus>(defaultStatus);
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   /** date input 的值（YYYY-MM-DD 或空 = 无截止日）。 */
   const [dueDate, setDueDate] = useState("");
@@ -113,7 +146,7 @@ function TaskCreateFormContent({
   useUnsavedChanges(
     trimmedTitle.length > 0 ||
       trimmedDescription.length > 0 ||
-      status !== "TODO" ||
+      status !== defaultStatus ||
       priority !== "MEDIUM" ||
       dueDate.length > 0,
     pending,
@@ -206,20 +239,22 @@ function TaskCreateFormContent({
         void handleSubmit(event);
       }}
       noValidate
-      className="overflow-hidden rounded-card border border-line bg-surface shadow-popover"
+      onKeyDown={(event) => {
+        // 描述里回车换行，Ctrl/Cmd+Enter 在任何字段都能提交。
+        if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault();
+          event.currentTarget.requestSubmit();
+        }
+      }}
     >
-      <header className="flex items-center justify-between gap-3 border-b border-line bg-surface-sunken px-5 py-3">
-        <h2 className="text-section font-semibold tracking-tight text-foreground">
-          新建任务
-        </h2>
-        <span className="font-mono text-caption uppercase tracking-widest text-foreground-muted">
-          post · /projects/:id/tasks
-        </span>
-      </header>
+      <DialogHeader>
+        <DialogTitle>新建任务</DialogTitle>
+        <DialogDescription className="sr-only">填写标题即可创建，其余信息可稍后补充。</DialogDescription>
+      </DialogHeader>
 
-      <div className="grid gap-5 px-5 py-5 md:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         {/* 标题 */}
-        <div className="space-y-1.5 md:col-span-2">
+        <div className="space-y-1.5 sm:col-span-3">
           <Label htmlFor={titleId}>任务标题</Label>
           <div className="relative">
             <Input
@@ -241,14 +276,7 @@ function TaskCreateFormContent({
                   setFieldErrors((prev) => ({ ...prev, title: undefined }));
                 }
               }}
-              className="pr-20"
             />
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-caption tabular-nums text-foreground-muted"
-            >
-              {trimmedTitle.length}/{TITLE_MAX}
-            </span>
           </div>
           <InlineError id={`${titleId}-error`}>{fieldErrors.title}</InlineError>
         </div>
@@ -325,14 +353,11 @@ function TaskCreateFormContent({
               }
             }}
           />
-          <p className="text-caption text-foreground-muted">
-            按 UTC 日期存储，逾期/今天到期语义与服务端一致。
-          </p>
           <InlineError id={`${dueDateId}-error`}>{fieldErrors.dueDate}</InlineError>
         </div>
 
         {/* 描述（可选） */}
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 sm:col-span-3">
           <Label htmlFor={descriptionId}>
             描述<span className="ml-1 text-foreground-muted">（可选）</span>
           </Label>
@@ -359,20 +384,17 @@ function TaskCreateFormContent({
         </div>
       </div>
 
-      <footer className="flex flex-wrap items-center gap-3 border-t border-line bg-surface-sunken px-5 py-4">
-        <Button type="submit" disabled={!canSubmit || pending} aria-busy={pending || undefined}>
-          {pending ? <Spinner /> : <Plus className="h-4 w-4" aria-hidden="true" />}
-          <span>{pending ? "正在创建…" : "创建任务"}</span>
-        </Button>
+      <InlineError className="mt-4">{formError}</InlineError>
+
+      <DialogFooter>
         <Button type="button" variant="ghost" disabled={pending} onClick={() => { if (confirmLeave()) onCancelled(); }}>
-          <X className="h-4 w-4" aria-hidden="true" />
           取消
         </Button>
-      </footer>
-
-      <div className="px-5 pb-4">
-        <InlineError>{formError}</InlineError>
-      </div>
+        <Button type="submit" disabled={!canSubmit || pending} aria-busy={pending || undefined}>
+          {pending ? <Spinner /> : null}
+          <span>{pending ? "正在创建…" : "创建任务"}</span>
+        </Button>
+      </DialogFooter>
     </form>
   );
 }

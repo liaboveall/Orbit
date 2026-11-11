@@ -1,40 +1,30 @@
 "use client";
 
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
+import { menuItem, menuSurface } from "./dropdown-menu";
 
-/**
- * Select（ORB-002，基于 @radix-ui/react-select）。
- *
- * 用于看板筛选（负责人/优先级）与任务详情（状态/优先级）。
- * Radix 提供键盘导航（方向键/Home/End/输入跳转）、aria 角色与焦点管理。
- * 触发器高度 40（h-10），边界 line-strong（3:1）。
- */
+/** Select（基于 Radix）：需要自定义选项内容时使用，其余场景用 NativeSelect。 */
 
 export const Select = SelectPrimitive.Root;
 export const SelectValue = SelectPrimitive.Value;
 
-export function SelectTrigger({
-  className,
-  children,
-  ...props
-}: ComponentProps<typeof SelectPrimitive.Trigger>) {
+export function SelectTrigger({ className, children, ...props }: ComponentProps<typeof SelectPrimitive.Trigger>) {
   return (
     <SelectPrimitive.Trigger
       className={cn(
-        "flex h-10 w-full items-center justify-between gap-2 rounded-control border border-line-strong",
-        "bg-surface px-3 text-label text-foreground outline-none",
-        "transition-[border-color] duration-150 ease-standard",
-        "data-[placeholder]:text-foreground-muted disabled:cursor-not-allowed disabled:opacity-60",
+        "surface-chip flex h-11 w-full items-center justify-between gap-2 rounded-control px-3.5 text-body text-foreground outline-none md:h-10 md:text-label",
+        "transition-[background-color] duration-200 ease-standard",
+        "data-[placeholder]:text-foreground-muted disabled:cursor-not-allowed disabled:opacity-55",
         className,
       )}
       {...props}
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDown className="h-4 w-4 shrink-0 text-foreground-secondary" />
+        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-foreground-muted" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );
@@ -44,16 +34,16 @@ export function SelectContent({
   className,
   children,
   position = "popper",
+  sideOffset = 6,
   ...props
 }: ComponentProps<typeof SelectPrimitive.Content>) {
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
+        data-lens=""
         position={position}
-        className={cn(
-          "z-50 min-w-[var(--radix-select-trigger-width)] rounded-overlay border border-line bg-surface p-1.5 shadow-popover",
-          className,
-        )}
+        sideOffset={sideOffset}
+        className={cn(menuSurface, "min-w-[var(--radix-select-trigger-width)]", className)}
         {...props}
       >
         <SelectPrimitive.Viewport>{children}</SelectPrimitive.Viewport>
@@ -62,46 +52,13 @@ export function SelectContent({
   );
 }
 
-export function SelectItem({
-  className,
-  children,
-  ...props
-}: ComponentProps<typeof SelectPrimitive.Item>) {
+export function SelectItem({ className, children, ...props }: ComponentProps<typeof SelectPrimitive.Item>) {
   return (
-    <SelectPrimitive.Item
-      className={cn(
-        "relative flex cursor-pointer select-none items-center gap-2 rounded-control py-2 pl-8 pr-2.5 text-label text-foreground outline-none",
-        "data-[highlighted]:bg-brand-soft data-[highlighted]:text-brand",
-        "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-        className,
-      )}
-      {...props}
-    >
+    <SelectPrimitive.Item className={cn(menuItem, "relative pl-8", className)} {...props}>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-      <SelectPrimitive.ItemIndicator className="absolute left-2 inline-flex items-center">
-        <Check className="h-4 w-4" />
+      <SelectPrimitive.ItemIndicator className="absolute left-2.5 inline-flex items-center text-brand-ink">
+        <Check className="h-4 w-4" strokeWidth={2.5} />
       </SelectPrimitive.ItemIndicator>
     </SelectPrimitive.Item>
-  );
-}
-
-export function SelectLabel({
-  className,
-  ...props
-}: ComponentProps<typeof SelectPrimitive.Label>) {
-  return (
-    <SelectPrimitive.Label
-      className={cn("px-2.5 py-1.5 text-caption font-medium text-foreground-muted", className)}
-      {...props}
-    />
-  );
-}
-
-export function SelectSeparator({
-  className,
-  ...props
-}: ComponentProps<typeof SelectPrimitive.Separator>) {
-  return (
-    <SelectPrimitive.Separator className={cn("my-1 h-px bg-line", className)} {...props} />
   );
 }

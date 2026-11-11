@@ -26,11 +26,11 @@ for (const kind of ["project", "task"] as const) {
       await page.getByRole("button", { name: "取消", exact: true }).click();
       expect(dialogs).toBe(1);
       await expect(field).toHaveValue("必须保留的草稿");
-      await page.getByRole("button", { name: "收起表单", exact: true }).click();
+      await page.keyboard.press("Escape");
       expect(dialogs).toBe(2);
       await expect(field).toHaveValue("必须保留的草稿");
       accept = true;
-      await page.getByRole("button", { name: "收起表单", exact: true }).click();
+      await page.getByRole("button", { name: "关闭对话框", exact: true }).click();
       expect(dialogs).toBe(3);
       await expect(field).toHaveCount(0);
       await open.click();

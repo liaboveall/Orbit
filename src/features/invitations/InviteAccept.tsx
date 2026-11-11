@@ -13,8 +13,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { InlineError } from "@/components/ui/inline-error";
 import { Skeleton, SkeletonBlock } from "@/components/ui/skeleton";
-import { Spinner } from "@/features/auth/auth-form";
+import { Spinner } from "@/components/ui/spinner";
 import { formatEventDateTime, useUserTimezone } from "@/lib/user-timezone";
+import { AuthNotice } from "@/features/auth/auth-form";
 import { forgetInviteToken, recallInviteToken, rememberInviteToken } from "./pending-invite";
 
 /**
@@ -225,17 +226,17 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
 
   if (status.kind === "error") {
     return (
-      <div className="space-y-4">
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-danger-soft text-danger">
-          <ShieldAlert className="h-6 w-6" aria-hidden="true" />
-        </span>
-        <h1 className="text-page font-semibold tracking-tight text-foreground">
-          {status.title}
-        </h1>
-        <p className="text-label leading-relaxed text-foreground-secondary">{status.detail}</p>
-        {clientToken && <Button onClick={() => setRetry(value => value + 1)}>重新加载邀请</Button>}
-        <InlineError>此邀请链接无法使用。如有疑问，请联系项目所有者重新发送邀请。</InlineError>
-      </div>
+      <AuthNotice
+        tone="danger"
+        icon={<ShieldAlert />}
+        title={status.title}
+        actions={clientToken ? <Button variant="secondary" onClick={() => setRetry((value) => value + 1)}>重新加载邀请</Button> : null}
+      >
+        <p>{status.detail}</p>
+        <p role="alert" className="text-caption text-foreground-muted">
+          此邀请链接无法使用。如有疑问，请联系项目所有者重新发送邀请。
+        </p>
+      </AuthNotice>
     );
   }
 
@@ -243,31 +244,25 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
 
   return (
     <div className="space-y-5">
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft text-brand">
-        <UserPlus className="h-6 w-6" aria-hidden="true" />
-      </span>
-      <div className="space-y-1.5">
-        <h1 className="text-page font-semibold tracking-tight text-foreground">
-          邀请你加入项目
-        </h1>
-        <p className="text-section font-semibold text-brand">{preview.projectName}</p>
-      </div>
+      <AuthNotice icon={<UserPlus />} title="邀请你加入项目">
+        <p className="text-title font-semibold text-foreground [overflow-wrap:anywhere]">{preview.projectName}</p>
+      </AuthNotice>
 
-      <dl className="space-y-2 rounded-card border border-line bg-surface-sunken px-4 py-3 text-label">
-        <div className="flex items-center justify-between gap-3">
-          <dt className="text-foreground-muted">邀请人</dt>
-          <dd className="font-medium text-foreground">{preview.ownerName}</dd>
+      <dl className="divide-y divide-line rounded-tile bg-surface text-label shadow-[inset_0_0_0_0.5px_var(--color-line)]">
+        <div className="flex min-h-11 items-center justify-between gap-3 px-3.5">
+          <dt className="text-foreground-secondary">邀请人</dt>
+          <dd className="min-w-0 truncate font-medium text-foreground">{preview.ownerName}</dd>
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <dt className="text-foreground-muted">加入角色</dt>
+        <div className="flex min-h-11 items-center justify-between gap-3 px-3.5">
+          <dt className="text-foreground-secondary">加入角色</dt>
           <dd className="font-medium text-foreground">成员</dd>
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <dt className="text-foreground-muted inline-flex items-center gap-1">
-            <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
+        <div className="flex min-h-11 items-center justify-between gap-3 px-3.5">
+          <dt className="inline-flex items-center gap-1.5 text-foreground-secondary">
+            <CalendarClock className="h-4 w-4 text-foreground-muted" aria-hidden="true" />
             过期时间
           </dt>
-          <dd className="font-medium text-foreground">{formatEventDateTime(preview.expiresAt, tz)}</dd>
+          <dd className="font-medium tabular-nums text-foreground">{formatEventDateTime(preview.expiresAt, tz)}</dd>
         </div>
       </dl>
 
@@ -277,7 +272,7 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
 
       <InlineError>{acceptError}</InlineError>
 
-      {/* Always show accept button - auth check happens on API endpoint */}
+      {/* 始终显示接受按钮：是否登录由接口判断，未登录时跳转登录后回到本页。 */}
       <Button
         type="button"
         size="lg"
@@ -292,9 +287,8 @@ export function InviteAccept({ token: _serverToken }: InviteAcceptProps) {
         <span>{accepting ? "正在接受…" : "接受邀请"}</span>
       </Button>
 
-      <p className="text-caption leading-relaxed text-foreground-muted">
-        接受后你将成为该项目成员，可查看任务与看板。此链接为一次性邀请：一旦被任意一人接受，
-        对所有人立即失效。
+      <p className="text-center text-caption leading-relaxed text-foreground-muted">
+        接受后你将成为项目成员，可以查看任务和看板。链接只能使用一次，被任何人接受后立即失效。
       </p>
     </div>
   );

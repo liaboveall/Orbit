@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { InlineError } from "@/components/ui/inline-error";
 import { useToast } from "@/components/ui/toast";
-import { Spinner } from "@/features/auth/auth-form";
+import { Spinner } from "@/components/ui/spinner";
 import { loginPathWithReturnTo } from "@/lib/return-to";
 
 /**

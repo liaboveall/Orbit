@@ -7,11 +7,8 @@ import { cn } from "@/lib/cn";
 import { IconButton } from "./button";
 
 /**
- * Dialog（ORB-002，基于 @radix-ui/react-dialog）。
- *
- * 无障碍由 Radix 保证：焦点陷阱、打开时初始焦点移入面板、关闭后焦点恢复触发元素、
- * Escape 关闭、aria-labelledby/aria-describedby 关联标题与描述。
- * 弹层圆角 rounded-overlay(16)、shadow-overlay（docs/02：影子只用于悬浮层）。
+ * Dialog（基于 Radix）。焦点陷阱、初始焦点、关闭后恢复焦点和 Escape 由 Radix 保证。
+ * 桌面居中，手机从底部升起。只做入场动画，关闭立即卸载。
  */
 
 export const Dialog = DialogPrimitive.Root;
@@ -25,21 +22,6 @@ export type DialogContentProps = ComponentProps<typeof DialogPrimitive.Content> 
   className?: string;
 };
 
-export function DialogOverlay({
-  className,
-  ...props
-}: ComponentProps<typeof DialogPrimitive.Overlay>) {
-  return (
-    <DialogPrimitive.Overlay
-      className={cn(
-        "fixed inset-0 z-40 bg-overlay",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
 export function DialogContent({
   children,
   closeLabel = "关闭对话框",
@@ -52,15 +34,13 @@ export function DialogContent({
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.defaultPrevented) return;
       const dialog = closeRef.current?.closest('[role="dialog"]');
-      // Radix 1.1.23 can retain the parent drawer's Escape listener after a
-      // nested dialog opens. Route by the focused layer before document capture.
-      // Menus/selects inside a dialog continue to own their own Escape handling.
+      // Radix 1.1.23 在嵌套对话框打开后可能保留父抽屉的 Escape 监听，
+      // 所以在 document 捕获阶段之前按焦点所在层分发。对话框里的菜单和下拉仍自己处理 Escape。
       const layer = event.target instanceof Element
         ? event.target.closest('[role="dialog"], [role="menu"], [role="listbox"]')
         : null;
       if (!dialog || layer !== dialog) return;
-      // Keep native IME candidate cancellation while preventing Radix/parent
-      // layers from treating the same composing Escape as a dialog dismissal.
+      // 输入法组字时的 Escape 只取消候选，不关闭对话框，也不让父层收到。
       if (event.isComposing || event.keyCode === 229) { event.stopImmediatePropagation(); return; }
       event.stopImmediatePropagation();
       onEscapeKeyDown?.(event);
@@ -74,12 +54,14 @@ export function DialogContent({
   }, [onEscapeKeyDown]);
   return (
     <DialogPrimitive.Portal>
-      <DialogOverlay />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-40 animate-fade-in bg-overlay" />
       <DialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 w-[calc(100vw-32px)] max-w-lg -translate-x-1/2 -translate-y-1/2",
-          "rounded-overlay border border-line bg-surface p-6 shadow-overlay",
-          "max-h-[85vh] overflow-y-auto",
+          "glass-thick fixed z-50 max-h-[88dvh] overflow-y-auto overscroll-contain rounded-panel p-6",
+          // 手机：底部升起
+          "inset-x-2 bottom-[max(8px,env(safe-area-inset-bottom))] animate-sheet-up",
+          // 桌面：居中
+          "sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-[calc(100vw-32px)] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:animate-dialog-in",
           className,
         )}
         {...props}
@@ -90,12 +72,7 @@ export function DialogContent({
       >
         {children}
         <DialogPrimitive.Close asChild>
-          <IconButton
-            ref={closeRef}
-            label={closeLabel}
-            size="sm"
-            className="absolute right-3 top-3"
-          >
+          <IconButton ref={closeRef} label={closeLabel} size="sm" className="absolute right-3.5 top-3.5 bg-surface-sunken">
             <X className="h-4 w-4" />
           </IconButton>
         </DialogPrimitive.Close>
@@ -104,45 +81,28 @@ export function DialogContent({
   );
 }
 
-export function DialogHeader({
-  className,
-  ...props
-}: ComponentProps<"div">) {
-  return <div className={cn("mb-4 space-y-2 pr-8", className)} {...props} />;
+export function DialogHeader({ className, ...props }: ComponentProps<"div">) {
+  return <div className={cn("mb-5 space-y-1.5 pr-10", className)} {...props} />;
 }
 
-export function DialogTitle({
-  className,
-  ...props
-}: ComponentProps<typeof DialogPrimitive.Title>) {
+export function DialogTitle({ className, ...props }: ComponentProps<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
-      className={cn("text-section font-semibold text-foreground", className)}
+      className={cn("text-section font-semibold tracking-[-0.015em] text-foreground", className)}
       {...props}
     />
   );
 }
 
-export function DialogDescription({
-  className,
-  ...props
-}: ComponentProps<typeof DialogPrimitive.Description>) {
+export function DialogDescription({ className, ...props }: ComponentProps<typeof DialogPrimitive.Description>) {
   return (
     <DialogPrimitive.Description
-      className={cn("text-label text-foreground-secondary", className)}
+      className={cn("text-label leading-relaxed text-foreground-secondary", className)}
       {...props}
     />
   );
 }
 
-export function DialogFooter({
-  className,
-  ...props
-}: ComponentProps<"div">) {
-  return (
-    <div
-      className={cn("mt-6 flex flex-wrap justify-end gap-3", className)}
-      {...props}
-    />
-  );
+export function DialogFooter({ className, ...props }: ComponentProps<"div">) {
+  return <div className={cn("mt-6 flex flex-wrap justify-end gap-2", className)} {...props} />;
 }

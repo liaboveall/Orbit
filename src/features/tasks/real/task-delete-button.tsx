@@ -20,7 +20,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
-import { Spinner } from "@/features/auth/auth-form";
+import { Spinner } from "@/components/ui/spinner";
 
 /**
  * 任务删除按钮 + 确认 Dialog（M2 Phase 6，DELETE /api/v1/tasks/{id}）。

@@ -2,263 +2,201 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LayoutGrid, Menu } from "lucide-react";
+import { House, LayoutGrid, type LucideIcon } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import type { UserDTO } from "@/contracts";
-import { cn } from "@/lib/cn";
-import { PROJECT_COLOR_DOT, projectColorAria } from "@/lib/project-color";
-import { IconButton, useFocusReturn } from "@/components/ui";
-import { Avatar } from "@/components/ui/avatar";
-import { Tooltip } from "@/components/ui/tooltip";
 import {
+  Avatar,
   Drawer,
   DrawerContent,
   DrawerDescription,
   DrawerTitle,
-} from "@/components/ui/drawer";
-import { useRecentProjects } from "./use-recent-projects";
-import { OrbitWordmark } from "./orbit-logo";
-import { UserMenu } from "./user-menu";
-import { useGuardedNavigate } from "@/features/tasks/unsaved-changes";
+  LinkLabel,
+  Segments,
+  Tooltip,
+  useFocusReturn,
+} from "@/components/ui";
+import { ProjectGlyph } from "@/features/projects/project-glyph";
 import { pruneDrafts } from "@/features/tasks/draft-storage";
+import { cn } from "@/lib/cn";
+import { projectColorAria } from "@/lib/project-color";
 import { UserTimezoneProvider } from "@/lib/user-timezone";
+import { OrbitWordmark } from "./orbit-logo";
+import { useRecentProjects } from "./use-recent-projects";
+import { UserMenu } from "./user-menu";
 
-// Responsive navigation shares recent projects only within the signed-in session.
-type NavMode = "rail" | "drawer";
+/**
+ * 应用外壳：桌面是浮动的玻璃侧栏（中等宽度收窄成图标栏），手机是底部的玻璃标签栏，
+ * 标签栏旁的头像打开包含最近项目和账户的抽屉。
+ */
 
-const itemBase =
-  "flex w-full items-center rounded-control text-label font-medium outline-none " +
-  "transition-colors duration-150 ease-standard";
+const PRIMARY: { key: string; href: string; label: string; short: string; icon: LucideIcon }[] = [
+  { key: "today", href: "/app/today", label: "我的工作台", short: "工作台", icon: House },
+  { key: "projects", href: "/app/projects", label: "全部项目", short: "项目", icon: LayoutGrid },
+];
 
-const itemPad: Record<NavMode, string> = {
-  rail: "h-10 justify-center gap-0 px-0 xl:h-10 xl:justify-start xl:gap-3 xl:px-3",
-  drawer: "h-11 gap-3 px-3",
-};
+/** 当前路径对应的导航项：工作台、项目列表，或某个项目的 id。 */
+function activeKeyOf(pathname: string): string | null {
+  if (pathname.startsWith("/app/today")) return "today";
+  if (pathname === "/app/projects") return "projects";
+  return /^\/app\/projects\/([^/]+)/.exec(pathname)?.[1] ?? null;
+}
 
-function navStateClass(active: boolean): string {
+const itemClass =
+  "flex h-11 w-full items-center gap-3 rounded-item px-2.5 text-label font-medium outline-none xl:h-10 " +
+  "transition-[color,transform] duration-200 ease-standard active:scale-[0.98]";
+
+function itemState(active: boolean): string {
   return active
-    ? "bg-brand-soft text-brand"
+    ? "text-foreground [&_svg]:text-brand-ink"
     : "text-foreground-secondary hover:bg-surface-sunken hover:text-foreground";
 }
 
-function labelClass(mode: NavMode): string {
-  return mode === "rail"
-    ? "hidden truncate xl:inline"
-    : "min-w-0 flex-1 truncate";
-}
-
-/** 侧栏导航内容：rail（桌面/平板固定侧栏）与 drawer（手机抽屉）共用。 */
-function SidebarNav({
-  mode,
-  pathname,
+function NavContent({
   user,
-  onNavigate,
+  pathname,
   recent,
+  collapsible = false,
+  onNavigate,
 }: {
-  recent: ReturnType<typeof useRecentProjects>;
-  mode: NavMode;
-  pathname: string;
   user: UserDTO;
+  pathname: string;
+  recent: ReturnType<typeof useRecentProjects>;
+  /** 桌面侧栏在中等宽度收窄成图标栏；抽屉里始终展开。 */
+  collapsible?: boolean;
   onNavigate?: () => void;
 }) {
-  // B6 修复：程序化导航同样受未保存草稿保护（脏表单未确认放弃时不离开）。
-  const guardedNavigate = useGuardedNavigate();
-  const todayActive = pathname.startsWith("/app/today");
-  const settingsActive = pathname.startsWith("/app/settings");
-  // 项目列表页（/app/projects，不含 fixture 的 /app/projects/[id]/board 等）为激活态。
-  const projectsActive = pathname === "/app/projects";
+  const active = activeKeyOf(pathname);
+  const label = cn("min-w-0 flex-1 truncate", collapsible && "hidden xl:block");
+  const center = collapsible && "max-xl:justify-center max-xl:px-0";
+  const note = cn("px-2.5 text-caption text-foreground-muted", collapsible && "hidden xl:block");
 
   return (
-    <div className="flex h-full flex-col">
-      {/* 字标 */}
-      <div
-        className={cn(
-          "flex h-16 shrink-0 items-center border-b border-line",
-          mode === "rail" ? "justify-center xl:justify-start xl:px-4" : "px-4",
-        )}
-      >
-        {mode === "rail" ? (
-          <Link
-            href="/app/today"
-            onClick={onNavigate}
-            aria-label="Orbit 首页"
-            className="rounded-control outline-none"
-          >
-            <OrbitWordmark collapsed />
-          </Link>
-        ) : (
-          <Link href="/app/today" onClick={onNavigate} aria-label="Orbit 首页">
-            <OrbitWordmark />
-          </Link>
-        )}
+    <div className="flex h-full min-h-0 flex-col">
+      <div className={cn("flex h-[60px] shrink-0 items-center px-5", collapsible && "max-xl:justify-center max-xl:px-0")}>
+        <Link href="/app/today" onClick={onNavigate} aria-label="Orbit 首页" className="rounded-control outline-none">
+          <OrbitWordmark collapsed={collapsible} />
+        </Link>
       </div>
 
-      <nav
-        aria-label="主导航"
-        className="flex-1 overflow-y-auto px-2 py-3 xl:px-3"
-      >
-        {/* 我的工作台 */}
-        <Tooltip content="我的工作台" side="right">
-          <Link
-            href="/app/today"
-            onClick={onNavigate}
-            aria-current={todayActive ? "page" : undefined}
-            aria-label="我的工作台"
-            className={cn(itemBase, itemPad[mode], navStateClass(todayActive))}
-          >
-            <Home className="h-5 w-5 shrink-0" aria-hidden="true" />
-            <span className={labelClass(mode)}>我的工作台</span>
-          </Link>
-        </Tooltip>
-
-        {/* 项目分组标题 */}
-        <p
-          className={cn(
-            "mt-5 mb-2 text-caption font-medium uppercase tracking-wide text-foreground-muted",
-            mode === "rail" ? "hidden xl:block" : "px-3",
-          )}
-        >
-          最近项目
-        </p>
-
-        {recent.loading && <p role="status" className={cn("px-3 text-caption text-foreground-muted", labelClass(mode))}>加载项目中…</p>}
-        {recent.error && <button type="button" onClick={recent.retry} aria-label="重新加载最近项目" className="min-h-11 w-full rounded-control px-2 text-caption text-danger focus-visible:outline-2">项目加载失败，重试</button>}
-        {!recent.loading && !recent.error && recent.projects.length === 0 && <p className={cn("px-3 text-caption text-foreground-muted", labelClass(mode))}>暂无项目，从全部项目开始。</p>}
-        <ul className="space-y-1">
-          {recent.projects.map((project) => {
-            const href = `/app/projects/${project.id}/board`;
-            const active = pathname.startsWith(`/app/projects/${project.id}/`);
-            const dot = (
-              <span
-                className={cn(
-                  "inline-block h-2.5 w-2.5 shrink-0 rounded-full",
-                  PROJECT_COLOR_DOT[project.color],
-                )}
-                aria-hidden="true"
-              />
-            );
-            return (
-              <li key={project.id}>
-                <Tooltip
-                  side="right"
-                  content={
-                    <span>
-                      {project.name}
-                      <span className="sr-only">
-                        （{projectColorAria(project.color)}）
-                      </span>
-                    </span>
-                  }
+      <nav aria-label="主导航" className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+        <Segments activeKey={active}>
+          <div className="space-y-0.5">
+            {PRIMARY.map(({ key, href, label: text, icon: Icon }) => (
+              <Tooltip key={key} content={text} side="right" className="xl:hidden">
+                <Link
+                  href={href}
+                  onClick={onNavigate}
+                  aria-label={text}
+                  aria-current={active === key ? "page" : undefined}
+                  data-active={active === key || undefined}
+                  className={cn(itemClass, center, itemState(active === key))}
                 >
-                  <Link
-                    href={href}
-                    onClick={onNavigate}
-                    aria-current={active ? "page" : undefined}
-                    aria-label={project.name}
-                    className={cn(
-                      itemBase,
-                      itemPad[mode],
-                      navStateClass(active),
-                    )}
-                  >
-                    {mode === "rail" ? (
-                      <>
-                        <span className="xl:hidden">{dot}</span>
-                        <span className="hidden items-center gap-3 xl:flex">
-                          {dot}
-                          <span className="min-w-0 flex-1 truncate">
-                            {project.name}
-                          </span>
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        {dot}
-                        <span className={labelClass(mode)}>{project.name}</span>
-                      </>
-                    )}
-                  </Link>
-                </Tooltip>
-              </li>
-            );
-          })}
-        </ul>
+                  <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                  <LinkLabel className={label}>{text}</LinkLabel>
+                </Link>
+              </Tooltip>
+            ))}
+          </div>
 
-        {/* 项目列表入口（M2 Phase 6：导航到真实数据页 /app/projects）。
-            门禁约束：必须保持 <button type="button"> + aria-label（tests/ui/accessibility-and-layout.spec.ts
-            用 getByRole("button") 断言），且绝不能移入上方 <ul>（ul 仅包含当前用户的最近项目）。 */}
-        <Tooltip content="全部项目" side="right">
-          <button
-            type="button"
-            aria-label="全部项目"
-            aria-current={projectsActive ? "page" : undefined}
-            onClick={() => {
-              guardedNavigate.push("/app/projects");
-              onNavigate?.();
-            }}
-            className={cn(
-              itemBase,
-              itemPad[mode],
-              "mt-1",
-              projectsActive
-                ? "bg-brand-soft text-brand"
-                : "text-foreground-muted hover:bg-surface-sunken hover:text-foreground",
-            )}
-          >
-            <LayoutGrid className="h-5 w-5 shrink-0" aria-hidden="true" />
-            <span className={labelClass(mode)}>全部项目</span>
-          </button>
-        </Tooltip>
+          <p className={cn("mb-1 mt-6 px-2.5 text-caption font-medium text-foreground-muted", collapsible && "hidden xl:block")}>
+            最近项目
+          </p>
+          {collapsible ? <div aria-hidden="true" className="mx-auto my-3 h-px w-6 bg-line xl:hidden" /> : null}
+
+          {recent.loading ? (
+            <p role="status" className={note}>
+              加载项目中…
+            </p>
+          ) : null}
+          {recent.error ? (
+            <button
+              type="button"
+              onClick={recent.retry}
+              aria-label="重新加载最近项目"
+              className="min-h-11 w-full rounded-item px-2 text-caption text-danger outline-none hover:bg-danger-soft"
+            >
+              {collapsible ? <span className="xl:hidden">重试</span> : null}
+              <span className={cn(collapsible && "hidden xl:inline")}>项目加载失败，重试</span>
+            </button>
+          ) : null}
+          {!recent.loading && !recent.error && recent.projects.length === 0 ? (
+            <p className={note}>暂无项目，从全部项目开始。</p>
+          ) : null}
+          <ul className="space-y-0.5">
+            {recent.projects.map((project) => {
+              const current = active === project.id;
+              return (
+                <li key={project.id}>
+                  <Tooltip
+                    side="right"
+                    content={
+                      <span>
+                        {project.name}
+                        <span className="sr-only">（{projectColorAria(project.color)}）</span>
+                      </span>
+                    }
+                  >
+                    <Link
+                      href={`/app/projects/${project.id}/board`}
+                      onClick={onNavigate}
+                      aria-label={project.name}
+                      aria-current={current ? "page" : undefined}
+                      data-active={current || undefined}
+                      className={cn(itemClass, center, itemState(current))}
+                    >
+                      <ProjectGlyph name={project.name} color={project.color} />
+                      <LinkLabel className={label}>{project.name}</LinkLabel>
+                    </Link>
+                  </Tooltip>
+                </li>
+              );
+            })}
+          </ul>
+        </Segments>
       </nav>
 
-      {/* 底部：当前账户 + 个人设置入口（真实会话数据，直达 /app/settings） */}
-      <div
-        className={cn(
-          "shrink-0 border-t border-line p-2 xl:p-3",
-          mode === "rail" && "flex justify-center xl:block",
-        )}
-      >
-        <div
-          className={cn(
-            "items-center gap-3",
-            mode === "rail" ? "hidden xl:flex" : "flex",
-          )}
-        >
-          <Link
-            href="/app/settings"
-            onClick={onNavigate}
-            aria-current={settingsActive ? "page" : undefined}
-            className={cn(
-              "flex min-w-0 flex-1 items-center gap-3 rounded-control p-1 -m-1 outline-none",
-              "transition-colors duration-150 ease-standard hover:bg-surface-sunken",
-              settingsActive && "bg-brand-soft",
-            )}
-          >
-            <Avatar name={user.name} size="md" />
-            <span className="min-w-0 flex-1">
-              <span
-                className={cn(
-                  "block truncate text-label font-medium",
-                  settingsActive ? "text-brand" : "text-foreground",
-                )}
-              >
-                {user.name}
-              </span>
-              <span className="block truncate text-caption text-foreground-muted">
-                个人设置
-              </span>
-            </span>
-          </Link>
-          <UserMenu variant="settings" side="top" align="end" user={user} />
-        </div>
-
-        {/* rail（平板）下仅显示头像菜单（xl 桌面态用上面的展开块） */}
-        {mode === "rail" ? (
-          <div className="xl:hidden">
-            <UserMenu variant="avatar" side="right" align="start" user={user} />
-          </div>
-        ) : null}
+      <div className="shrink-0 p-3 pt-1">
+        <UserMenu user={user} collapsible={collapsible} active={pathname.startsWith("/app/settings")} />
       </div>
+    </div>
+  );
+}
+
+/** 手机底部的玻璃标签栏：两个目的地是一颗胶囊，旁边的头像打开完整导航。 */
+function TabBar({ user, pathname, onOpenMenu }: { user: UserDTO; pathname: string; onOpenMenu: () => void }) {
+  const active = pathname.startsWith("/app/today") ? "today" : pathname.startsWith("/app/projects") ? "projects" : null;
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-[max(12px,env(safe-area-inset-bottom))] z-30 flex items-center justify-center gap-2.5 md:hidden">
+      <nav aria-label="快捷导航" data-lens="" className="glass pointer-events-auto rounded-full p-1">
+        <Segments activeKey={active} className="flex items-center">
+          {PRIMARY.map(({ key, href, short, icon: Icon }) => (
+            <Link
+              key={key}
+              href={href}
+              aria-current={active === key ? "page" : undefined}
+              data-active={active === key || undefined}
+              className={cn(
+                "flex h-[52px] min-w-[88px] flex-col items-center justify-center gap-0.5 rounded-full px-4 text-[11px] font-medium outline-none",
+                "transition-[color,transform] duration-200 ease-standard active:scale-[0.96]",
+                active === key ? "text-brand-ink" : "text-foreground-secondary",
+              )}
+            >
+              <Icon className="h-[22px] w-[22px]" aria-hidden="true" />
+              {short}
+            </Link>
+          ))}
+        </Segments>
+      </nav>
+      <button
+        type="button"
+        aria-label="打开导航菜单"
+        data-lens=""
+        onClick={onOpenMenu}
+        className="glass pointer-events-auto flex h-[60px] w-[60px] items-center justify-center rounded-full outline-none transition-transform duration-200 ease-standard active:scale-[0.94]"
+      >
+        <Avatar name={user.name} size="lg" />
+      </button>
     </div>
   );
 }
@@ -266,86 +204,49 @@ function SidebarNav({
 export function AppShell({ user, children }: { user: UserDTO; children: ReactNode }) {
   const pathname = usePathname();
   const recent = useRecentProjects(user.id);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  // 共享浏览器换账号：删除其他账号留下的本机草稿与已过期草稿（生命周期见 draft-storage）。
+  const [menuOpen, setMenuOpen] = useState(false);
+  // 共享浏览器换账号：删除其他账号留下的本机草稿和已过期草稿。
   useEffect(() => {
     pruneDrafts(user.id);
   }, [user.id]);
-  // 编程式打开的手机抽屉导航：打开瞬间记录焦点，关闭后还给汉堡按钮（docs/02：关闭后恢复焦点）。
-  const { captureFocus, handleCloseAutoFocus } =
-    useFocusReturn<HTMLButtonElement>();
+  // 打开抽屉时记录焦点，关闭后还给触发按钮。
+  const { captureFocus, handleCloseAutoFocus } = useFocusReturn<HTMLButtonElement>();
 
   return (
-    // F23 修复：会话用户的时区作为事件时间展示的统一来源（详情见 lib/user-timezone）。
     <UserTimezoneProvider value={user.timezone}>
-    <div className="min-h-dvh bg-background">
-      {/* F31⑥：键盘用户跳过导航直达主内容（docs/02 §6） */}
       <a
         href="#app-main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-control focus:bg-brand focus:px-4 focus:py-2 focus:text-label focus:font-medium focus:text-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-brand focus:px-4 focus:py-2 focus:text-label focus:font-medium focus:text-foreground-invert"
       >
         跳到主内容
       </a>
-      {/* 固定侧栏：手机隐藏，平板 72px，桌面 224px */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[72px] border-r border-line bg-surface md:block xl:w-56">
-        <SidebarNav mode="rail" pathname={pathname} user={user} recent={recent} />
+
+      <aside className="glass fixed inset-y-3 left-3 z-30 hidden w-[var(--shell-rail)] rounded-panel md:block xl:w-[var(--shell-sidebar)]">
+        <NavContent user={user} pathname={pathname} recent={recent} collapsible />
       </aside>
 
-      {/* 手机抽屉导航（Radix Dialog：焦点陷阱 / Escape / 焦点恢复） */}
-      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <DrawerContent
-          side="left"
-          closeLabel="关闭导航"
-          className="w-[min(85vw,300px)] p-0"
-          onCloseAutoFocus={handleCloseAutoFocus}
-        >
+      <Drawer open={menuOpen} onOpenChange={setMenuOpen}>
+        <DrawerContent side="bottom" closeLabel="关闭导航" onCloseAutoFocus={handleCloseAutoFocus}>
           <DrawerTitle className="sr-only">导航</DrawerTitle>
           <DrawerDescription>项目与工作台导航菜单</DrawerDescription>
-          <div className="pt-10">
-            <SidebarNav
-              mode="drawer"
-              recent={recent}
-              pathname={pathname}
-              user={user}
-              onNavigate={() => setDrawerOpen(false)}
-            />
-          </div>
+          <NavContent user={user} pathname={pathname} recent={recent} onNavigate={() => setMenuOpen(false)} />
         </DrawerContent>
       </Drawer>
 
-      {/* 主列：左侧留出侧栏宽度 */}
-      <div className="flex min-h-dvh flex-col md:pl-[72px] xl:pl-56">
-        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-line bg-surface/95 px-4 backdrop-blur md:px-6 xl:px-8">
-          {/* 汉堡按钮：仅手机显示 */}
-          <IconButton
-            label="打开导航菜单"
-            className="md:hidden"
-            onClick={() => {
-              captureFocus();
-              setDrawerOpen(true);
-            }}
-          >
-            <Menu className="h-5 w-5" />
-          </IconButton>
-
-          <span className="text-label text-foreground-secondary">
-            面向个人与学生小团队的项目协作
-          </span>
-
-          <span className="ml-auto flex items-center gap-2">
-            {/* 真实会话时区（来自 GET /me 同源的账户档案），mono 强调其标识属性 */}
-            <span className="hidden font-mono text-caption text-foreground-muted sm:inline">
-              {user.timezone}
-            </span>
-            <Avatar name={user.name} size="md" />
-          </span>
-        </header>
-
-        <main id="app-main" className="flex-1 px-4 py-6 md:px-6 xl:px-8">
+      <div className="md:pl-[calc(var(--shell-rail)+var(--shell-inset))] xl:pl-[calc(var(--shell-sidebar)+var(--shell-inset))]">
+        <main id="app-main" className="mx-auto min-h-dvh w-full max-w-[1480px] px-4 pb-32 pt-4 md:px-7 md:pb-14 md:pt-5 xl:px-9">
           {children}
         </main>
       </div>
-    </div>
+
+      <TabBar
+        user={user}
+        pathname={pathname}
+        onOpenMenu={() => {
+          captureFocus();
+          setMenuOpen(true);
+        }}
+      />
     </UserTimezoneProvider>
   );
 }

@@ -227,7 +227,7 @@ export function CommentList({
   return (
     <section className="space-y-4" aria-label="评论">
       {forbidden && <p role="status">任务已不可用，未保存的内容仅供复制。</p>}
-      <h2 className="flex items-center gap-2 text-label font-semibold text-foreground">
+      <h2 className="flex items-center gap-2 px-1 text-label font-semibold text-foreground">
         <MessageSquare
           className="h-4 w-4 text-foreground-muted"
           aria-hidden="true"
@@ -260,11 +260,11 @@ export function CommentList({
         <>
           {loadError && <div role="alert"><InlineError>{loadError}</InlineError><Button size="sm" variant="secondary" onClick={() => void load()}>重新加载</Button></div>}
           {total === 0 ? (
-            <p className="text-caption text-foreground-muted">
+            <p className="px-1 text-caption text-foreground-muted">
               还没有评论，来说点什么吧。
             </p>
           ) : (
-            <ul className="space-y-2" role="list">
+            <ul className="rounded-tile bg-surface shadow-[inset_0_0_0_0.5px_var(--color-line)] space-y-0.5 p-1" role="list">
               {comments!.map((comment) => (
                 <CommentItem
                   key={comment.id}
@@ -298,7 +298,7 @@ export function CommentList({
       )}
 
       {(canWrite || draft.length > 0) && (
-        <div className="rounded-control border border-line p-3">
+        <div className="rounded-tile bg-surface shadow-[inset_0_0_0_0.5px_var(--color-line)] p-2.5">
           {postedOutsideWindow && <p role="status" className="text-caption text-foreground-secondary">评论已发布到讨论末尾，可继续加载更多评论查看。</p>}
           <Textarea
             value={draft}
@@ -332,7 +332,7 @@ export function CommentList({
           {postError && <InlineError>{postError}</InlineError>}
           <div className="mt-2 flex items-center justify-between gap-2">
             <p className="text-caption text-foreground-muted">
-              {draft.length}/{BODY_MAX} · 纯文本，脚本不会执行
+              {draft.length}/{BODY_MAX}
             </p>
             <Button
               size="sm"

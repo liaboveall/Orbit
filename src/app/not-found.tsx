@@ -14,8 +14,8 @@ import { OrbitMark } from "@/features/shell/orbit-logo";
  */
 export default function NotFound() {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-background px-6 py-16">
-      <OrbitMark className="h-9 w-9 text-brand" />
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 px-6 py-16">
+      <OrbitMark className="h-9 w-9 text-brand-ink" />
       <EmptyState
         className="w-full max-w-lg"
         icon={<Compass className="h-6 w-6" />}
