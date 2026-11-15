@@ -21,6 +21,7 @@ import { pruneDrafts } from "@/features/tasks/draft-storage";
 import { cn } from "@/lib/cn";
 import { projectColorAria } from "@/lib/project-color";
 import { UserTimezoneProvider } from "@/lib/user-timezone";
+import { LiveProvider } from "./live";
 import { OrbitWordmark } from "./orbit-logo";
 import { useRecentProjects } from "./use-recent-projects";
 import { UserMenu } from "./user-menu";
@@ -44,7 +45,7 @@ function activeKeyOf(pathname: string): string | null {
 
 const itemClass =
   "flex h-11 w-full items-center gap-3 rounded-item px-2.5 text-label font-medium outline-none xl:h-10 " +
-  "transition-[color,transform] duration-200 ease-standard active:scale-[0.98]";
+  "transition-[color,transform] duration-200 ease-standard press [--press-scale:0.98]";
 
 function itemState(active: boolean): string {
   return active
@@ -178,7 +179,7 @@ function TabBar({ user, pathname, onOpenMenu }: { user: UserDTO; pathname: strin
               data-active={active === key || undefined}
               className={cn(
                 "flex h-[52px] min-w-[88px] flex-col items-center justify-center gap-0.5 rounded-full px-4 text-[11px] font-medium outline-none",
-                "transition-[color,transform] duration-200 ease-standard active:scale-[0.96]",
+                "transition-[color,transform] duration-200 ease-standard press",
                 active === key ? "text-brand-ink" : "text-foreground-secondary",
               )}
             >
@@ -193,7 +194,7 @@ function TabBar({ user, pathname, onOpenMenu }: { user: UserDTO; pathname: strin
         aria-label="打开导航菜单"
         data-lens=""
         onClick={onOpenMenu}
-        className="glass pointer-events-auto flex h-[60px] w-[60px] items-center justify-center rounded-full outline-none transition-transform duration-200 ease-standard active:scale-[0.94]"
+        className="glass pointer-events-auto flex h-[60px] w-[60px] items-center justify-center rounded-full outline-none transition-transform duration-200 ease-standard press [--press-scale:0.94]"
       >
         <Avatar name={user.name} size="lg" />
       </button>
@@ -235,7 +236,7 @@ export function AppShell({ user, children }: { user: UserDTO; children: ReactNod
 
       <div className="md:pl-[calc(var(--shell-rail)+var(--shell-inset))] xl:pl-[calc(var(--shell-sidebar)+var(--shell-inset))]">
         <main id="app-main" className="mx-auto min-h-dvh w-full max-w-[1480px] px-4 pb-32 pt-4 md:px-7 md:pb-14 md:pt-5 xl:px-9">
-          {children}
+          <LiveProvider userId={user.id}>{children}</LiveProvider>
         </main>
       </div>
 

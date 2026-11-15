@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { ProjectListClient } from "@/features/projects/project-list-client";
 import { requirePageUser } from "@/server/auth/page-session";
 import { listProjects } from "@/server/modules/project";
+import { PageTransition } from "@/components/ui/transitions";
+import { LiveScope } from "@/features/shell/live";
+import { readLiveSeed } from "../_live";
 
 /**
  * /app/projects —— 项目列表（M2 Phase 6：首个真实数据列表页）。
@@ -37,6 +40,8 @@ type PageProps = {
 
 export default async function ProjectsPage({ searchParams }: PageProps) {
   const sessionUser = await requirePageUser();
+  // 令牌先于数据读取，之后的任何变化都能被轮询发现。
+  const seed = await readLiveSeed();
 
   const params = await searchParams;
   const rawArchived = Array.isArray(params.archived) ? params.archived[0] : params.archived;
@@ -46,11 +51,16 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
   const result = await listProjects(sessionUser.id, { limit: PAGE_SIZE, archived });
 
   return (
-    <ProjectListClient
-      initialProjects={result.projects}
-      nextCursor={result.nextCursor}
-      hasMore={result.hasMore}
-      archived={archived}
-    />
+    <PageTransition>
+      <div>
+        <LiveScope seed={seed} />
+        <ProjectListClient
+          initialProjects={result.projects}
+          nextCursor={result.nextCursor}
+          hasMore={result.hasMore}
+          archived={archived}
+        />
+      </div>
+    </PageTransition>
   );
 }

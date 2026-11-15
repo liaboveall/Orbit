@@ -3,11 +3,12 @@
 import { Archive, Inbox, Plus, SearchX } from "lucide-react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { memo, useCallback, useState, type MouseEvent } from "react";
 import type { MemberDTO, ProjectDTO, TaskSummaryDTO, TaskListQueryDTO } from "@/contracts";
 import { Avatar, Button, buttonVariants, EmptyState, InlineError, Spinner } from "@/components/ui";
 import { DueBadge, PriorityMark } from "@/features/tasks/priority-badge";
-import { getDueMeta } from "@/features/tasks/task-meta";
+import { getDueMeta, sameTaskSummary } from "@/features/tasks/task-meta";
+import { useHotkey } from "@/components/ui/use-hotkey";
 import { cn } from "@/lib/cn";
 import { loginPathWithReturnTo } from "@/lib/return-to";
 import { usePagedTasks } from "../use-paged-tasks";
@@ -16,6 +17,8 @@ import { TaskFilters } from "./task-filters";
 import { TaskDeleteButton } from "./task-delete-button";
 import { useTaskMutation } from "./use-task-mutation";
 import { TaskStatusSelect } from "./task-status-select";
+import { useTaskPanel } from "./task-panel";
+import { ItemTransition } from "@/components/ui/transitions";
 
 /**
  * 项目任务列表。
@@ -58,19 +61,30 @@ export function TaskListClient({
   const { tasks, cursor, busy: loadingMore, error: pageError, more } = usePagedTasks(
     `/projects/${project.id}/tasks`, `${userId}:${today}`, { ...query, limit: PAGE_SIZE }, initialTasks, initialCursor,
   );
-  const goToLogin = () => window.location.assign(loginPathWithReturnTo(tasksPath));
+  const goToLogin = useCallback(() => window.location.assign(loginPathWithReturnTo(tasksPath)), [tasksPath]);
+  const panel = useTaskPanel();
+  const path = usePathname();
+  const search = useSearchParams();
+  // 详情地址在当前筛选上加 task 参数；它不随「当前打开的是哪一条」变化。
+  const filters = new URLSearchParams(search.toString());
+  filters.delete("task");
+  const hrefBase = `${path}?${filters.size ? `${filters}&` : ""}task=`;
   const archived = project.archivedAt !== null;
   const isOwner = project.role === "OWNER";
+  useHotkey("n", () => setCreating(true), !archived && !creating);
   // 筛选无结果和项目里还没有任务是两种空状态。
   const hasActiveFilters = Boolean(
     query.q || query.status || query.priority || query.assigneeId || query.unassigned || query.overdue,
   );
-  const rowProps = (task: TaskSummaryDTO) => ({
+  const rowProps = (task: TaskSummaryDTO): RowProps => ({
     task,
     today,
     canDelete: !archived && (isOwner || task.creator.id === userId),
     archived,
     onUnauthorized: goToLogin,
+    href: hrefBase + task.id,
+    open: panel?.activeId === task.id,
+    onOpen: panel?.open,
   });
 
   return (
@@ -79,7 +93,7 @@ export function TaskListClient({
         members={members}
         action={
           archived ? null : (
-            <Button onClick={() => setCreating(true)} className="max-sm:h-11 max-sm:w-11 max-sm:px-0">
+            <Button onClick={() => setCreating(true)} aria-keyshortcuts="N" title="新建任务（N）" className="max-sm:h-11 max-sm:w-11 max-sm:px-0">
               <Plus className="h-4 w-4 max-sm:h-5 max-sm:w-5" aria-hidden="true" />
               <span className="max-sm:sr-only">新建任务</span>
             </Button>
@@ -154,7 +168,9 @@ export function TaskListClient({
               </thead>
               <tbody className="divide-y divide-line">
                 {tasks.map((task) => (
-                  <TaskRow key={task.id} {...rowProps(task)} />
+                  <ItemTransition key={task.id} move>
+                    <TaskRow {...rowProps(task)} />
+                  </ItemTransition>
                 ))}
               </tbody>
             </table>
@@ -163,7 +179,9 @@ export function TaskListClient({
           {/* 手机：同样的信息和操作排成卡片，不横向滚动 */}
           <ul role="list" className="space-y-2 md:hidden" aria-label="项目任务列表">
             {tasks.map((task) => (
-              <TaskCard key={task.id} {...rowProps(task)} />
+              <ItemTransition key={task.id} move>
+                <TaskCard {...rowProps(task)} />
+              </ItemTransition>
             ))}
           </ul>
         </>
@@ -187,14 +205,29 @@ type RowProps = {
   canDelete: boolean;
   archived: boolean;
   onUnauthorized: () => void;
+  /** 打开这条任务详情面板的地址。 */
+  href: string;
+  /** 详情面板正显示这条任务。 */
+  open: boolean;
+  /** 经面板宿主乐观打开详情。 */
+  onOpen?: (task: TaskSummaryDTO, href: string, event?: MouseEvent) => void;
 };
 
-/** 打开任务详情面板的地址：在当前筛选上加 task 参数。 */
-function useTaskHref(taskId: string): string {
-  const path = usePathname();
-  const target = new URLSearchParams(useSearchParams().toString());
-  target.set("task", taskId);
-  return `${path}?${target}`;
+/**
+ * 行做了 memo：后台刷新带来内容相同的新对象时不重新渲染，所以只有真正变化的行
+ * 参与视图过渡（排序变化时滑到新位置）。回调由列表保持引用稳定。
+ */
+function sameRow(a: RowProps, b: RowProps): boolean {
+  return (
+    sameTaskSummary(a.task, b.task) &&
+    a.today === b.today &&
+    a.canDelete === b.canDelete &&
+    a.archived === b.archived &&
+    a.onUnauthorized === b.onUnauthorized &&
+    a.href === b.href &&
+    a.open === b.open &&
+    a.onOpen === b.onOpen
+  );
 }
 
 function Assignee({ task }: { task: TaskSummaryDTO }) {
@@ -211,11 +244,13 @@ function Assignee({ task }: { task: TaskSummaryDTO }) {
 const titleClass = (done: boolean) =>
   cn("min-w-0 text-label font-medium text-foreground", done && "line-through decoration-foreground-muted");
 
-function TaskRow({ task, today, canDelete, archived, onUnauthorized }: RowProps) {
-  const href = useTaskHref(task.id);
+const TaskRow = memo(function TaskRow({ task, today, canDelete, archived, onUnauthorized, href, open, onOpen }: RowProps) {
   const mutation = useTaskMutation();
   return (
-    <tr className="group/row transition-colors duration-150 ease-standard hover:bg-surface-sunken">
+    <tr
+      data-open={open || undefined}
+      className="group/row transition-colors duration-150 ease-standard hover:bg-surface-sunken data-[open]:bg-brand-soft"
+    >
       <th scope="row" className="py-3 pl-5 pr-3 font-normal">
         <span className="flex min-w-0 items-baseline gap-2.5">
           <span className="shrink-0 text-caption tabular-nums text-foreground-muted">{task.identifier}</span>
@@ -223,6 +258,7 @@ function TaskRow({ task, today, canDelete, archived, onUnauthorized }: RowProps)
             href={href}
             scroll={false}
             data-task-link={task.id}
+            onClick={(event) => onOpen?.(task, href, event)}
             className={cn(titleClass(task.status === "DONE"), "truncate")}
             title={task.title}
           >
@@ -251,10 +287,9 @@ function TaskRow({ task, today, canDelete, archived, onUnauthorized }: RowProps)
       </td>
     </tr>
   );
-}
+}, sameRow);
 
-function TaskCard({ task, today, canDelete, archived, onUnauthorized }: RowProps) {
-  const href = useTaskHref(task.id);
+const TaskCard = memo(function TaskCard({ task, today, canDelete, archived, onUnauthorized, href, onOpen }: RowProps) {
   const mutation = useTaskMutation();
   return (
     <li className="surface-card relative rounded-tile py-2 pl-3.5 pr-2">
@@ -265,6 +300,7 @@ function TaskCard({ task, today, canDelete, archived, onUnauthorized }: RowProps
           href={href}
           scroll={false}
           data-task-card-link={task.id}
+          onClick={(event) => onOpen?.(task, href, event)}
           className={cn(titleClass(task.status === "DONE"), "break-words")}
           title={task.title}
         >
@@ -285,4 +321,4 @@ function TaskCard({ task, today, canDelete, archived, onUnauthorized }: RowProps
       </div>
     </li>
   );
-}
+}, sameRow);

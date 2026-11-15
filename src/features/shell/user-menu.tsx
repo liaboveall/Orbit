@@ -68,7 +68,7 @@ export function UserMenu({
           title={user.name}
           className={cn(
             "flex w-full items-center gap-2.5 rounded-item p-1.5 outline-none",
-            "transition-[background-color,transform] duration-200 ease-standard active:scale-[0.98]",
+            "transition-[background-color,transform] duration-200 ease-standard press [--press-scale:0.98]",
             "hover:bg-surface-sunken data-[state=open]:bg-surface-sunken",
             collapsible && "max-xl:justify-center",
             active && "surface-selected hover:bg-[var(--selected-fill)]",

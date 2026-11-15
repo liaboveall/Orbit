@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useState, useRef, useSyncExternalStore, type ComponentProps, type ReactNode } from "react";
+import { useCallback, useState, useRef, useSyncExternalStore, type ComponentProps } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, CircleDashed, Link2, MoreHorizontal, Pencil, SignalHigh, UserRound, X, type LucideIcon } from "lucide-react";
+import { CalendarDays, CircleDashed, Link2, MoreHorizontal, Pencil, SignalHigh, UserRound, X } from "lucide-react";
 import { renderRestrictedMarkdown } from "@/lib/restricted-markdown";
 import { useUserTimezone } from "@/lib/user-timezone";
 import {
@@ -40,6 +40,8 @@ import { SubtaskList } from "../subtasks";
 import { CommentList } from "../comments";
 import { AttachmentList } from "../attachments";
 import { formatDateTimeCN } from "./datetime";
+import { useUndoDelete } from "./use-undo-delete";
+import { detailGroup as group, detailTitle, dueDateControl, PropertyRow, propertyControl } from "./task-detail-parts";
 
 import { UnsavedChangesProvider, useUnsavedChanges } from "../unsaved-changes";
 import {
@@ -55,36 +57,6 @@ import {
 const api = createApiClient();
 type TextField = "title" | "description";
 const FIELD_LABEL: Record<TextField, string> = { title: "标题", description: "描述" };
-
-/** 详情里的一组内容：浮在面板上的白色圆角分组，像系统设置里的一节。 */
-const group = "rounded-tile bg-surface shadow-[inset_0_0_0_0.5px_var(--color-line)]";
-
-/** 属性行里的选择器：贴右、无底色。 */
-const propertyControl =
-  "h-11 bg-transparent! pl-2 pr-7 text-right shadow-none! [text-align-last:right] md:h-10";
-
-function PropertyRow({
-  label,
-  icon: Icon,
-  hint,
-  children,
-}: {
-  label: string;
-  icon: LucideIcon;
-  hint?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <label className="flex min-h-11 items-center justify-between gap-3 pl-3.5 pr-2 text-label md:min-h-10">
-      <span className="flex min-w-0 items-center gap-2.5 text-foreground-secondary">
-        <Icon className="h-4 w-4 shrink-0 text-foreground-muted" aria-hidden="true" />
-        {label}
-        {hint}
-      </span>
-      {children}
-    </label>
-  );
-}
 
 export function TaskEditor(props: ComponentProps<typeof TaskEditorContent>) {
   return <UnsavedChangesProvider key={`${props.currentUserId}:${props.task.id}`}><TaskEditorContent {...props} /></UnsavedChangesProvider>;
@@ -119,6 +91,7 @@ function TaskEditorContent({
 }) {
   const router = useRouter();
   const { toast } = useToast();
+  const announceDeleted = useUndoDelete();
   const timeZone = useUserTimezone();
   const [snapshot, setSnapshot] = useState({
     source: incoming,
@@ -313,7 +286,7 @@ function TaskEditorContent({
       }
       discard();
       setDeleting(false);
-      toast({ title: "任务已移至回收站" });
+      announceDeleted(result.data, task.identifier);
       if (onDeleted) onDeleted();
       else router.push(`/app/projects/${task.projectId}/tasks`);
       router.refresh();
@@ -327,6 +300,12 @@ function TaskEditorContent({
   function close() {
     if (dirty || hasUnsavedChanges()) { captureFocus(); setClosing(true); }
     else onClose?.();
+  }
+  /** 编辑框里的快捷键：Ctrl / ⌘ + Enter 保存。输入法组字时不处理。 */
+  function saveOnShortcut(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Enter" || !(event.metaKey || event.ctrlKey) || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    if (!busy && dirty && !conflict && !locked) void mutate(draft ?? {}, true);
   }
   const inputTitle = draft?.title ?? task.title;
   const inputDescription = draft?.description ?? task.description;
@@ -502,13 +481,14 @@ function TaskEditorContent({
               disabled={busy}
               readOnly={locked}
               onChange={(e) => edit("title", e.target.value)}
+              onKeyDown={saveOnShortcut}
               autoFocus={editing === "title"}
               className="text-title font-semibold md:text-title"
             />
             {controlsAt === "title" && controls}
           </div>
         ) : (
-          <TitleHeading className="text-[24px] font-semibold leading-[1.22] tracking-[-0.018em]">
+          <TitleHeading className={detailTitle}>
             <button
               className="-mx-1.5 block w-[calc(100%+12px)] rounded-control px-1.5 py-0.5 text-left outline-none transition-colors [overflow-wrap:anywhere] enabled:hover:bg-surface-sunken"
               disabled={locked || busy}
@@ -581,7 +561,7 @@ function TaskEditorContent({
             <input
               aria-label="截止日"
               type="date"
-              className="mr-1.5 h-11 min-w-0 rounded-[8px] bg-transparent text-right text-body text-foreground outline-none disabled:opacity-55 md:h-10 md:text-label"
+              className={dueDateControl}
               value={task.dueDate ?? ""}
               disabled={locked || busy || dirty}
               onChange={(e) => void mutate({ expectedVersion: task.version, dueDate: e.target.value || null })}
@@ -601,6 +581,7 @@ function TaskEditorContent({
                 disabled={busy}
                 readOnly={locked}
                 onChange={(e) => edit("description", e.target.value)}
+                onKeyDown={saveOnShortcut}
                 autoFocus={editing === "description"}
               />
               {controlsAt === "description" && controls}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useLayoutEffect } from "react";
 import { Activity as ActivityIcon } from "lucide-react";
 import {
   ActivitySchema,
@@ -18,9 +18,9 @@ import { InlineError } from "@/components/ui/inline-error";
 import { SectionHeader } from "@/components/ui/page-header";
 import { Spinner } from "@/components/ui/spinner";
 import { STATUS_LABEL } from "@/features/tasks/task-meta";
-import { useAutoRefresh } from "@/features/tasks/real/use-auto-refresh";
 import { usePermissionLossHandler, PermissionLossOverlay } from "@/features/activity/use-permission-loss-handler";
 import { formatEventDate, formatEventDateTime, useUserTimezone } from "@/lib/user-timezone";
+import { ItemTransition } from "@/components/ui/transitions";
 
 /**
  * 项目活动时间线（M4 / ORB-011，`/app/projects/[id]/activity`）。
@@ -201,7 +201,10 @@ export function ActivityFeed({
   // effect：initialActivities 引用变化 → 上面的渲染期块先重置分页 state → 提交 →
   // 本 effect 运行 generation++。此后任何绑定旧代次、仍在飞行的 handleLoadMore 响应
   // 落地时都会发现 generationRef.current 已前进而被整体丢弃，语义与渲染期自增一致。
-  useEffect(() => {
+  // 用 useLayoutEffect 而不是 useEffect：这次提交如果带视图过渡，React 要等过渡动画结束才执行
+  // useEffect，其间（几百毫秒）旧代次仍然有效，迟到的旧响应会被当成当前数据。布局副作用随提交
+  // 同步执行，没有这个窗口。
+  useLayoutEffect(() => {
     generationRef.current += 1;
   }, [initialActivities]);
 
@@ -213,9 +216,6 @@ export function ActivityFeed({
   const cursor = extraActivities.length > 0 ? extraCursor : baseCursor;
   const hasMore = extraActivities.length > 0 ? extraHasMore : baseHasMore;
 
-  // R11: Background refresh every 30s + on focus/visibility change
-  useAutoRefresh();
-  
   // R11 Enhanced: Handle permission loss gracefully
   const tz = useUserTimezone(); // F23：账户时区。
   const {
@@ -306,7 +306,8 @@ export function ActivityFeed({
               </h3>
               <ol className="surface-card divide-y divide-line overflow-hidden rounded-card">
                 {day.items.map((item) => (
-                  <li key={item.id} className="flex items-center gap-3 px-4 py-3">
+                  <ItemTransition key={item.id}>
+                  <li className="flex items-center gap-3 px-4 py-3">
                     <Avatar name={item.actor.name} size="md" />
                     <p className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1 text-label">
                       <span className="font-medium text-foreground">{item.actor.name}</span>
@@ -330,6 +331,7 @@ export function ActivityFeed({
                       {mounted ? formatRelative(item.createdAt, tz) : formatEventDateTime(item.createdAt, tz)}
                     </time>
                   </li>
+                  </ItemTransition>
                 ))}
               </ol>
             </section>

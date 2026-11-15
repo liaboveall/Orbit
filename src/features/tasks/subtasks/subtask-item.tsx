@@ -1,7 +1,8 @@
 "use client";
 
 import { useUnsavedChanges } from "../unsaved-changes";
-import { Check, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
+import { CheckMark } from "@/components/ui/check-mark";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import {
@@ -61,6 +62,9 @@ export function SubtaskItem({
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
   const [saving, setSaving] = useState(false);
+  /** 点击后先行显示的完成状态；null 表示以服务端数据为准。 */
+  const [toggled, setToggled] = useState<boolean | null>(null);
+  const done = toggled ?? subtask.isCompleted;
   const [deleteOpen, setDeleteOpen] = useState(false);
   useUnsavedChanges(editing, saving);
   useEffect(() => {
@@ -152,6 +156,8 @@ export function SubtaskItem({
   async function handleToggle() {
     if (lock.current || !canEdit || disabled) return;
     beginWrite();
+    // 先把勾画上，请求在后面跟；失败或冲突时回到服务端的状态。
+    setToggled(!subtask.isCompleted);
     try {
       const res = await api.patch(`/subtasks/${subtask.id}`, SubtaskSchema, {
         expectedVersion: subtask.version,
@@ -184,6 +190,7 @@ export function SubtaskItem({
     } catch {
       toast({ title: "无法连接服务器，请稍后重试。", variant: "danger" });
     } finally {
+      setToggled(null);
       endWrite();
     }
   }
@@ -217,16 +224,17 @@ export function SubtaskItem({
 
   if (unavailable && !editing) return null;
   return (
-    <li className="group/row flex items-start gap-2.5 rounded-control px-2.5 py-2 transition-colors hover:bg-surface-sunken">
+    <li className="enter-rise group/row flex items-start gap-2.5 rounded-control px-2.5 py-2 hover:bg-surface-sunken">
       <button
         type="button"
         onClick={handleToggle}
         disabled={!canEdit || disabled || saving}
-        aria-label={subtask.isCompleted ? "标记为未完成" : "标记为完成"}
-        aria-pressed={subtask.isCompleted}
+        aria-label={done ? "标记为未完成" : "标记为完成"}
+        aria-pressed={done}
         className={cn(
-          "mt-px flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-[1.75px] outline-none transition-all",
-          subtask.isCompleted
+          "mt-px flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-[1.75px] outline-none transition-[background-color,border-color,opacity] duration-200",
+          toggled === true && "animate-check-pop",
+          done
             ? "border-success bg-success text-foreground-invert"
             : "border-line-strong hover:border-brand",
           !canEdit || disabled
@@ -235,9 +243,7 @@ export function SubtaskItem({
           saving && "pointer-events-none opacity-70",
         )}
       >
-        {subtask.isCompleted && (
-          <Check className="h-3 w-3" aria-hidden="true" />
-        )}
+        {done && <CheckMark animate={toggled === true} strokeWidth={3.4} className="h-3 w-3" />}
       </button>
 
       <div className="min-w-0 flex-1">
@@ -336,8 +342,8 @@ export function SubtaskItem({
           <div className="flex items-start gap-2">
             <span
               className={cn(
-                "flex-1 break-all text-label [overflow-wrap:anywhere]",
-                subtask.isCompleted
+                "flex-1 break-all text-label transition-colors duration-200 [overflow-wrap:anywhere]",
+                done
                   ? "text-foreground-muted line-through"
                   : "text-foreground",
               )}

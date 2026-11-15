@@ -3,7 +3,7 @@
 import { Archive, ArchiveRestore, ArrowUpRight, FolderPlus, LayoutGrid, ListChecks, Plus, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useLayoutEffect } from "react";
 import {
   ApiClientError,
   ProjectSchema,
@@ -24,6 +24,7 @@ import { loginPathWithReturnTo } from "@/lib/return-to";
 import { projectColorAria } from "@/lib/project-color";
 import { ProjectCreateDialog } from "./project-create-form";
 import { ProjectGlyph } from "./project-glyph";
+import { ItemTransition } from "@/components/ui/transitions";
 
 /**
  * 项目列表客户端（M2 Phase 6，`/app/projects`）。
@@ -115,7 +116,10 @@ export function ProjectListClient({
   // effect：initialProjects 引用变化（refresh / tab 切换）→ 上面的渲染期块先重置分页
   // state → 提交 → 本 effect 运行 generation++。此后任何绑定旧代次、仍在飞行的
   // handleLoadMore 响应落地时都会发现 generationRef.current 已前进而被整体丢弃。
-  useEffect(() => {
+  // 用 useLayoutEffect 而不是 useEffect：这次提交如果带视图过渡，React 要等过渡动画结束才执行
+  // useEffect，其间（几百毫秒）旧代次仍然有效，迟到的旧响应会被当成当前数据。布局副作用随提交
+  // 同步执行，没有这个窗口。
+  useLayoutEffect(() => {
     generationRef.current += 1;
   }, [initialProjects]);
 
@@ -208,7 +212,7 @@ export function ProjectListClient({
   };
 
   return (
-    <div className="w-full animate-rise md:pt-3">
+    <div className="w-full md:pt-3">
       <PageHeader
         title="全部项目"
         description={`${archived === "only" ? "已归档的项目（只读）" : "你拥有或参与的项目"}，共 ${projects.length}${hasMore ? "+" : ""} 个`}
@@ -289,7 +293,8 @@ export function ProjectListClient({
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 xl:gap-4">
           {projects.map((project) => (
-            <li key={project.id}>
+            <ItemTransition key={project.id}>
+            <li>
               <ProjectCard
                 project={project}
                 showRestore={archived === "only"}
@@ -299,6 +304,7 @@ export function ProjectListClient({
                 }}
               />
             </li>
+            </ItemTransition>
           ))}
         </ul>
       )}

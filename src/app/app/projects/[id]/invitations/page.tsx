@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { InvitationsList } from "@/features/invitations/InvitationsList";
 import { listInvitations } from "@/server/modules/invitation/service";
 import { loadProject, orNotFound } from "../_data";
+import { PageTransition } from "@/components/ui/transitions";
 
 /**
  * 邀请管理。查看、创建和撤销邀请都只给项目所有者：页面只为所有者读取邀请列表，
@@ -15,5 +16,11 @@ export default async function ProjectInvitationsPage({ params }: { params: Promi
   const { user, project } = await loadProject((await params).id);
   const isOwner = project.role === "OWNER";
   const invitations = isOwner ? await orNotFound(listInvitations(project.id, user.id)) : [];
-  return <InvitationsList projectId={project.id} userIsOwner={isOwner} initialInvitations={invitations} />;
+  return (
+    <PageTransition variant="swap">
+      <div>
+        <InvitationsList projectId={project.id} userIsOwner={isOwner} initialInvitations={invitations} />
+      </div>
+    </PageTransition>
+  );
 }

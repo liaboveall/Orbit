@@ -24,6 +24,7 @@ import { formatEventDate, useUserTimezone } from "@/lib/user-timezone";
 import { loginPathWithReturnTo } from "@/lib/return-to";
 import { clearProjectDrafts } from "@/features/tasks/draft-storage";
 import { MemberTabs } from "./member-tabs";
+import { ItemTransition } from "@/components/ui/transitions";
 
 /**
  * 项目成员列表（M4 / ORB-014，`/app/projects/[id]/members`）。
@@ -152,8 +153,8 @@ export function MembersList({
             const canExit = isSelf && !isOwnerRow;
 
             return (
+              <ItemTransition key={member.userId}>
               <li
-                key={member.userId}
                 className="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-4 py-3"
               >
                 <Avatar name={member.name} size="lg" />
@@ -203,6 +204,7 @@ export function MembersList({
                   ) : null}
                 </div>
               </li>
+              </ItemTransition>
             );
           })}
         </ul>

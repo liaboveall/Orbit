@@ -25,7 +25,7 @@ const sizeClass: Record<ButtonSize, string> = {
 
 const motionClass =
   "transition-[background-color,color,opacity,transform,filter,box-shadow] duration-200 ease-standard " +
-  "active:scale-[0.96] disabled:pointer-events-none disabled:opacity-45";
+  "press disabled:pointer-events-none disabled:opacity-45";
 
 /** 生成按钮样式类，供 Button 与需要按钮外观的 Link 复用。 */
 export function buttonVariants({

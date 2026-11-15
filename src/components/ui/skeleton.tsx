@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
  * Skeleton（ORB-002）：加载占位。
  *
  * docs/02 §4、§7：加载时外壳尺寸稳定、避免整屏 spinner——用与真实布局同形的骨架。
- * pulse 动画在 prefers-reduced-motion 下由 tokens.css 全局规则自动降级为近乎静止。
+ * 一道高光从左向右扫过（glass.css 的 skeleton）；减少动态效果时静止。
  */
 
 export type SkeletonProps = ComponentProps<"div">;
@@ -15,7 +15,7 @@ export function Skeleton({ className, ...props }: SkeletonProps) {
     <div
       aria-hidden="true"
       className={cn(
-        "animate-pulse rounded-control bg-surface-sunken",
+        "skeleton rounded-control",
         className,
       )}
       {...props}

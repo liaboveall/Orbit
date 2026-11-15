@@ -227,10 +227,69 @@
 @utility lift {
   @media (hover: hover) {
     &:hover {
-      transform: translateY(-2px);
       box-shadow: var(--card-rim), var(--shadow-card-hover);
+
+      @media (prefers-reduced-motion: no-preference) {
+        transform: translateY(-2px);
+      }
     }
   }
+}
+
+/* 按下时轻微回弹：所有可点击的胶囊、卡片共用。减少动态效果时不缩放。 */
+@utility press {
+  @media (prefers-reduced-motion: no-preference) {
+    &:active:not(:disabled) {
+      transform: scale(var(--press-scale, 0.96));
+    }
+  }
+}
+
+/* 骨架屏：一道高光从左向右扫过，比整块闪烁更安静。减少动态效果时静止。 */
+@utility skeleton {
+  background-color: var(--color-surface-sunken);
+  background-image: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--color-surface-solid) 55%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: var(--animate-shimmer);
+}
+
+/*
+ * 条目入场：列表里新出现的行（新评论、新子任务，或骨架屏换成真实内容的那一批）
+ * 淡入并轻轻升起。用 @starting-style 实现，只在元素刚插入时生效，不需要脚本；
+ * 不支持的浏览器直接显示。行自己的悬停底色过渡也写在这里，避免两条 transition 互相覆盖。
+ */
+@utility enter-rise {
+  transition:
+    opacity var(--duration-base) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-standard);
+
+  @starting-style {
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      opacity var(--duration-base) var(--ease-out),
+      translate var(--duration-spring-smooth) var(--ease-spring-smooth),
+      background-color var(--duration-fast) var(--ease-standard);
+
+    @starting-style {
+      opacity: 0;
+      translate: 0 8px;
+    }
+  }
+}
+
+/* 面板和菜单里的细滚动条，跟随主题；不占用布局宽度的地方才用。 */
+@utility scrollbar-quiet {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-foreground) 22%, transparent) transparent;
 }
 
 /*
@@ -302,12 +361,16 @@
   }
 
   [data-segments][data-animate] > [data-segment-thumb] {
-    transition:
-      top 380ms var(--ease-fluid),
-      left 380ms var(--ease-fluid),
-      width 380ms var(--ease-fluid),
-      height 380ms var(--ease-fluid),
-      opacity 160ms var(--ease-standard);
+    transition: opacity var(--duration-fast) var(--ease-standard);
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition:
+        top var(--duration-spring) var(--ease-spring),
+        left var(--duration-spring) var(--ease-spring),
+        width var(--duration-spring) var(--ease-spring),
+        height var(--duration-spring) var(--ease-spring),
+        opacity var(--duration-fast) var(--ease-standard);
+    }
   }
 
   /* 服务端首屏和脚本就绪前，由选中项自己画底色，避免闪烁。 */
@@ -318,7 +381,9 @@
 
   /* 认证页背景里沿轨道运行的行星；减少动态效果时停在原地。 */
   .orbit-planet {
-    animation: orbit-travel 72s linear infinite;
+    @media (prefers-reduced-motion: no-preference) {
+      animation: orbit-travel 72s linear infinite;
+    }
   }
 
   /* 原生日期控件的日历图标跟随主题。 */
@@ -330,5 +395,101 @@
   /* 限制 Markdown 正文的节奏。 */
   .prose-orbit > * + * {
     margin-top: 0.6em;
+  }
+}
+
+/*
+ * 视图过渡（React <ViewTransition>，见 src/components/ui/transitions.tsx）。
+ *
+ * React 只给发生变化的边界命名，页面其余部分保持可交互；这里定义各类边界的动画。
+ * 类名由组件的 enter / exit / update / share 属性写入 view-transition-class。
+ * 不支持视图过渡的浏览器直接更新，没有动画。
+ */
+::view-transition {
+  /* 过渡期间快照浮在页面上方，放行指针事件，未参与过渡的内容照常可点。 */
+  pointer-events: none;
+}
+
+::view-transition-group(*) {
+  animation-duration: var(--duration-spring-smooth);
+  animation-timing-function: var(--ease-spring-smooth);
+}
+
+/* 页面内容：旧内容快速淡出，新内容稍后升起。导航和侧栏在布局里，不参与。 */
+::view-transition-old(.page) {
+  animation: fade-out 90ms var(--ease-in) both;
+}
+::view-transition-new(.page) {
+  animation:
+    fade-in 200ms var(--ease-out) 70ms both,
+    vt-rise var(--duration-spring-smooth) var(--ease-spring-smooth) 70ms both;
+}
+
+/* 同一位置换内容（项目内切换分区、筛选结果）：只交叉淡化，不位移。 */
+::view-transition-old(.swap) {
+  animation: fade-out 90ms var(--ease-in) both;
+}
+::view-transition-new(.swap) {
+  animation: fade-in 180ms var(--ease-out) 60ms both;
+}
+
+/* 列表项：新增的淡入并长出，移除的淡出收缩，留下的滑到新位置。 */
+::view-transition-group(.item) {
+  animation-duration: var(--duration-spring);
+  animation-timing-function: var(--ease-spring);
+}
+::view-transition-new(.item):only-child {
+  animation:
+    fade-in var(--duration-base) var(--ease-out) both,
+    vt-grow var(--duration-spring) var(--ease-spring) both;
+}
+::view-transition-old(.item):only-child {
+  animation: vt-shrink var(--duration-fast) var(--ease-in) both;
+}
+/* 位置变化时两张快照内容相同，直接显示新的，不做交叉淡化，文字不发虚。 */
+::view-transition-old(.item):not(:only-child) {
+  display: none;
+}
+::view-transition-new(.item):not(:only-child) {
+  animation: none;
+}
+
+/* 数字和小标记：原地交叉淡化。 */
+::view-transition-old(.fade),
+::view-transition-new(.fade) {
+  animation-duration: var(--duration-fast);
+}
+
+@keyframes vt-rise {
+  from {
+    translate: 0 10px;
+  }
+}
+@keyframes vt-grow {
+  from {
+    scale: 0.96;
+  }
+}
+@keyframes vt-shrink {
+  to {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* 保留淡入淡出，去掉位移和缩放；位置变化直接到位。 */
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+  }
+  ::view-transition-new(.page),
+  ::view-transition-new(.swap),
+  ::view-transition-new(.item):only-child {
+    animation: fade-in var(--duration-fast) var(--ease-out) both !important;
+  }
+  ::view-transition-old(.page),
+  ::view-transition-old(.swap),
+  ::view-transition-old(.item):only-child {
+    animation: fade-out 120ms var(--ease-in) both !important;
   }
 }

@@ -321,6 +321,10 @@ export function CommentList({
                   setDraft("");
                   setPostError(null);
                 }
+              } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                // Ctrl / ⌘ + Enter 发表；单独的 Enter 仍是换行。
+                e.preventDefault();
+                void handlePost();
               }
             }}
             placeholder="发表评论（纯文本，最多 2000 字符）…"
@@ -331,8 +335,9 @@ export function CommentList({
           />
           {postError && <InlineError>{postError}</InlineError>}
           <div className="mt-2 flex items-center justify-between gap-2">
-            <p className="text-caption text-foreground-muted">
+            <p className="text-caption tabular-nums text-foreground-muted">
               {draft.length}/{BODY_MAX}
+              <span className="ml-2 hidden [@media(hover:hover)]:inline">Ctrl / ⌘ + Enter 发表</span>
             </p>
             <Button
               size="sm"

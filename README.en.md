@@ -63,9 +63,13 @@ Navigation moves to a floating tab bar at the bottom, the board shows one column
   <img src="docs/media/mobile-light.webp" width="960" alt="Orbit on three phones: the workbench, the board with one column showing, and a full-screen task.">
 </picture>
 
+### Motion that shows where things go
+
+Open a task and the panel slides out at once, already filled with what the card showed, while the details load behind it. Change a status and the card glides to its new column. A teammate's change appears within about ten seconds, and it glides too instead of jumping. When you finish something, the check mark is drawn. The curves come from a real spring, and things always leave faster than they arrive.
+
 ### Light and dark
 
-The color scheme follows the system, and body text meets WCAG AA contrast in both. When the system asks for reduced transparency, the glass becomes solid. When it asks for reduced motion, transitions are turned off.
+The color scheme follows the system, and body text meets WCAG AA contrast in both. When the system asks for reduced transparency, the glass becomes solid. When it asks for reduced motion, movement and scaling are turned off and only short fades remain.
 
 <img src="docs/media/themes.webp" width="960" alt="The same board, in light mode at the top left and dark mode at the bottom right.">
 
@@ -85,11 +89,11 @@ The color scheme follows the system, and body text meets WCAG AA contrast in bot
   <tr>
     <td valign="top">
       <strong>Works from the keyboard</strong><br>
-      Dragging, menus, dialogs, and the task panel all work without a mouse, and focus is always visible.
+      Dragging, menus, dialogs, and the task panel all work without a mouse, and focus is always visible. Press <code>/</code> to search and <code>N</code> for a new task.
     </td>
     <td valign="top">
       <strong>Deleting is reversible</strong><br>
-      Deleted tasks go to the trash first. A project can be archived as read-only and restored later.
+      The message shown after deleting a task has an Undo, and the task goes to the trash either way. A project can be archived as read-only and restored later.
     </td>
   </tr>
   <tr>

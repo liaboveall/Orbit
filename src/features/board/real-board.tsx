@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useId, useSyncExternalStore } from "react";
+import { Fragment, memo, useCallback, useState, useRef, useEffect, useId, useLayoutEffect, useMemo, useSyncExternalStore, useTransition, type MouseEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
@@ -13,10 +13,12 @@ import {
   useSensors,
   useDroppable,
   closestCorners,
+  defaultDropAnimationSideEffects,
   type Announcements,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
+  type DropAnimation,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -40,14 +42,18 @@ import {
   type TaskSummaryDTO,
 } from "@/contracts";
 import { Button, IconButton, InlineError, Segments } from "@/components/ui";
+import { ItemTransition } from "@/components/ui/transitions";
+import { useHotkey } from "@/components/ui/use-hotkey";
 import { TaskCreateDialog } from "@/features/tasks/real/task-create-form";
 import { TaskFilters } from "@/features/tasks/real/task-filters";
-import { STATUS_LABEL } from "@/features/tasks/task-meta";
+import { useTaskPanel } from "@/features/tasks/real/task-panel";
+import { STATUS_LABEL, sameTaskSummary } from "@/features/tasks/task-meta";
 import { StatusGlyph } from "@/features/tasks/status-glyph";
-import { useAutoRefresh } from "@/features/tasks/real/use-auto-refresh";
 import { cn } from "@/lib/cn";
 import { loginPathWithReturnTo } from "@/lib/return-to";
+import { adoptSnapshot, initialBoardState, placeTask, settleTask, type BoardState } from "./board-state";
 import { TaskCardFace } from "./task-card-face";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 
 const api = createApiClient();
 const mobileQuery = "(max-width: 767px)";
@@ -60,6 +66,16 @@ const readMobile = () => window.matchMedia(mobileQuery).matches;
 const serverMobile = () => false;
 
 const goToLogin = () => window.location.assign(loginPathWithReturnTo(location.pathname + location.search));
+
+/** 卡片再多，视图过渡要逐张量位置就不划算了；超过这个数量直接更新，不做位置动画。 */
+const ANIMATED_CARD_LIMIT = 160;
+
+/** 落位：浮层滑回卡片的新位置，期间原位保持占位的淡色。 */
+const dropAnimation: DropAnimation = {
+  duration: 280,
+  easing: "cubic-bezier(0.32, 0.72, 0, 1)",
+  sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: "0.35" } } }),
+};
 
 /** 刷新后把每一列补读到刷新前已加载的长度，页面高度和滚动位置保持不变。 */
 async function refillBoard(endpoint: string, query: BoardQueryDTO, first: BoardDTO, previous: BoardDTO, signal?: AbortSignal): Promise<BoardDTO> {
@@ -80,7 +96,7 @@ async function refillBoard(endpoint: string, query: BoardQueryDTO, first: BoardD
   return board;
 }
 
-type MoveTask = (task: TaskSummaryDTO, status: TaskStatus, before: string | null) => Promise<void>;
+type MoveTask = (task: TaskSummaryDTO, status: TaskStatus, before: string | null, options?: { animate?: boolean }) => Promise<void>;
 
 export function RealBoard({
   initial,
@@ -100,33 +116,48 @@ export function RealBoard({
   // dnd-kit 默认用模块级计数器生成无障碍说明的 id，服务端和浏览器数到的值不同。
   const dndId = useId();
   const isMobile = useSyncExternalStore(subscribeMobile, readMobile, serverMobile);
-  useAutoRefresh();
+  const [, startTransition] = useTransition();
   const context = JSON.stringify([project.id, today, query]);
-  const [state, setState] = useState({ source: initial, board: initial, context, previous: initial, refreshing: false });
-  if (state.source !== initial || state.context !== context) setState({ source: initial, board: state.context === context ? state.board : initial, context, previous: state.context === context ? state.board : initial, refreshing: state.context === context });
-  const board = state.source === initial ? state.board : initial;
+  const [state, setState] = useState<BoardState>(() => initialBoardState(initial, context));
   const [busy, setBusy] = useState(false);
+  const [dragging, setDragging] = useState<TaskSummaryDTO | null>(null);
+  // 移动在途或正在拖拽时先不采用同一视图的新快照：它可能读于移动提交之前，
+  // 也不该在手里拖着卡片时重排。操作结束后的下一次渲染再处理。
+  const settled = !busy && dragging === null;
+  if (state.context !== context || (state.source !== initial && settled)) setState(adoptSnapshot(state, initial, context));
+  const board = state.board;
+  const refreshing = state.refill !== null;
   const lock = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const queryKey = JSON.stringify(query);
+  const endpoint = `/projects/${project.id}/board`;
+
   useEffect(() => {
+    if (state.refill === null) return;
     const controller = new AbortController();
-    if (state.refreshing) {
-      void refillBoard(`/projects/${project.id}/board`, JSON.parse(queryKey) as BoardQueryDTO, state.source, state.previous, controller.signal)
-        .then((value) => { if (!controller.signal.aborted) setState((prev) => ({ ...prev, board: value, refreshing: false })); })
-        .catch((reason: unknown) => {
-          if (!controller.signal.aborted) {
-            setState((prev) => ({ ...prev, refreshing: false }));
-            setError(reason instanceof Error ? reason.message : "刷新失败，请重试。");
-          }
-        });
-    }
+    const source = state.source;
+    void refillBoard(endpoint, JSON.parse(queryKey) as BoardQueryDTO, source, state.refill, controller.signal)
+      .then((value) => {
+        if (!controller.signal.aborted) setState((prev) => (prev.source === source ? { ...prev, board: value, refill: null } : prev));
+      })
+      .catch((reason: unknown) => {
+        if (controller.signal.aborted) return;
+        setState((prev) => (prev.source === source ? { ...prev, refill: null } : prev));
+        setError(reason instanceof Error ? reason.message : "刷新失败，请重试。");
+      });
     return () => controller.abort();
-  }, [state.refreshing, state.source, state.previous, project.id, queryKey]);
+  }, [state.refill, state.source, endpoint, queryKey]);
+
+  // 收到过期快照：服务端此刻已有更新的版本，再读一次。
+  useEffect(() => {
+    if (state.stale > 0) startTransition(() => router.refresh());
+  }, [state.stale, state.source, router]);
+
   /** 新建任务对话框：值是新任务的初始状态，null 表示关闭。 */
   const [creating, setCreating] = useState<TaskStatus | null>(null);
-  const [dragging, setDragging] = useState<TaskSummaryDTO | null>(null);
   const [dropTarget, setDropTarget] = useState<{ id: string; status: TaskStatus | null } | null>(null);
+  /** 刚落位的卡片：闪一下，告诉用户它到了哪里。 */
+  const [landed, setLanded] = useState<string | null>(null);
   // 手机用状态 tab 一次看一列，桌面保持三列。
   const [mobileStatus, setMobileStatus] = useState<TaskStatus>(query.status ?? "TODO");
   const selectedStatus = board.columns.some((column) => column.status === mobileStatus) ? mobileStatus : board.columns[0]?.status;
@@ -142,37 +173,50 @@ export function RealBoard({
   );
   const complete = board.columns.length === 3 && board.columns.every((c) => c.nextCursor === null);
   const writable = project.archivedAt === null;
-  const canDrag = writable && !busy && !state.refreshing && !filtered && complete;
+  const canDrag = writable && !busy && !refreshing && !filtered && complete;
+  const cardCount = board.columns.reduce((sum, column) => sum + column.items.length, 0);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
-  function commit(value: BoardDTO) {
-    if (alive.current) setState((prev) => (prev.source === initial ? { ...prev, board: value } : prev));
+  useHotkey("n", () => setCreating("TODO"), writable && creating === null);
+
+  /** 只在视图没变（同一份 source）时写入，过期的异步结果不落到新视图上。 */
+  function commit(change: BoardDTO | ((current: BoardDTO) => BoardDTO), source = state.source) {
+    if (!alive.current) return;
+    setState((prev) =>
+      prev.source === source ? { ...prev, board: typeof change === "function" ? change(prev.board) : change } : prev,
+    );
+  }
+  /** 让服务端组件重读；新快照到达时由上面的 adoptSnapshot 合并进本地状态。 */
+  function refresh() {
+    startTransition(() => router.refresh());
   }
   async function fresh() {
-    const result = await api.get(`/projects/${project.id}/board`, BoardSchema, { query });
+    const source = state.source;
+    const result = await api.get(endpoint, BoardSchema, { query });
     if (!result.ok) {
       if (result.status === 401) goToLogin();
       if (result.status === 404) router.refresh();
       throw new Error(result.error.message);
     }
-    const refreshed = await refillBoard(`/projects/${project.id}/board`, query, result.data, board);
-    commit(refreshed);
+    const refreshed = await refillBoard(endpoint, query, result.data, board);
+    commit(refreshed, source);
     return refreshed;
   }
   async function load(status?: TaskStatus, all = false) {
-    if (lock.current || state.refreshing) return;
+    if (lock.current || refreshing) return;
     lock.current = true;
     setBusy(true);
     setError(null);
+    const source = state.source;
     let next = board;
     try {
       for (const column of board.columns.filter((c) => !status || c.status === status)) {
         let cursor = column.nextCursor;
         while (cursor) {
-          const result = await api.get(`/projects/${project.id}/board`, BoardSchema, {
+          const result = await api.get(endpoint, BoardSchema, {
             query: { ...query, status: column.status, cursor, limit: 100 },
           });
           if (!result.ok) {
@@ -200,7 +244,7 @@ export function RealBoard({
               c.status === column.status ? { ...page, items: [...c.items, ...page.items] } : c,
             ),
           };
-          commit(next);
+          commit(next, source);
           cursor = page.nextCursor;
           if (!all) break;
         }
@@ -212,25 +256,18 @@ export function RealBoard({
       setBusy(false);
     }
   }
-  const move: MoveTask = async (task, status, beforeTaskId) => {
-    if (lock.current || state.refreshing || !writable) return;
+  const move: MoveTask = async (task, status, beforeTaskId, options) => {
+    if (lock.current || refreshing || !writable) return;
     lock.current = true;
     setBusy(true);
     setError(null);
+    const source = state.source;
     const old = board;
+    const placed = placeTask(board, task, status, beforeTaskId);
+    // 拖拽落位由 dnd-kit 负责动画；从状态菜单移动时，卡片经视图过渡滑到目标列。
+    if (options?.animate) startTransition(() => commit(placed, source));
+    else commit(placed, source);
     let rollback = true;
-    const columns = board.columns.map((c) => ({
-      ...c,
-      items: c.items.filter((t) => t.id !== task.id),
-      total: c.total - (c.status === task.status ? 1 : 0),
-    }));
-    const target = columns.find((c) => c.status === status);
-    if (target) {
-      const index = beforeTaskId ? target.items.findIndex((t) => t.id === beforeTaskId) : -1;
-      target.items.splice(index < 0 ? target.items.length : index, 0, { ...task, status });
-      target.total++;
-    }
-    commit({ ...board, columns });
     try {
       const result = await api.post(`/tasks/${task.id}/move`, MoveResultSchema, {
         expectedVersion: task.version,
@@ -239,7 +276,7 @@ export function RealBoard({
         beforeTaskId,
       });
       if (!result.ok) {
-        commit(old);
+        commit(old, source);
         rollback = false;
         if (result.status === 401) {
           goToLogin();
@@ -249,16 +286,33 @@ export function RealBoard({
         throw new Error(result.error.message);
       }
       rollback = false;
-      await fresh();
-      router.refresh();
+      // 响应里就是这张卡片的最新状态和新的看板版本：直接落到本地，不再整板重读。
+      // 之后的后台刷新只负责让服务端组件（和路由缓存）跟上。
+      commit((current) => settleTask(current, result.data.task, result.data.boardVersion), source);
+      setLanded(task.id);
+      refresh();
     } catch (e) {
-      if (rollback) commit(old);
+      if (rollback) commit(old, source);
       setError(e instanceof Error ? e.message : "移动失败，已恢复原顺序，请重试。");
     } finally {
       lock.current = false;
       setBusy(false);
     }
   };
+  // 卡片做了 memo，需要一个引用不变的移动回调；它总是调用最新的 move。
+  // 用布局副作用更新：带视图过渡的提交要等动画结束才执行 useEffect，其间回调会停在上一次
+  // 渲染的闭包上（旧的看板和版本号）。
+  const latestMove = useRef(move);
+  useLayoutEffect(() => {
+    latestMove.current = move;
+  });
+  const stableMove = useCallback<MoveTask>((...args) => latestMove.current(...args), []);
+  useEffect(() => {
+    if (landed === null) return;
+    const timer = setTimeout(() => setLanded(null), 900);
+    return () => clearTimeout(timer);
+  }, [landed]);
+
   function dragEnd(event: DragEndEvent) {
     if (!canDrag || !event.over || event.active.id === event.over.id) return;
     const task = board.columns.flatMap((c) => c.items).find((t) => t.id === event.active.id);
@@ -302,18 +356,19 @@ export function RealBoard({
 
   return (
     <div
-      className="outline-none"
+      className={cn("outline-none", dragging !== null && "select-none")}
       data-project-content
       tabIndex={-1}
       data-task-saving={busy || undefined}
-      data-task-editing={creating !== null || undefined}
+      // 新建对话框打开或正在拖拽时，后台刷新先等一等。
+      data-task-editing={creating !== null || dragging !== null || undefined}
     >
       <TaskFilters
         members={members}
         board
         action={
           writable ? (
-            <Button onClick={() => setCreating("TODO")} className="max-sm:h-11 max-sm:w-11 max-sm:px-0">
+            <Button onClick={() => setCreating("TODO")} aria-keyshortcuts="N" title="新建任务（N）" className="max-sm:h-11 max-sm:w-11 max-sm:px-0">
               <Plus className="h-4 w-4 max-sm:h-5 max-sm:w-5" aria-hidden="true" />
               <span className="max-sm:sr-only">新建任务</span>
             </Button>
@@ -326,10 +381,10 @@ export function RealBoard({
           onOpenChange={(open) => setCreating(open ? "TODO" : null)}
           projectId={project.id}
           defaultStatus={creating ?? "TODO"}
-          onCreated={async () => {
+          onCreated={() => {
+            // 新卡片由刷新后的服务端快照带来，到达时长出来。
             setCreating(null);
-            await fresh();
-            router.refresh();
+            refresh();
           }}
           onUnauthorized={goToLogin}
         />
@@ -397,7 +452,7 @@ export function RealBoard({
               )}
             >
               {STATUS_LABEL[column.status]}
-              <span className="ml-1.5 tabular-nums text-foreground-muted">{column.total}</span>
+              <AnimatedNumber value={column.total} className="ml-1.5 tabular-nums text-foreground-muted" />
             </button>
           );
         })}
@@ -427,7 +482,9 @@ export function RealBoard({
               writable={writable}
               busy={busy}
               today={today}
-              onMove={move}
+              animated={cardCount <= ANIMATED_CARD_LIMIT}
+              landed={landed}
+              onMove={stableMove}
               onLoad={() => void load(column.status)}
               onAdd={() => setCreating(column.status)}
               mobileVisible={column.status === selectedStatus}
@@ -438,9 +495,9 @@ export function RealBoard({
             />
           ))}
         </div>
-        <DragOverlay dropAnimation={{ duration: 260, easing: "cubic-bezier(0.32, 0.72, 0, 1)" }}>
+        <DragOverlay dropAnimation={dropAnimation}>
           {dragging ? (
-            <div data-lens="" className="glass cursor-grabbing rounded-tile p-3">
+            <div data-lens="" className="glass animate-lift cursor-grabbing rounded-tile p-3 shadow-[var(--glass-rim),var(--shadow-drag)]">
               <TaskCardFace
                 task={dragging}
                 today={today}
@@ -461,6 +518,8 @@ function Column({
   writable,
   busy,
   today,
+  animated,
+  landed,
   onMove,
   onLoad,
   onAdd,
@@ -475,6 +534,9 @@ function Column({
   writable: boolean;
   busy: boolean;
   today: string;
+  /** 卡片是否参与视图过渡（数量很大时关闭）。 */
+  animated: boolean;
+  landed: string | null;
   onMove: MoveTask;
   onLoad: () => void;
   onAdd: () => void;
@@ -483,11 +545,37 @@ function Column({
   isMobile: boolean;
   tabPrefix: string;
   isTarget: boolean;
-  /** 跨列拖拽时显示插入线的任务 id。 */
+  /** 跨列拖拽时落点的 id：某张卡片（插在它前面）或本列（放到列尾）。 */
   insertBefore?: string;
 }) {
   const { setNodeRef } = useDroppable({ id: column.status, disabled: !canDrag });
   const label = STATUS_LABEL[column.status];
+  const path = usePathname();
+  const search = useSearchParams();
+  const panel = useTaskPanel();
+  // 顺序没变时保持同一个数组：dnd-kit 的排序上下文不重算，卡片也就不重新渲染。
+  const order = column.items.map((t) => t.id).join(",");
+  const ids = useMemo(() => (order ? order.split(",") : []), [order]);
+  // 详情地址在当前筛选上加 task 参数；它不随「当前打开的是哪一条」变化。
+  const filters = new URLSearchParams(search.toString());
+  filters.delete("task");
+  const hrefBase = `${path}?${filters.size ? `${filters}&` : ""}task=`;
+  const card = (task: TaskSummaryDTO) => (
+    <Card
+      task={task}
+      href={hrefBase + task.id}
+      canDrag={canDrag}
+      writable={writable}
+      busy={busy}
+      today={today}
+      landed={landed === task.id}
+      // 详情面板打开期间，对应的卡片保持可辨识；点击后立刻生效，不等地址更新。
+      open={panel ? panel.activeId === task.id : search.get("task") === task.id}
+      onOpen={panel?.open}
+      onMove={onMove}
+      showInsertLine={insertBefore === task.id}
+    />
+  );
   return (
     <section
       ref={setNodeRef}
@@ -498,7 +586,7 @@ function Column({
       tabIndex={isMobile ? 0 : undefined}
       className={cn(
         "min-h-40 rounded-card bg-surface-tray p-1.5 outline-none shadow-[inset_0_0_0_0.5px_var(--color-line)]",
-        "transition-[background-color,box-shadow] duration-200 ease-standard",
+        "transition-[background-color,box-shadow] duration-300 ease-out",
         isTarget && "bg-brand-soft shadow-[inset_0_0_0_1.5px_var(--color-brand)]",
         mobileVisible ? "" : "hidden md:block",
       )}
@@ -507,7 +595,7 @@ function Column({
         <h2 className="flex min-w-0 flex-1 items-center gap-2 text-label font-semibold max-md:sr-only">
           <StatusGlyph status={column.status} className="h-4 w-4" />
           {label}
-          <span className="font-medium tabular-nums text-foreground-muted">{column.total}</span>
+          <AnimatedNumber value={column.total} className="font-medium tabular-nums text-foreground-muted" />
         </h2>
         {writable ? (
           <IconButton label={`添加到${label}`} size="sm" className="max-md:hidden" onClick={onAdd}>
@@ -517,25 +605,27 @@ function Column({
           <span aria-hidden="true" className="h-8 max-md:hidden" />
         )}
       </div>
-      <SortableContext items={column.items.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
         <div className="space-y-1.5">
-          {column.items.map((task) => (
-            <Card
-              key={task.id}
-              task={task}
-              canDrag={canDrag}
-              writable={writable}
-              busy={busy}
-              today={today}
-              onMove={onMove}
-              showInsertLine={insertBefore === task.id}
-            />
-          ))}
+          {column.items.map((task) =>
+            animated ? (
+              // 具名：任务换列时从旧位置滑到新位置，而不是一边消失一边出现。
+              <ItemTransition key={task.id} name={`task-${task.id}`} move>
+                {card(task)}
+              </ItemTransition>
+            ) : (
+              <Fragment key={task.id}>{card(task)}</Fragment>
+            ),
+          )}
         </div>
       </SortableContext>
       {column.items.length === 0 && (
         <p className="py-10 text-center text-caption text-foreground-muted">暂无任务</p>
       )}
+      {/* 跨列拖到列尾：在最后一张卡片下面画落点。 */}
+      {insertBefore === column.status && column.items.length > 0 ? (
+        <span aria-hidden="true" className="mx-2 mt-1.5 block h-0.5 rounded-full bg-brand" />
+      ) : null}
       {column.nextCursor && (
         <Button className="mt-1.5 w-full" size="sm" variant="ghost" disabled={busy} onClick={onLoad}>
           加载更多（{label}）
@@ -545,31 +635,59 @@ function Column({
   );
 }
 
-function Card({
-  task,
-  canDrag,
-  writable,
-  busy,
-  today,
-  onMove,
-  showInsertLine,
-}: {
+type CardProps = {
   task: TaskSummaryDTO;
+  /** 打开这条任务详情的地址。 */
+  href: string;
   canDrag: boolean;
   writable: boolean;
   busy: boolean;
   today: string;
+  /** 刚刚落到这里：闪一下。 */
+  landed: boolean;
+  /** 详情面板正显示这条任务。 */
+  open: boolean;
+  /** 经面板宿主乐观打开详情；没有宿主时卡片标题就是普通链接。 */
+  onOpen?: (task: TaskSummaryDTO, href: string, event?: MouseEvent) => void;
   onMove: MoveTask;
   showInsertLine: boolean;
-}) {
+};
+
+function sameCard(a: CardProps, b: CardProps): boolean {
+  return (
+    sameTaskSummary(a.task, b.task) &&
+    a.href === b.href &&
+    a.canDrag === b.canDrag &&
+    a.writable === b.writable &&
+    a.busy === b.busy &&
+    a.today === b.today &&
+    a.landed === b.landed &&
+    a.open === b.open &&
+    a.onOpen === b.onOpen &&
+    a.onMove === b.onMove &&
+    a.showInsertLine === b.showInsertLine
+  );
+}
+
+/**
+ * 任务卡。做了 memo：后台刷新带来内容相同的新对象时不重新渲染，
+ * 所以只有真正变化的卡片参与视图过渡。回调由调用方保持引用稳定。
+ */
+const Card = memo(function Card({
+  task,
+  href,
+  canDrag,
+  writable,
+  busy,
+  today,
+  landed,
+  open,
+  onOpen,
+  onMove,
+  showInsertLine,
+}: CardProps) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id, disabled: !canDrag });
-  const path = usePathname();
-  const search = useSearchParams();
-  const target = new URLSearchParams(search.toString());
-  target.set("task", task.id);
-  // 详情面板打开期间，对应的卡片保持可辨识。
-  const open = search.get("task") === task.id;
   return (
     <article
       ref={setNodeRef}
@@ -580,11 +698,17 @@ function Card({
         if (event.pointerType !== "mouse" || (event.target as Element).closest("select, button")) return;
         listeners?.onPointerDown?.(event);
       }}
+      // 点卡片的空白处也打开详情；链接、状态菜单和手柄各做各的事。拖拽结束时的那次点击已被 dnd-kit 拦掉。
+      onClick={(event) => {
+        if (!onOpen || event.defaultPrevented || (event.target as Element).closest("a, select, button")) return;
+        onOpen(task, href);
+      }}
       className={cn(
         "surface-card group relative rounded-tile p-3",
         !isDragging && "lift",
         isDragging && "opacity-35",
-        canDrag && "cursor-grab",
+        onOpen && "cursor-pointer",
+        landed && "animate-landed",
         open && "shadow-[inset_0_0_0_1.5px_var(--color-brand),var(--shadow-card)]",
       )}
     >
@@ -597,14 +721,14 @@ function Card({
         status={
           /* 状态图形本身就是移动菜单：系统原生下拉，读屏和键盘都能用 */
           <span className="relative -m-1.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full transition-colors hover:bg-surface-sunken has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-ring [@media(pointer:coarse)]:-m-3 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11">
-            <StatusGlyph status={task.status} />
+            <StatusGlyph status={task.status} animate={landed} />
             <select
               aria-label={`移动 ${task.identifier}`}
               title={STATUS_LABEL[task.status]}
               className="absolute inset-0 cursor-pointer appearance-none opacity-0 disabled:cursor-default"
               value={task.status}
               disabled={!writable || busy}
-              onChange={(e) => void onMove(task, e.target.value as TaskStatus, null)}
+              onChange={(e) => void onMove(task, e.target.value as TaskStatus, null, { animate: true })}
             >
               {TASK_STATUS.map((status) => (
                 <option key={status} value={status}>
@@ -617,10 +741,11 @@ function Card({
         title={
           <Link
             data-task-link={task.id}
-            href={path + "?" + target.toString()}
+            href={href}
             scroll={false}
             title={task.title}
             draggable={false}
+            onClick={(event) => onOpen?.(task, href, event)}
             className="line-clamp-2 block rounded-[6px] text-label font-medium text-foreground [overflow-wrap:anywhere] hover:text-brand-ink"
           >
             {task.title}
@@ -641,4 +766,4 @@ function Card({
       />
     </article>
   );
-}
+}, sameCard);

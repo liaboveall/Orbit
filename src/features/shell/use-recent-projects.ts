@@ -2,20 +2,30 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createApiClient, ProjectSchema, type ProjectDTO } from "@/contracts";
+import { onWake } from "@/lib/wake";
+import { useShellToken } from "./live";
 
 const api = createApiClient();
 type State = { userId: string; projects: ProjectDTO[]; loading: boolean; error: boolean };
 
+/** 页面保鲜的轮询不可用时的兜底间隔。 */
+const FALLBACK_INTERVAL_MS = 60_000;
+
 /**
- * Instance-local state only; every refresh passes through the authenticated project API.
- * 路由切换不触发重新拉取（OI-24）：新鲜度由 30s 轮询与 focus/visibility 恢复承担；
- * 换账号（userId 变化）或手动重试会重新加载。过期响应经 AbortController 取消，
- * 不产生跨用户缓存。
+ * 侧栏的最近项目。只存在这个组件实例里，每次都经过带鉴权的项目接口读取。
+ *
+ * 读取时机：挂载、换账号、手动重试、窗口重新获得焦点，以及页面保鲜的 shell 令牌变化
+ * （可访问的项目集合或项目资料变了，见 ./live.tsx）。路由切换不重新读取。
+ * 过期的响应经 AbortController 取消，不产生跨用户缓存。
  */
 export function useRecentProjects(userId: string) {
   const [state, setState] = useState<State>({ userId, projects: [], loading: true, error: false });
   const [attempt, setAttempt] = useState(0);
+  const shell = useShellToken();
   const inFlight = useRef<AbortController | undefined>(undefined);
+  /** 当前账号的读取函数；令牌变化和兜底定时器通过它触发同一条读取路径。 */
+  const reload = useRef<(() => void) | undefined>(undefined);
+
   useEffect(() => {
     let disposed = false;
     async function refresh() {
@@ -34,17 +44,33 @@ export function useRecentProjects(userId: string) {
           setState({ userId, projects: [], loading: false, error: true });
       }
     }
-    const onVisible = () => { if (document.visibilityState === "visible") void refresh(); };
+    reload.current = () => void refresh();
     void refresh();
-    const timer = setInterval(onVisible, 30000);
-    window.addEventListener("focus", onVisible);
-    document.addEventListener("visibilitychange", onVisible);
+    const stopWake = onWake(() => void refresh());
     return () => {
-      disposed = true; inFlight.current?.abort(); clearInterval(timer);
-      window.removeEventListener("focus", onVisible);
-      document.removeEventListener("visibilitychange", onVisible);
+      disposed = true; inFlight.current?.abort(); reload.current = undefined;
+      stopWake();
     };
   }, [userId, attempt]);
+
+  // 令牌从一个值变成另一个值才重读；第一次拿到令牌不算变化（挂载时已经读过）。
+  const seenShell = useRef<string | null>(null);
+  useEffect(() => {
+    const previous = seenShell.current;
+    seenShell.current = shell;
+    if (previous !== null && shell !== null && previous !== shell) reload.current?.();
+  }, [shell]);
+
+  // 轮询还没有结果（接口不可用）时才靠定时器。
+  const polling = shell !== null;
+  useEffect(() => {
+    if (polling) return;
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") reload.current?.();
+    }, FALLBACK_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [polling]);
+
   return { ...(state.userId === userId ? state : { projects: [], loading: true, error: false }),
     retry: () => setAttempt(value => value + 1) };
 }

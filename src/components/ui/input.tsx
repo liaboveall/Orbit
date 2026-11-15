@@ -27,9 +27,21 @@ export function Input({ className, type = "text", ...props }: InputProps) {
 
 export type TextareaProps = ComponentProps<"textarea">;
 
-export function Textarea({ className, rows = 4, ...props }: TextareaProps) {
+export function Textarea({ className, rows = 4, style, ...props }: TextareaProps) {
   return (
-    <textarea rows={rows} className={cn(fieldBase, mobileFontBase, "resize-y px-3.5 py-2.5 leading-relaxed", className)} {...props} />
+    <textarea
+      rows={rows}
+      // 支持 field-sizing 的浏览器里随内容增高：rows 折算成最小高度（否则空着时会缩成一行），
+      // max-h 是上限。其余浏览器按 rows 显示，照常可拖拽。
+      style={{ minHeight: `calc(${rows}lh + 1.25rem + 2px)`, ...style }}
+      className={cn(
+        fieldBase,
+        mobileFontBase,
+        "scrollbar-quiet max-h-[60dvh] resize-y px-3.5 py-2.5 leading-relaxed [field-sizing:content]",
+        className,
+      )}
+      {...props}
+    />
   );
 }
 
@@ -74,17 +86,19 @@ export function NativeSelect({ className, wrapperClassName, children, ...props }
 export type SearchFieldProps = Omit<InputProps, "className"> & {
   /** 结果在途时把放大镜换成转圈。 */
   pending?: boolean;
+  /** 聚焦这个搜索框的单键快捷键，空着且未聚焦时显示在右端。按键本身由调用方注册。 */
+  shortcut?: string;
   /** 外层胶囊的样式，控制宽度。 */
   className?: string;
 };
 
 /** 胶囊搜索框。可访问名称由 aria-label 提供。 */
-export function SearchField({ pending = false, className, type = "search", ...props }: SearchFieldProps) {
+export function SearchField({ pending = false, shortcut, className, type = "search", ...props }: SearchFieldProps) {
   return (
     <label
       className={cn(
         pillClass,
-        "relative flex min-w-0 cursor-text items-center pl-9 pr-3.5",
+        "group/search relative flex min-w-0 cursor-text items-center pl-9 pr-3.5",
         "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring",
         className,
       )}
@@ -94,9 +108,19 @@ export function SearchField({ pending = false, className, type = "search", ...pr
       </span>
       <input
         type={type}
-        className="field w-full min-w-0 bg-transparent text-foreground outline-none placeholder:text-foreground-muted [&::-webkit-search-cancel-button]:appearance-none"
+        aria-keyshortcuts={shortcut}
+        className="field peer w-full min-w-0 bg-transparent text-foreground outline-none placeholder:text-foreground-muted [&::-webkit-search-cancel-button]:appearance-none"
         {...props}
       />
+      {shortcut ? (
+        // 只在有实体键盘的设备上、输入框为空且未聚焦时出现。
+        <kbd
+          aria-hidden="true"
+          className="pointer-events-none ml-1.5 hidden h-5 min-w-5 shrink-0 items-center justify-center rounded-[6px] bg-surface-sunken px-1 font-sans text-caption text-foreground-muted peer-placeholder-shown:[@media(hover:hover)]:inline-flex peer-focus:!hidden"
+        >
+          {shortcut}
+        </kbd>
+      ) : null}
     </label>
   );
 }

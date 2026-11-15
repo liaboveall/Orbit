@@ -31,7 +31,8 @@ export function Tooltip({ content, side = "top", children, className, ...trigger
           side={side}
           sideOffset={8}
           className={cn(
-            "z-50 max-w-64 animate-pop-in rounded-full bg-tooltip px-3 py-1.5 text-caption text-tooltip-foreground shadow-[0_8px_24px_-8px_rgb(0_0_0/0.4)] backdrop-blur-md",
+            "z-50 max-w-64 origin-[var(--radix-tooltip-content-transform-origin)] rounded-full bg-tooltip px-3 py-1.5 text-caption text-tooltip-foreground shadow-[0_8px_24px_-8px_rgb(0_0_0/0.4)] backdrop-blur-md",
+            "animate-pop-in data-[state=closed]:animate-pop-out",
             className,
           )}
         >

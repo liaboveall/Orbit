@@ -5,8 +5,11 @@ import { MyTasksList } from "@/features/workbench/task-list";
 import { WorkbenchFilters } from "@/features/workbench/workbench-filters";
 import { WorkbenchStats } from "@/features/workbench/workbench-stats";
 import { requirePageUser } from "@/server/auth/page-session";
+import { readLiveSeed } from "../_live";
 import { DomainError } from "@/server/http/errors";
 import { getOverview, listMyTasks } from "@/server/modules/workbench/service";
+import { PageTransition } from "@/components/ui/transitions";
+import { LiveScope } from "@/features/shell/live";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "我的工作台 · Orbit" };
@@ -38,6 +41,8 @@ export default async function TodayPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const user = await requirePageUser();
+  // 令牌先于数据读取，之后的任何变化都能被轮询发现。
+  const seed = await readLiveSeed();
   const raw = await searchParams;
   const parsed = MyTasksQuerySchema.safeParse(
     Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== undefined)),
@@ -49,15 +54,17 @@ export default async function TodayPage({
   let result;
   try {
     [overview, result] = await Promise.all([
-      getOverview(user.id, now),
-      listMyTasks(user.id, query, now),
+      getOverview(user.id, now, user.timezone),
+      listMyTasks(user.id, query, now, user.timezone),
     ]);
   } catch (error) {
     if (error instanceof DomainError && error.code === "VALIDATION_ERROR") return <InvalidFilters />;
     throw error;
   }
   return (
-    <div className="animate-rise md:pt-3">
+    <PageTransition>
+    <div className="md:pt-3">
+      <LiveScope seed={seed} />
       <PageHeader
         eyebrow={formatToday(overview.today)}
         title="我的工作台"
@@ -73,5 +80,6 @@ export default async function TodayPage({
         today={overview.today}
       />
     </div>
+    </PageTransition>
   );
 }

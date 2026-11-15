@@ -6,6 +6,8 @@ import { dateInTimezone } from "@/lib/calendar";
 import { listMembers } from "@/server/modules/project";
 import { findProjectTask } from "@/server/modules/task";
 import { loadProject } from "../../_data";
+import { PageTransition } from "@/components/ui/transitions";
+import { LiveScope } from "@/features/shell/live";
 
 /**
  * 可直达的任务详情页，与看板的侧面板共用同一个编辑器。
@@ -19,14 +21,16 @@ export const dynamic = "force-dynamic";
 
 export default async function TaskDetailPage({ params }: { params: Promise<{ id: string; taskId: string }> }) {
   const { id, taskId } = await params;
-  const { user, project } = await loadProject(id);
+  const { user, project, seed } = await loadProject(id);
   const [task, members] = await Promise.all([
     findProjectTask(taskId, project.id, user.id),
     listMembers(project.id, user.id),
   ]);
 
   return (
+    <PageTransition variant="swap">
     <div className="mx-auto w-full max-w-3xl">
+      <LiveScope project={project.id} seed={seed} />
       <Link
         href={`/app/projects/${project.id}/board`}
         className="mb-3 inline-flex h-9 items-center gap-0.5 rounded-full pr-3 text-label font-medium text-brand-ink outline-none transition-colors hover:text-brand-hover"
@@ -49,5 +53,6 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
         />
       </div>
     </div>
+    </PageTransition>
   );
 }

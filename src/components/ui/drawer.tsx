@@ -5,6 +5,8 @@ import { X } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { IconButton } from "./button";
+import { overlayClass } from "./dialog";
+import { useOverlayPresence } from "./overlay-presence";
 
 /**
  * Drawer：基于 Radix Dialog 的玻璃面板，复用焦点陷阱、Escape 与焦点恢复。
@@ -23,8 +25,10 @@ export type DrawerContentProps = ComponentProps<typeof DialogPrimitive.Content> 
 };
 
 const sideClass: Record<NonNullable<DrawerContentProps["side"]>, string> = {
-  right: "inset-y-0 right-0 animate-sheet-right sm:inset-y-2.5 sm:right-2.5 sm:rounded-panel",
-  bottom: "inset-x-2 bottom-[max(8px,env(safe-area-inset-bottom))] max-h-[84dvh] animate-sheet-up rounded-panel",
+  right:
+    "inset-y-0 right-0 data-[state=open]:animate-sheet-right data-[state=closed]:animate-sheet-right-out sm:inset-y-2.5 sm:right-2.5 sm:rounded-panel",
+  bottom:
+    "inset-x-2 bottom-[max(8px,env(safe-area-inset-bottom))] max-h-[84dvh] rounded-panel data-[state=open]:animate-sheet-up data-[state=closed]:animate-sheet-up-out",
 };
 
 export function DrawerContent({
@@ -37,11 +41,12 @@ export function DrawerContent({
 }: DrawerContentProps) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-40 animate-fade-in bg-overlay" />
+      <DialogPrimitive.Overlay className={overlayClass} />
       <DialogPrimitive.Content
         className={cn("glass-thick fixed z-50 flex flex-col", sideClass[side], className)}
         {...props}
       >
+        <OverlayPresence />
         {showCloseButton ? (
           <DialogPrimitive.Close asChild>
             <IconButton label={closeLabel} size="sm" className="absolute right-3.5 top-3.5 z-10 bg-surface-sunken">
@@ -53,6 +58,12 @@ export function DrawerContent({
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
   );
+}
+
+/** 只在抽屉内容挂载期间存在：让下面的列表知道此刻有弹层盖着。 */
+function OverlayPresence() {
+  useOverlayPresence();
+  return null;
 }
 
 export function DrawerTitle({ className, ...props }: ComponentProps<typeof DialogPrimitive.Title>) {

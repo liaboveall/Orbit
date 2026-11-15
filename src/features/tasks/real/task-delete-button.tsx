@@ -35,6 +35,7 @@ import { Spinner } from "@/components/ui/spinner";
  */
 
 import type { TaskMutation } from "./use-task-mutation";
+import { useUndoDelete } from "./use-undo-delete";
 
 const api = createApiClient();
 
@@ -49,6 +50,7 @@ export type TaskDeleteButtonProps = {
 export function TaskDeleteButton({ task, onUnauthorized, mutation }: TaskDeleteButtonProps) {
   const { pending } = mutation;
   const { toast } = useToast();
+  const announceDeleted = useUndoDelete();
   const [open, setOpen] = useState(false);
 
   async function handleDelete(): Promise<void> {
@@ -59,11 +61,7 @@ export function TaskDeleteButton({ task, onUnauthorized, mutation }: TaskDeleteB
       });
       if (result.ok) {
         setOpen(false);
-        toast({
-          title: "任务已移入回收站",
-          description: `${task.identifier} · 可在项目回收站中恢复`,
-          variant: "success",
-        });
+        announceDeleted(result.data, task.identifier);
         mutation.refresh();
         return;
       }

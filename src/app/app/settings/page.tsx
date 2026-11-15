@@ -7,6 +7,7 @@ import { loginPathWithReturnTo } from "@/lib/return-to";
 import { requirePageUser } from "@/server/auth/page-session";
 import { DomainError } from "@/server/http/errors";
 import { readUserById } from "@/server/me/read-user";
+import { PageTransition } from "@/components/ui/transitions";
 
 /**
  * /app/settings —— 个人设置（M1 / ORB-006）。
@@ -43,6 +44,7 @@ export default async function SettingsPage() {
   }
 
   return (
+    <PageTransition>
     <div className="w-full max-w-5xl pt-2 md:pt-5">
       <PageHeader
         title="个人设置"
@@ -51,5 +53,6 @@ export default async function SettingsPage() {
 
       <SettingsForm user={user} />
     </div>
+    </PageTransition>
   );
 }

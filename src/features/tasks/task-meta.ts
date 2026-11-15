@@ -1,4 +1,4 @@
-import type { TaskPriority, TaskStatus } from "@/contracts";
+import type { TaskPriority, TaskStatus, TaskSummaryDTO } from "@/contracts";
 
 /**
  * 任务展示用的纯工具：状态和优先级的中文标签、看板列顺序、截止日相对「今天」的语义。
@@ -61,6 +61,31 @@ export function getDueMeta(dueDate: string | null, today: string, status: TaskSt
   if (diff === 0) return { tone: "today", short, overdue: false, label: `今天截止（${dueDate}）` };
   if (diff <= 7) return { tone: "soon", short, overdue: false, label: `${diff} 天后截止（${dueDate}）` };
   return { tone: "later", short, overdue: false, label: `截止 ${dueDate}` };
+}
+
+/**
+ * 两份任务摘要在界面上是否等价。后台刷新每次都带来新的对象，内容通常没变；
+ * 列表行用它做 memo 比较，没变的行不重新渲染，也就不参与视图过渡。
+ */
+export function sameTaskSummary(a: TaskSummaryDTO, b: TaskSummaryDTO): boolean {
+  return (
+    a === b ||
+    (a.id === b.id &&
+      a.version === b.version &&
+      a.updatedAt === b.updatedAt &&
+      a.identifier === b.identifier &&
+      a.title === b.title &&
+      a.status === b.status &&
+      a.priority === b.priority &&
+      a.dueDate === b.dueDate &&
+      a.assignee?.id === b.assignee?.id &&
+      a.assignee?.name === b.assignee?.name &&
+      a.creator.id === b.creator.id &&
+      a.subtaskTotal === b.subtaskTotal &&
+      a.subtaskCompleted === b.subtaskCompleted &&
+      a.commentCount === b.commentCount &&
+      a.attachmentCount === b.attachmentCount)
+  );
 }
 
 /** 字节数格式化为可读大小（附件行用）。 */

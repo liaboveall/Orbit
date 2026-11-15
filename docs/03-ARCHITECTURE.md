@@ -10,7 +10,7 @@
 | Web | Next.js 16 App Router + 配套 React 稳定版 | public 页面/外壳服务端渲染，交互局部 client |
 | Language | TypeScript strict | DTO 显式定义，不泄露 ORM 对象 |
 | UI | Tailwind CSS、Radix primitives、Lucide | 以 tokens 为视觉源；只选一种组件原语体系 |
-| Client data | RSC + createApiClient / API 直调 | 服务器组件直查为数据真源；写操作后 router.refresh()；分页用请求代次绑定防旧响应污染；筛选在 URL；草稿在局部状态，任务标题/描述另按用户在本机持久化以便恢复（生命周期见 §6） |
+| Client data | RSC + createApiClient / API 直调 | 服务器组件直查为数据真源；写操作后 router.refresh()；页面保鲜靠变更令牌轮询，变了才重读；分页用请求代次绑定防旧响应污染；筛选在 URL；草稿在局部状态，任务标题/描述另按用户在本机持久化以便恢复（生命周期见 §6） |
 | Forms | React state + Zod 契约 schema | 当前未引入 React Hook Form；与 API 校验共享限制，服务端仍重新校验 |
 | Drag | @dnd-kit/core + sortable，选兼容版本 | 键盘/菜单替代、失败回滚 |
 | Persistence | PostgreSQL 17 + Prisma 7 + PostgreSQL adapter | SQL 迁移补充 ORM 不支持的约束 |
@@ -62,7 +62,9 @@ tests/            单元、契约、集成和浏览器测试
 
 业务 API：请求 ID → 验证 Origin/Content-Type/大小/限流 → 会话检查 → schema 校验 → 确定所属项目 → 领域服务内再次授权 → 事务 → DTO → 统一响应。
 
-项目写操作统一在短事务里锁定 Project 行，重新检查 archived 状态与成员权限，再修改资源。统一锁顺序 User（仅影响owner项目配额的创建/归档/恢复）→ Project → Task → 子资源，避免配额、成员退出与任务分配竞争。普通任务写无需User锁。V1 的人数/规模下接受同项目写操作串行化，优先正确性；不同项目仍可并发。不得在持锁期间请求 SMTP、S3 或 AI。
+项目写操作统一在短事务里锁定 Project 行（FOR NO KEY UPDATE，见 04 §4），重新检查 archived 状态与成员权限，再修改资源。统一锁顺序 User（仅影响owner项目配额的创建/归档/恢复）→ Project → Task → 子资源，避免配额、成员退出与任务分配竞争。普通任务写无需User锁。V1 的人数/规模下接受同项目写操作串行化，优先正确性；不同项目仍可并发。不得在持锁期间请求 SMTP、S3 或 AI。
+
+每个请求的数据库往返数是有意控制的：Prisma 的关联查询每个关联各发一条语句，交互式事务里的语句又逐条排队，所以热路径把「授权 + 数据」写成一条语句（项目读取、成员名单、任务宿主解析、看板），任务列表用一条语句补齐整页的姓名与计数，写事务把活动日志、Project.revision、boardVersion 与父任务 updatedAt 合进同一条语句。看板读取由二十多条降到两条，移动任务由二十余条降到九条。
 
 业务失败抛领域错误，HTTP 层负责映射；不把 SQL 错误、堆栈或第三方响应直接返回用户。Server Components 可直接调用同一授权查询服务，不通过服务器 HTTP 绕一圈，也不能跳过权限。
 
@@ -84,6 +86,14 @@ V1 不引入数据库 RLS；所有查询必须经过项目授权服务，并用�
 
 分页/无限滚动使用**请求代次绑定**（`generationRef`，见 `src/features/activity/ActivityFeed.tsx`、`src/features/projects/project-list-client.tsx`）：每次首屏重置或卸载递增代次，仍在飞行的旧响应落地时发现代次不匹配即整体丢弃，防止旧上下文响应污染新数据。dedupe-by-id 不足以防护来自不同筛选上下文的旧响应，故以代次为准。
 
+**页面保鲜**（`src/features/shell/live.tsx`、`src/app/app/_live.ts`）。一个标签页只有一个轮询：约每 10 秒请求 `GET /api/v1/my/pulse`，带 `If-None-Match`，没有变化时是空的 304。响应为当前用户可访问的每个项目各给一个变更令牌（任何成员可见的写入都会改变它，见 05 §6）。页面由服务端渲染时，在读取本页数据**之前**取一次令牌并随页面下发（`<LiveScope seed>`）；之后轮询到的令牌与它不同，就说明页面上的数据过期了，调用一次 `router.refresh()`，新的渲染带回新的令牌。令牌先于数据，所以不会漏掉渲染之后、第一次轮询之前的写入，最多多刷新一次。项目页只比较自己项目的令牌，工作台和项目列表比较总令牌；侧栏的最近项目在 shell 令牌变化时重读。子任务、评论、附件列表以父任务的 updatedAt 为版本，随任务数据的更新重读，不再各自定时轮询。
+
+兜底保留三条：窗口重新获得焦点或标签页重新可见时无条件重读一次；每 5 分钟无条件重读一次；轮询连续失败时退回每 30 秒重读。正在编辑、保存或拖拽时（`data-task-editing` / `data-task-saving`）不重读，稍后再试。这取代了原来「每 30 秒整页重读 + 每个子列表各自 30 秒轮询 + 侧栏 30 秒轮询」的做法：空闲时每次检查是一条 SQL，变化的传播从最多 30 秒缩短到约 10 秒。
+
+**任务面板**（`src/features/tasks/real/task-panel.tsx`）。地址里的 `?task=` 仍是唯一真源，任务数据仍由服务端页面读取。打开和关闭都是一次路由 Transition，等待期间用 `useOptimistic` 先把面板切到目标状态：打开时立刻显示卡片上已有的摘要，数据到达后换成编辑器；关闭时立刻收起。导航失败时乐观状态自动回到地址对应的状态，客户端不维护第二份任务数据。
+
+**看板的本地状态**（`src/features/board/board-state.ts`）。看板在服务端快照之上保留一份本地状态，用于乐观移动和已加载的更多分页。移动成功后直接用响应里的任务和新的 boardVersion 更新本地状态，不再整板重读；随后的后台刷新只让服务端组件和路由缓存跟上。boardVersion 只增不减：比本地还旧的快照（在途刷新早于刚完成的移动）不采用，再读一次；移动在途或正在拖拽时，同一视图的新快照等操作结束后再采用。任务卡做了 memo，内容没变就不重新渲染，所以只有真正变化的卡片参与视图过渡（02 §9）。
+
 草稿、弹窗、拖拽状态留在局部 React state；V1 不引入全局 Redux/Zustand。例外是任务标题/描述草稿：按 `orbit:draft:<userId>:<projectId>:<taskId>` 存于 localStorage 7 天，仅用于刷新、崩溃或会话过期后的恢复；恢复时所有待提交字段以编辑态可见，确认放弃/离开、保存成功、成功退出登录、换账号或失去项目访问时删除（`src/features/tasks/draft-storage.ts`）。评论、子任务草稿只在内存。打开中的任务被他人删除后，面板与独立页保留最后一次内容和草稿并切换为只读提示，不因后台刷新卸载编辑器。列表筛选、视图和打开任务 ID 在 URL 中；不把描述、评论、凭证写 URL。加载态用 skeleton，与过期（stale）内容区分。
 
 ## 7. 附件流程
@@ -103,16 +113,16 @@ V1 不引入数据库 RLS；所有查询必须经过项目授权服务，并用�
 
 SMTP 每次发送使用独立可取消连接，TCP/greeting/空闲预算分别 10/10/15 秒，发送总预算 20 秒。总预算到期关闭真实 socket，不能只让 Promise 超时；保留 implicit TLS、生产强制 STARTTLS 和证书校验。同 env 并发发送互不取消。实现对照 [Nodemailer socket 选项](https://nodemailer.com/extras/smtp-connection) 与锁定版本源码。
 
-附件下载获取响应头预算 10 秒，整个响应流预算 120 秒；成功、截断、客户端取消及超时均释放计时器/监听。按存储声明长度检查实际字节，流开始后只结束流并留脱敏事件，不伪造新的 JSON 错误响应。
+附件下载获取响应头预算 10 秒，整个响应流预算 120 秒；成功、截断、客户端取消及超时均释放计时器/监听。按存储声明长度检查实际字节，流开始后只结束流并留脱敏事件，不伪造新的 JSON 错误响应。存储客户端另设 5 秒建连超时，失败最多重试一次。
 
-结构化日志分层：Nginx 安全访问日志记录 requestId、固定标签 route/method、status、bytes、durationSeconds，不记录路径、查询或 Referer，避免路径令牌泄露；代理覆盖 X-Request-Id 后传入应用用于关联。应用记录脱敏 errorClass/errorCode 和认证邮件事件，LOG_LEVEL 控制 debug/info/warn/error。业务 userId/projectId 仅在事件明确需要且完成授权后选取，禁止复制请求或错误原文。
+结构化日志分层：Nginx 安全访问日志记录 requestId、固定标签 route/method、status、bytes、durationSeconds，不记录路径、查询或 Referer，避免路径令牌泄露；代理覆盖 X-Request-Id 后传入应用用于关联。应用记录脱敏 errorClass/errorCode 和认证邮件事件，LOG_LEVEL 控制 debug/info/warn/error。业务 userId/projectId 仅在事件明确需要且完成授权后选取，禁止复制请求或错误原文。页面渲染等未被路由处理器捕获的服务端错误经 `onRequestError` 记一条 request_error 事件：固定的路由模式（不是实际路径）、方法、requestId、错误类别和用户错误页上的 digest，不含消息与堆栈。
 
-staging/production 使用 PostgreSQL 共享原子固定窗口限流：业务写 60 次/用户/分钟、GET 读取 300 次/用户/分钟、邀请预览/接受合计 20 次/IP/分钟；认证使用 Better Auth 的 customStorage.consume，并保持敏感端点原阈值。上传采用数据库滑动分钟 10 次和最多 2 个跨副本活跃租约（180 秒，覆盖 120 秒请求截止）；development/test 保留内存实现，真实双池并发测试直接验证共享实现。只信任 TRUSTED_PROXY_COUNT 指定代理链，默认 0 退化共享来源桶。细节与维护见 [部署与恢复](OCI-DEPLOYMENT.md)。
+staging/production 使用 PostgreSQL 共享原子固定窗口限流：业务写 60 次/用户/分钟、GET 读取 300 次/用户/分钟、邀请预览/接受合计 20 次/IP/分钟；认证使用 Better Auth 的 customStorage.consume，并保持敏感端点原阈值。上传采用数据库滑动分钟 10 次和最多 2 个跨副本活跃租约（180 秒，覆盖 120 秒请求截止）；development/test 保留内存实现，真实双池并发测试直接验证共享实现。只信任 TRUSTED_PROXY_COUNT 指定代理链，默认 0 退化共享来源桶。限流计数表不写 WAL（04 §3），读取不再等待刷盘。细节与维护见 [部署与恢复](OCI-DEPLOYMENT.md)。
 
 服务端页面与 API 共用每用户读取额度：每个完整页面请求（首屏、客户端导航、刷新）在读取数据前计 1 次，同一请求的布局与页面只计一次；链接预取只渲染到布局、不执行页面，因此不计费（2026-09-24 实测预取载荷不含页面数据）。超额时跳转 /rate-limited 说明页，显示等待秒数并保留原地址。
 
 注册、重发验证邮件、找回密码等匿名认证入口不在请求内等待 SMTP：发信 hook 立即返回，投递经 Next `after()` 在响应结束后执行（有界并发，积压上限后丢弃并记录 auth_email_dropped），投递失败只写脱敏 auth_email_failed，不改变匿名响应的状态、正文与耗时。进程被强制终止时尚未发出的认证邮件可能丢失，用户可重新发送。
 
-连接池饱和时 Prisma 交互式事务在 maxWait（2 秒）内无法开始会抛出特定 P2028，与 pg-pool 等待超时一样映射为 503 SERVICE_UNAVAILABLE；其余 P2028 仍按 500 上报。
+连接池饱和时 Prisma 交互式事务在 maxWait（2 秒）内无法开始会抛出特定 P2028，与 pg-pool 等待超时一样映射为 503 SERVICE_UNAVAILABLE；其余 P2028 仍按 500 上报。应用连接另设 idle_in_transaction_session_timeout=15 秒：事务打开却没有语句在执行时由数据库终止会话并释放行锁，兜住进程卡死遗留的持锁事务。
 
-健康检查 /health/live 验证进程；/health/ready 核对构建时生成的迁移名称/checksum/成功状态及所有业务列的存在、类型和可空性，拒绝失败迁移与不兼容结构。检查范围有界，不读取用户行；不是完整索引/约束审计（发布仍运行迁移历史检查）。邮件/存储故障只影响对应操作，不使整个看板不可用；响应不暴露内部信息。
+健康检查 /health/live 验证进程；/health/ready 核对构建时生成的迁移名称/checksum/成功状态及所有业务列的存在、类型和可空性，拒绝失败迁移与不兼容结构。检查范围有界，不读取用户行；不是完整索引/约束审计（发布仍运行迁移历史检查）。结构只会随迁移改变，所以完整核对在进程启动、任何一次失败之后以及每 5 分钟执行一次，其间每次探测只做一条连通性查询：容器健康检查每 30 秒探测一次，数据库中断仍在下一次探测被发现。邮件/存储故障只影响对应操作，不使整个看板不可用；响应不暴露内部信息。

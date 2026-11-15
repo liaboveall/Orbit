@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SectionHeader } from "@/components/ui/page-header";
 import { ProjectSettingsForm } from "@/features/projects/project-settings-form";
 import { loadProject } from "../_data";
+import { PageTransition } from "@/components/ui/transitions";
 
 /**
  * 项目设置。所有者可以修改资料和归档；其他成员只读查看项目资料，
@@ -16,6 +17,7 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
   const isOwner = project.role === "OWNER";
 
   return (
+    <PageTransition variant="swap">
     <div className="mx-auto w-full max-w-3xl">
       <SectionHeader
         title="项目设置"
@@ -39,5 +41,6 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
         </dl>
       )}
     </div>
+    </PageTransition>
   );
 }

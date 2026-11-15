@@ -10,7 +10,8 @@ export const DropdownMenu = DropdownMenuPrimitive.Root;
 export const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 
 /** 菜单和下拉列表共用的浮层与选项外观。 */
-export const menuSurface = "glass-menu z-50 animate-pop-in rounded-card p-1.5";
+export const menuSurface =
+  "glass-menu z-50 rounded-card p-1.5 data-[state=open]:animate-pop-in data-[state=closed]:animate-pop-out";
 export const menuItem =
   "flex min-h-11 cursor-pointer select-none items-center gap-2.5 rounded-item px-3 text-label text-foreground outline-none sm:min-h-9 " +
   "transition-colors duration-100 data-[highlighted]:bg-surface-sunken " +

@@ -198,7 +198,7 @@ export function CommentItem({
 
   if (unavailable && !editing) return null;
   return (
-    <li className="group/comment relative flex items-start gap-2.5 rounded-control px-2.5 py-2.5 transition-colors hover:bg-surface-sunken">
+    <li className="enter-rise group/comment relative flex items-start gap-2.5 rounded-control px-2.5 py-2.5 hover:bg-surface-sunken">
       <Avatar name={comment.author.name} size="sm" />
 
       <div className="min-w-0 flex-1 space-y-1">

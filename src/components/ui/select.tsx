@@ -43,7 +43,7 @@ export function SelectContent({
         data-lens=""
         position={position}
         sideOffset={sideOffset}
-        className={cn(menuSurface, "min-w-[var(--radix-select-trigger-width)]", className)}
+        className={cn(menuSurface, "min-w-[var(--radix-select-trigger-width)] origin-[var(--radix-select-content-transform-origin)]", className)}
         {...props}
       >
         <SelectPrimitive.Viewport>{children}</SelectPrimitive.Viewport>

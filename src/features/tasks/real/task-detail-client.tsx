@@ -3,7 +3,6 @@
 import { useState } from "react";
 import type { TaskDTO, MemberDTO } from "@/contracts";
 import { TaskEditor } from "./task-editor";
-import { useAutoRefresh } from "./use-auto-refresh";
 
 /**
  * 独立任务详情页的编辑器外壳。
@@ -29,7 +28,6 @@ export function TaskDetailClient({
   isProjectOwner: boolean;
   members: MemberDTO[];
 }) {
-  useAutoRefresh();
   const [lastTask, setLastTask] = useState(taskDetail);
   if (taskDetail !== null && taskDetail !== lastTask) setLastTask(taskDetail);
   const shown = taskDetail ?? lastTask;

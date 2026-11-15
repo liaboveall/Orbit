@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AlarmClock, CalendarDays, CircleDot, Inbox, Sun, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { MyTasksQueryDTO, OverviewDTO } from "@/contracts";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 
 /**
  * 工作台的分类磁贴：每一格既是数字，也是筛选入口。
@@ -37,7 +38,7 @@ export function WorkbenchStats({
                 href={"/app/today?" + bucketQuery(query, bucket).toString()}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "surface-card flex h-full flex-col gap-3 rounded-card p-3.5 outline-none active:scale-[0.98]",
+                  "surface-card flex h-full flex-col gap-3 rounded-card p-3.5 outline-none press [--press-scale:0.98]",
                   active
                     ? "bg-surface-solid shadow-[inset_0_0_0_1.5px_var(--color-brand),var(--shadow-card)]"
                     : "lift",
@@ -53,9 +54,10 @@ export function WorkbenchStats({
                   >
                     <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />
                   </span>
-                  <span className="text-[28px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-foreground">
-                    {count}
-                  </span>
+                  <AnimatedNumber
+                    value={count}
+                    className="text-[28px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-foreground"
+                  />
                 </span>
                 <span className="text-label font-medium text-foreground-secondary">{label}</span>
               </Link>

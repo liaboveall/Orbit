@@ -101,34 +101,114 @@
   --shadow-overlay: 0 2px 6px rgb(0 0 0 / 0.05), 0 32px 80px -20px rgb(10 20 50 / 0.36);
   --shadow-drag: 0 6px 14px rgb(0 0 0 / 0.08), 0 30px 60px -16px rgb(10 20 50 / 0.4);
 
+  /*
+   * 动效（规则见 docs/02 §2）。缓动分三类：
+   *   ease-out / ease-in   入场减速、退场加速，用于透明度和颜色
+   *   ease-fluid           长距离位移（抽屉、选中滴）
+   *   ease-spring*         弹簧：由阻尼谐振子采样生成的 linear()，时长取其稳定时间。
+   *                        只用在位移和缩放上；透明度不用会过冲的曲线。
+   * 弹簧参数（感知时长 / 回弹）：smooth 0.32s / 0，snappy 0.30s / 0.16，bouncy 0.34s / 0.32。
+   */
   --ease-standard: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.4, 0, 0.9, 0.4);
   --ease-fluid: cubic-bezier(0.32, 0.72, 0, 1);
-  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-spring-smooth: linear(0, 0.004 1%, 0.02 2.3%, 0.044 3.5%, 0.082 5%, 0.158 7.5%, 0.363 13.5%, 0.46 16.5%, 0.555 19.8%, 0.637 23%, 0.707 26.3%, 0.77 29.8%, 0.82 33.3%, 0.863 37%, 0.902 41.5%, 0.931 46.3%, 0.955 51.7%, 0.973 58%, 0.984 65%, 0.992 73.3%, 1);
+  --ease-spring: linear(0, 0.006 1.3%, 0.026 2.8%, 0.057 4.3%, 0.096 5.8%, 0.192 8.8%, 0.416 15%, 0.517 18%, 0.617 21.3%, 0.703 24.5%, 0.77 27.5%, 0.831 30.8%, 0.879 34%, 0.919 37.5%, 0.951 41.3%, 0.975 45.5%, 0.992 50%, 1.002 55.3%, 1.008 66.8%, 1);
+  --ease-spring-bouncy: linear(0, 0.008 1.3%, 0.031 2.5%, 0.065 3.8%, 0.118 5.3%, 0.226 7.8%, 0.48 13%, 0.595 15.5%, 0.709 18.3%, 0.798 20.8%, 0.871 23.3%, 0.93 25.8%, 0.979 28.5%, 1.014 31.3%, 1.033 33.5%, 1.045 35.8%, 1.052 38.3%, 1.054 41%, 1.048 46%, 1.013 60.3%, 1.002 68.3%, 0.997 79.8%, 1);
 
-  --animate-fade-in: fade-in 200ms var(--ease-standard);
-  --animate-dialog-in: dialog-in 320ms var(--ease-fluid);
-  --animate-sheet-right: sheet-right 420ms var(--ease-fluid);
-  --animate-sheet-up: sheet-up 420ms var(--ease-fluid);
-  --animate-pop-in: pop-in 240ms var(--ease-fluid);
-  --animate-rise: rise 480ms var(--ease-fluid) both;
+  /* 时长：弹簧三档与各自曲线的稳定时间配对；退场明显快于入场。 */
+  --duration-instant: 100ms;
+  --duration-fast: 160ms;
+  --duration-base: 220ms;
+  --duration-spring: 420ms;
+  --duration-spring-smooth: 480ms;
+  --duration-spring-bouncy: 570ms;
+
+  /*
+   * 入场与退场成对出现。退场只用一个关键帧动画：Radix 在第一个 animationend 时卸载，
+   * 多个不同时长的动画会让元素提前消失；`both` 让它停在终点，卸载前不闪回原样。
+   */
+  --animate-fade-in: fade-in var(--duration-base) var(--ease-out) both;
+  --animate-fade-out: fade-out var(--duration-fast) var(--ease-in) both;
+  --animate-dialog-in: scale-in var(--duration-spring) var(--ease-spring) both, fade-in var(--duration-fast) var(--ease-out) both;
+  --animate-dialog-out: scale-out var(--duration-fast) var(--ease-in) both;
+  --animate-sheet-right: sheet-right var(--duration-spring-smooth) var(--ease-spring-smooth) both;
+  --animate-sheet-right-out: sheet-right-out var(--duration-base) var(--ease-in) both;
+  --animate-sheet-up: sheet-up var(--duration-spring-smooth) var(--ease-spring-smooth) both;
+  --animate-sheet-up-out: sheet-up-out var(--duration-base) var(--ease-in) both;
+  --animate-pop-in: pop-in var(--duration-spring) var(--ease-spring) both, fade-in var(--duration-instant) var(--ease-out) both;
+  --animate-pop-out: pop-out 120ms var(--ease-in) both;
+  --animate-toast-in: toast-in var(--duration-spring-bouncy) var(--ease-spring-bouncy) both, fade-in var(--duration-fast) var(--ease-out) both;
+  --animate-toast-out: toast-out var(--duration-fast) var(--ease-in) both;
+  --animate-toast-swipe-out: toast-swipe-out var(--duration-fast) var(--ease-out) both;
+  --animate-rise: rise var(--duration-spring-smooth) var(--ease-spring-smooth) both;
+  --animate-shimmer: shimmer 1.6s var(--ease-standard) infinite;
+  --animate-check-pop: check-pop var(--duration-spring-bouncy) var(--ease-spring-bouncy) both;
+  --animate-check-draw: check-draw 260ms var(--ease-out) 60ms both;
+  --animate-lift: lift var(--duration-spring) var(--ease-spring) both;
+  --animate-landed: landed 700ms var(--ease-out) both;
 
   @keyframes fade-in {
     from { opacity: 0; }
   }
-  @keyframes dialog-in {
-    from { opacity: 0; transform: scale(0.92); filter: blur(6px); }
+  @keyframes fade-out {
+    to { opacity: 0; }
+  }
+  @keyframes scale-in {
+    from { transform: scale(0.94); filter: blur(6px); }
+  }
+  @keyframes scale-out {
+    to { opacity: 0; transform: scale(0.97); }
   }
   @keyframes sheet-right {
     from { transform: translateX(calc(100% + 16px)); }
   }
+  @keyframes sheet-right-out {
+    to { transform: translateX(calc(100% + 16px)); }
+  }
   @keyframes sheet-up {
     from { transform: translateY(calc(100% + 16px)); }
   }
+  @keyframes sheet-up-out {
+    to { transform: translateY(calc(100% + 16px)); }
+  }
   @keyframes pop-in {
-    from { opacity: 0; transform: scale(0.9); filter: blur(4px); }
+    from { transform: scale(0.92); }
+  }
+  @keyframes pop-out {
+    to { opacity: 0; transform: scale(0.96); }
+  }
+  @keyframes toast-in {
+    from { transform: translateY(16px) scale(0.94); }
+  }
+  @keyframes toast-out {
+    to { opacity: 0; transform: scale(0.94); }
+  }
+  @keyframes toast-swipe-out {
+    from { transform: translateX(var(--radix-toast-swipe-end-x)); }
+    to { opacity: 0; transform: translateX(calc(100% + 24px)); }
   }
   @keyframes rise {
     from { opacity: 0; transform: translateY(12px); }
+  }
+  @keyframes shimmer {
+    from { background-position: 150% 0; }
+    to { background-position: -50% 0; }
+  }
+  @keyframes check-pop {
+    from { transform: scale(0.6); }
+  }
+  @keyframes lift {
+    to { transform: scale(1.02); }
+  }
+  @keyframes landed {
+    from { outline: 2px solid color-mix(in srgb, var(--color-brand) 85%, transparent); outline-offset: 0; }
+    to { outline: 2px solid transparent; outline-offset: 4px; }
+  }
+  @keyframes check-draw {
+    from { stroke-dashoffset: var(--check-length, 24); }
+    to { stroke-dashoffset: 0; }
   }
 }
 
@@ -224,25 +304,68 @@
       radial-gradient(48vmax 40vmax at -6% 102%, var(--aurora-4), transparent 66%);
   }
 
+  /* 标题各行长度均衡，正文避免最后一行只剩一两个字；不支持的浏览器按普通方式折行。 */
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p,
+  li,
+  dd {
+    text-wrap: pretty;
+  }
+
   ::selection {
     background-color: color-mix(in srgb, var(--color-brand) 28%, transparent);
   }
 
+  /*
+   * 减少动态效果：去掉位移、缩放和模糊，保留短促的淡入淡出，状态变化仍然看得见。
+   * 逐个覆盖动画变量，不用「所有动画 0.01ms」的全局规则（那会让元素直接跳变，
+   * 也会连颜色过渡一起关掉）。持续循环的动画停在静止帧。
+   */
   @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-      scroll-behavior: auto !important;
+    :root {
+      --animate-dialog-in: fade-in var(--duration-fast) var(--ease-out) both;
+      --animate-dialog-out: fade-out 120ms var(--ease-in) both;
+      --animate-sheet-right: fade-in var(--duration-fast) var(--ease-out) both;
+      --animate-sheet-right-out: fade-out 120ms var(--ease-in) both;
+      --animate-sheet-up: fade-in var(--duration-fast) var(--ease-out) both;
+      --animate-sheet-up-out: fade-out 120ms var(--ease-in) both;
+      --animate-pop-in: fade-in var(--duration-instant) var(--ease-out) both;
+      --animate-pop-out: fade-out var(--duration-instant) var(--ease-in) both;
+      --animate-toast-in: fade-in var(--duration-fast) var(--ease-out) both;
+      --animate-toast-out: fade-out 120ms var(--ease-in) both;
+      --animate-toast-swipe-out: fade-out 120ms var(--ease-in) both;
+      --animate-rise: fade-in var(--duration-base) var(--ease-out) both;
+      --animate-shimmer: none;
+      --animate-check-pop: none;
+      --animate-check-draw: none;
+      --animate-lift: none;
+      --animate-landed: landed 700ms var(--ease-out) both;
+      --animate-spin: spin 2.4s linear infinite;
+      --animate-pulse: none;
+    }
+
+    html {
+      scroll-behavior: auto;
     }
   }
 }
 
 /* 焦点环刻意不进 @layer，保证压过组件上的 outline-none 工具类。
-   .field 是文本输入框，在组件内画同色焦点环，不再叠加 outline。 */
-:where(a, button, input:not(.field), textarea:not(.field), select, summary, [tabindex]):focus-visible {
+   .field 是文本输入框，在组件内画同色焦点环，不再叠加 outline。
+   对话框和抽屉的容器本身不画环：焦点落在容器上只是「已进入弹层」，下一次 Tab 才到具体控件。 */
+:where(
+    a,
+    button,
+    input:not(.field),
+    textarea:not(.field),
+    select,
+    summary,
+    [tabindex]:not([role="dialog"], [role="alertdialog"])
+  ):focus-visible {
   outline: 2px solid var(--color-ring);
   outline-offset: 2px;
 }

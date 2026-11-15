@@ -1,9 +1,10 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useOptimistic, useState, useTransition, type ReactNode } from "react";
+import { useCallback, useEffect, useOptimistic, useRef, useState, useTransition, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { NativeSelect, SearchField, pillClass } from "@/components/ui/input";
+import { useHotkey } from "@/components/ui/use-hotkey";
 import { cn } from "@/lib/cn";
 import { TASK_STATUS, TASK_PRIORITY, type MemberDTO } from "@/contracts";
 import { STATUS_LABEL, PRIORITY_LABEL } from "../task-meta";
@@ -54,6 +55,11 @@ export function TaskFilters({
   const path = usePathname();
   const search = useSearchParams();
   const [pending, startTransition] = useTransition();
+  const searchInput = useRef<HTMLInputElement>(null);
+  useHotkey("/", () => {
+    searchInput.current?.focus();
+    searchInput.current?.select();
+  });
 
   const urlQuery = search.get("q") ?? "";
   const urlValues: FilterValues = {
@@ -121,8 +127,16 @@ export function TaskFilters({
         placeholder="搜索标题或编号"
         maxLength={100}
         pending={pending}
+        ref={searchInput}
+        shortcut="/"
         value={typed}
         onChange={(event) => setTyped(event.target.value)}
+        onKeyDown={(event) => {
+          // Escape 先清空，再按一次把焦点还给页面；输入法组字时不处理。
+          if (event.key !== "Escape" || event.nativeEvent.isComposing) return;
+          if (typed) setTyped("");
+          else event.currentTarget.blur();
+        }}
         className="order-1 min-w-0 flex-1 sm:w-56 sm:flex-none lg:w-64"
       />
 

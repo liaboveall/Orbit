@@ -10,5 +10,6 @@ import { cn } from "@/lib/cn";
  */
 export function LinkLabel({ className, ...props }: ComponentProps<"span">) {
   const { pending } = useLinkStatus();
-  return <span className={cn(pending && "animate-pulse", className)} {...props} />;
+  // 减少动态效果时不脉动，改为静止的半透明，点击已生效的反馈仍在。
+  return <span className={cn(pending && "animate-pulse motion-reduce:opacity-60", className)} {...props} />;
 }

@@ -1,14 +1,25 @@
-import { Check } from "lucide-react";
 import type { TaskStatus } from "@/contracts";
+import { CheckMark } from "@/components/ui/check-mark";
 import { cn } from "@/lib/cn";
 
-/** 任务状态图形：空心圆、半满的圆、对勾。形状本身可区分，不只靠颜色。 */
-export function StatusGlyph({ status, className }: { status: TaskStatus; className?: string }) {
-  const base = "h-[18px] w-[18px] shrink-0 rounded-full";
+/**
+ * 任务状态图形：空心圆、半满的圆、对勾。形状本身可区分，不只靠颜色。
+ * `animate` 用在状态刚变化的那一下：完成时圆点弹一下并画出对勾，其它状态轻轻弹入。
+ */
+export function StatusGlyph({
+  status,
+  animate = false,
+  className,
+}: {
+  status: TaskStatus;
+  animate?: boolean;
+  className?: string;
+}) {
+  const base = cn("h-[18px] w-[18px] shrink-0 rounded-full", animate && "animate-check-pop");
   if (status === "DONE") {
     return (
       <span aria-hidden="true" className={cn(base, "flex items-center justify-center bg-success text-[var(--color-surface-solid)]", className)}>
-        <Check className="h-[65%] w-[65%]" strokeWidth={3.4} />
+        <CheckMark animate={animate} strokeWidth={3.4} className="h-[65%] w-[65%]" />
       </span>
     );
   }

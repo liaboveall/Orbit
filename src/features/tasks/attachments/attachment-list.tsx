@@ -280,7 +280,7 @@ function AttachmentItem({
   return (
     <li
       className={cn(
-        "group/row flex items-center gap-3 rounded-tile p-2.5 transition-colors",
+        "enter-rise group/row flex items-center gap-3 rounded-tile p-2.5",
         isFailed ? "bg-danger-soft" : "bg-surface shadow-[inset_0_0_0_0.5px_var(--color-line)]",
       )}
     >
