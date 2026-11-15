@@ -7,7 +7,7 @@ import { createSubtask } from "../../src/server/modules/subtask/service";
 import { prisma } from "../../src/server/db/prisma";
 import { createAuth } from "../../src/server/auth/options";
 import { getEnv } from "../../src/server/env";
-import { touchTaskUpdatedAt } from "../../src/server/modules/task/subresource";
+import { appendActivity } from "../../src/server/modules/activity/writer";
 
 // R01/R06/R07/R08: real handler and real database regressions.
 test.each(["owner", "member"] as const)("%s deletion makes comment replay a tombstone and clears cached text", async (deleter) => {
@@ -74,9 +74,12 @@ test.each(["UTC", "Asia/Shanghai", "America/Los_Angeles"])("event times are inva
   try {
     await prisma.$transaction(async tx => {
       await tx.$executeRaw`SELECT set_config('TimeZone', ${zone}, true)`;
-      await touchTaskUpdatedAt(tx, f.taskId);
+      // The activity statement also refreshes the parent task's updatedAt (sub-resource writes).
+      await appendActivity(tx, { projectId: f.projectId, actorId: f.owner, entityType: "TASK", entityId: f.taskId, action: "TASK_UPDATED" }, { touchTaskId: f.taskId });
       const stored = await tx.$queryRaw<Array<{ epoch: number }>>`SELECT (extract(epoch FROM "updatedAt") * 1000)::double precision AS epoch FROM "Task" WHERE id=${f.taskId}::uuid`;
       expect(Math.abs(stored[0]!.epoch - Date.now())).toBeLessThan(5000);
+      const logged = await tx.$queryRaw<Array<{ epoch: number }>>`SELECT (extract(epoch FROM "createdAt") * 1000)::double precision AS epoch FROM "ActivityLog" WHERE "projectId"=${f.projectId}::uuid ORDER BY "createdAt" DESC LIMIT 1`;
+      expect(Math.abs(logged[0]!.epoch - Date.now())).toBeLessThan(5000);
       // adapter-pg 7.10's timestamp parser assumes UTC text. Production pools
       // pin timezone=UTC; restore that contract before testing ORM decoding.
       await tx.$executeRaw`SELECT set_config('TimeZone', 'UTC', true)`;

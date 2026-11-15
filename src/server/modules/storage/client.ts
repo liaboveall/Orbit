@@ -9,6 +9,9 @@ import { createReadStream } from "node:fs";
 import { getEnv, type OrbitEnv } from "@/server/env";
 import { guardDownloadStream } from "./download-stream";
 import { logEvent } from "@/server/http/log";
+/** 与存储建立 TCP/TLS 连接的预算；到期即失败，不让请求挂在不可达的端点上。 */
+export const STORAGE_CONNECT_TIMEOUT_MS = 5_000;
+
 export function createS3Client(env: OrbitEnv): S3Client {
   return new S3Client({
     region: env.STORAGE_REGION,
@@ -19,6 +22,10 @@ export function createS3Client(env: OrbitEnv): S3Client {
       secretAccessKey: env.STORAGE_SECRET_ACCESS_KEY,
     },
     requestChecksumCalculation: "WHEN_REQUIRED",
+    // 存储故障时最多再试一次（SDK 默认三次并带退避）：上传、下载、删除各有自己的总预算
+    // （AbortSignal），重试只是在预算内多占一次连接。
+    maxAttempts: 2,
+    requestHandler: { connectionTimeout: STORAGE_CONNECT_TIMEOUT_MS },
   });
 }
 let client: S3Client | undefined;

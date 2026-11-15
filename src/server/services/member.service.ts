@@ -5,7 +5,10 @@ import { prisma } from "@/server/db/prisma";
 import { DomainError } from "@/server/http/errors";
 import { lockProjectRow, withTransaction } from "@/server/db/tx";
 import { appendActivity } from "@/server/modules/activity/writer";
-import { resolveProjectAccess } from "@/server/modules/authorization/project-access";
+import {
+  accessForLockedProject,
+  resolveProjectAccess,
+} from "@/server/modules/authorization/project-access";
 export { listMembers } from "@/server/modules/project/read";
 
 /**
@@ -18,7 +21,7 @@ export { listMembers } from "@/server/modules/project/read";
  *
  * 安全：
  * - 所有写操作必须在事务内进行
- * - 使用 SELECT ... FOR UPDATE 处理并发
+ * - 使用项目行锁（SELECT ... FOR NO KEY UPDATE）处理并发
  * - 活动日志走白名单过滤
  */
 
@@ -53,7 +56,7 @@ export function canRemoveMember(ownerId: string, targetUserId: string): boolean 
  *  - 请求者非项目成员/项目不存在 → 404 NOT_FOUND；目标非成员 → 404 NOT_FOUND。
  *
  * 事务原子序列（ReadCommitted + 有限重试，锁顺序 Project → Task，docs/04 §4）：
- *   lockProjectRow（FOR UPDATE）→ 清空目标在本项目的全部任务分配（含软删除任务）
+ *   lockProjectRow（FOR NO KEY UPDATE）→ 清空目标在本项目的全部任务分配（含软删除任务）
  *   并递增其 version → 删除 ProjectMember → 写入 MEMBER_REMOVED 活动日志。
  *
  * @param params 参数对象
@@ -95,7 +98,7 @@ export async function removeMember(params: RemoveMemberParams): Promise<void> {
     if (!locked) throw new DomainError("NOT_FOUND", "项目不存在或你无权访问。");
 
     // STEP 1: Re-check authorization INSIDE transaction AFTER lock acquisition
-    const currentAccess = await resolveProjectAccess(tx, project.id, requesterId);
+    const currentAccess = await accessForLockedProject(tx, locked, requesterId);
     if (currentAccess.role !== "OWNER" && requesterId !== targetUserId) {
       // Requester lost authorization while waiting for lock
       throw new DomainError("FORBIDDEN", "权限已失效，无法继续此操作。");

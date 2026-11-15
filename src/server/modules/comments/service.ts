@@ -4,9 +4,8 @@ import { CommentSchema, UuidSchema } from "@/contracts";
 import type { Prisma } from "@/generated/prisma/client";
 import { DomainError } from "@/server/http/errors";
 import { prisma } from "@/server/db/prisma";
-import { lockProjectRow, withTransaction } from "@/server/db/tx";
+import { lockProjectOfTaskChild, withTransaction } from "@/server/db/tx";
 import { appendActivity } from "@/server/modules/activity/writer";
-import { projectNotFoundError } from "@/server/modules/authorization/project-access";
 import {
   beginIdempotency,
   commitIdempotency,
@@ -22,10 +21,9 @@ import {
 } from "@/server/modules/pagination/cursor";
 import { formatIdentifier } from "@/server/modules/task/identifier";
 import {
-  locateTaskProject,
+  lockTaskProject,
   requireWritableTaskSubresource,
   resolveReadableTaskSubresource,
-  touchTaskUpdatedAt,
 } from "@/server/modules/task/subresource";
 import {
   canDeleteComment,
@@ -152,7 +150,6 @@ export async function createComment(
   input: CreateCommentDTO,
   idempotencyKey: string,
 ): Promise<CreateCommentResult> {
-  const projectId = await locateTaskProject(taskId);
   taskId = taskId.toLowerCase();
   const requestHash = hashRequest(input);
   const routeKey = createCommentRouteKey(taskId);
@@ -165,10 +162,10 @@ export async function createComment(
   } as const;
 
   const execute = () => withTransaction(async (tx) => {
-    const locked = await lockProjectRow(tx, projectId);
-    if (!locked) throw projectNotFoundError();
+    const locked = await lockTaskProject(tx, taskId);
+    const projectId = locked.id;
 
-    const { task, access } = await requireWritableTaskSubresource(tx, projectId, taskId, userId);
+    const { task, access } = await requireWritableTaskSubresource(tx, locked, taskId, userId);
 
     const begin = await beginIdempotency(tx, idempotencyOpts);
     if (begin.kind === "replay") {
@@ -196,16 +193,19 @@ export async function createComment(
       include: authorInclude,
     });
 
-    await touchTaskUpdatedAt(tx, taskId);
-
-    await appendActivity(tx, {
-      projectId,
-      actorId: userId,
-      entityType: "COMMENT",
-      entityId: created.id,
-      action: "COMMENT_CREATED",
-      metadata: { taskIdentifier: formatIdentifier(access.project.key, task.number) },
-    });
+    // 同一条语句同步父任务 updatedAt（不动 task.version）。
+    await appendActivity(
+      tx,
+      {
+        projectId,
+        actorId: userId,
+        entityType: "COMMENT",
+        entityId: created.id,
+        action: "COMMENT_CREATED",
+        metadata: { taskIdentifier: formatIdentifier(access.project.key, task.number) },
+      },
+      { touchTaskId: taskId },
+    );
 
     const comment = toCommentDTO(created);
 
@@ -257,19 +257,14 @@ export async function updateComment(
 ): Promise<CommentDTO> {
   if (!UuidSchema.safeParse(commentId).success) throw commentNotFoundError();
 
-  const locator = await prisma.comment.findUnique({
-    where: { id: commentId },
-    select: { taskId: true, task: { select: { projectId: true } } },
-  });
-  if (!locator) throw commentNotFoundError();
-  const { taskId } = locator;
-  const projectId = locator.task.projectId;
-
   return withTransaction(async (tx) => {
-    const locked = await lockProjectRow(tx, projectId);
-    if (!locked) throw projectNotFoundError();
+    // 按评论定位并锁定所属项目（一条语句），同时带回父任务 id；评论不存在 → 404。
+    const located = await lockProjectOfTaskChild(tx, "comment", commentId);
+    if (!located) throw commentNotFoundError();
+    const { project: locked, taskId } = located;
+    const projectId = locked.id;
 
-    const { task, access } = await requireWritableTaskSubresource(tx, projectId, taskId, userId);
+    const { task, access } = await requireWritableTaskSubresource(tx, locked, taskId, userId);
 
     const comment = await tx.comment.findUnique({
       where: { id: commentId },
@@ -295,30 +290,35 @@ export async function updateComment(
     // 无语义变化：不 bump version、不写活动。
     if (body === comment.body) return toCommentDTO(comment);
 
-    const updated = await tx.comment.update({
-      where: { id: commentId },
-      data: {
-        body,
-        version: comment.version + 1,
-        editedAt: new Date(),
-      },
-      include: authorInclude,
-    });
-
-    await touchTaskUpdatedAt(tx, taskId);
+    // 作者不会因编辑而改变：沿用持锁后读到的 author，不再为它多查一次。
+    const updated = {
+      ...(await tx.comment.update({
+        where: { id: commentId },
+        data: {
+          body,
+          version: comment.version + 1,
+          editedAt: new Date(),
+        },
+      })),
+      author: comment.author,
+    };
 
     const changedFields: ActivityMetadataField[] = ["body"];
-    await appendActivity(tx, {
-      projectId,
-      actorId: userId,
-      entityType: "COMMENT",
-      entityId: comment.id,
-      action: "COMMENT_UPDATED",
-      metadata: {
-        fields: changedFields,
-        taskIdentifier: formatIdentifier(access.project.key, task.number),
+    await appendActivity(
+      tx,
+      {
+        projectId,
+        actorId: userId,
+        entityType: "COMMENT",
+        entityId: comment.id,
+        action: "COMMENT_UPDATED",
+        metadata: {
+          fields: changedFields,
+          taskIdentifier: formatIdentifier(access.project.key, task.number),
+        },
       },
-    });
+      { touchTaskId: taskId },
+    );
 
     return toCommentDTO(updated);
   });
@@ -336,19 +336,14 @@ export async function deleteComment(
 ): Promise<CommentDTO> {
   if (!UuidSchema.safeParse(commentId).success) throw commentNotFoundError();
 
-  const locator = await prisma.comment.findUnique({
-    where: { id: commentId },
-    select: { taskId: true, task: { select: { projectId: true } } },
-  });
-  if (!locator) throw commentNotFoundError();
-  const { taskId } = locator;
-  const projectId = locator.task.projectId;
-
   return withTransaction(async (tx) => {
-    const locked = await lockProjectRow(tx, projectId);
-    if (!locked) throw projectNotFoundError();
+    // 按评论定位并锁定所属项目（一条语句），同时带回父任务 id；评论不存在 → 404。
+    const located = await lockProjectOfTaskChild(tx, "comment", commentId);
+    if (!located) throw commentNotFoundError();
+    const { project: locked, taskId } = located;
+    const projectId = locked.id;
 
-    const { task, access } = await requireWritableTaskSubresource(tx, projectId, taskId, userId);
+    const { task, access } = await requireWritableTaskSubresource(tx, locked, taskId, userId);
 
     const comment = await tx.comment.findUnique({
       where: { id: commentId },
@@ -369,15 +364,17 @@ export async function deleteComment(
     }
 
     // 软删除：清空 body、置 deletedAt、version++（docs/04 §3）。
-    const updated = await tx.comment.update({
-      where: { id: commentId },
-      data: {
-        body: "",
-        deletedAt: new Date(),
-        version: comment.version + 1,
-      },
-      include: authorInclude,
-    });
+    const updated = {
+      ...(await tx.comment.update({
+        where: { id: commentId },
+        data: {
+          body: "",
+          deletedAt: new Date(),
+          version: comment.version + 1,
+        },
+      })),
+      author: comment.author,
+    };
 
     // Deletion overrides historical replay: scrub the cached text atomically.
     await tx.idempotencyRecord.updateMany({
@@ -385,16 +382,18 @@ export async function deleteComment(
       data: { responseBody: toCommentDTO(updated) },
     });
 
-    await touchTaskUpdatedAt(tx, taskId);
-
-    await appendActivity(tx, {
-      projectId,
-      actorId: userId,
-      entityType: "COMMENT",
-      entityId: comment.id,
-      action: "COMMENT_DELETED",
-      metadata: { taskIdentifier: formatIdentifier(access.project.key, task.number) },
-    });
+    await appendActivity(
+      tx,
+      {
+        projectId,
+        actorId: userId,
+        entityType: "COMMENT",
+        entityId: comment.id,
+        action: "COMMENT_DELETED",
+        metadata: { taskIdentifier: formatIdentifier(access.project.key, task.number) },
+      },
+      { touchTaskId: taskId },
+    );
 
     return toCommentDTO(updated);
   });

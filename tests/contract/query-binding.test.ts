@@ -25,7 +25,10 @@ const responses: Record<string, [string, "single" | "list" | "page" | "empty" | 
   deleteComment: ["Comment", "single"], listAttachments: ["Attachment", "list"], uploadAttachment: ["Attachment", "single", "201"],
   getAttachmentDownload: ["Download", "single"], deleteAttachment: ["", "empty"], listActivity: ["Activity", "page"],
   getMyOverview: ["Overview", "single"], listMyTasks: ["TaskSummary", "page"], getAttachmentContent: ["", "binary"],
+  getMyPulse: ["Pulse", "single"],
 };
+// Conditional GETs additionally document a body-less 304 that carries only the validator header.
+const notModified = new Set(["getMyPulse"]);
 const queries: Record<string, { shape: Record<string, ZodType> }> = {
   listProjects: ProjectListQuerySchema, listInvitations: PaginationQuerySchema, listProjectTasks: TaskListQuerySchema,
   getBoard: BoardQuerySchema, listComments: PaginationQuerySchema, listActivity: PaginationQuerySchema,
@@ -41,7 +44,13 @@ function compare(document: Document) {
     const id = op.operationId;
     const [name, kind, extra] = responses[id]!;
     const success = kind === "empty" ? ["204"] : extra ? ["200", extra] : ["200"];
-    expect(Object.keys(op.responses).sort(), id).toEqual([...success, ...errors].sort());
+    const conditional = notModified.has(id) ? ["304"] : [];
+    expect(Object.keys(op.responses).sort(), id).toEqual([...success, ...conditional, ...errors].sort());
+    for (const status of conditional) {
+      expect(op.responses[status]!.content, `${id} ${status}`).toBeUndefined();
+      expect(Object.keys((op.responses[status] as { headers?: object }).headers ?? {}), `${id} ${status}`).toEqual(["ETag"]);
+      expect((op.parameters ?? []).some(p => p.in === "header" && p.name === "If-None-Match" && !p.required), id).toBe(true);
+    }
     for (const status of errors) expect(op.responses[status], `${id} ${status}`).toEqual({ $ref: "#/components/responses/BusinessError" });
     for (const status of success) {
       const content = op.responses[status]!.content;
@@ -116,6 +125,8 @@ describe("operation/request/response bindings", () => {
     ["unknown query", d => { d.paths["/projects"]!.get!.parameters!.push({ name: "unknown", in: "query", required: true, schema: { type: "string" } }); }],
     ["wrong default", d => { d.paths["/projects"]!.get!.parameters!.find(p => p.name === "limit")!.schema.default = 10; }],
     ["wrong status", d => { delete d.paths["/projects"]!.get!.responses["404"]; }],
+    ["a body on 304", d => { (d.paths["/my/pulse"]!.get!.responses["304"] as { content?: unknown }).content = { "application/json": { schema: ref("Pulse") } }; }],
+    ["undocumented 304", d => { d.paths["/my/overview"]!.get!.responses["304"] = {}; }],
     ["wrong signature pattern", d => { d.paths["/attachments/{attachmentId}/content"]!.get!.parameters!.find(p => p.name === "signature")!.schema.pattern = ".*"; }],
   ];
   for (const [name, mutate] of mutations) it(`rejects ${name} through the same comparator`, () => {

@@ -175,6 +175,9 @@ model Project {
   archivedAt     DateTime? @db.Timestamptz(3)
   version        Int          @default(1)
   boardVersion   Int          @default(1)
+  // 项目内变更计数：每条活动日志在同一语句里把它加一（见 activity/writer.ts），
+  // 只用于变更探测（GET /my/pulse），不进入任何 DTO。
+  revision       Int          @default(0)
   nextTaskNumber Int          @default(1)
   reservedBytes  BigInt       @default(0)
   usedBytes      BigInt       @default(0)

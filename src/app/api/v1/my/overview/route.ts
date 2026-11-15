@@ -7,10 +7,8 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const id = resolveRequestIdFromRequest(request);
   try {
-    return jsonSuccess(
-      await getOverview((await requireSessionUser(request)).id),
-      id,
-    );
+    const user = await requireSessionUser(request);
+    return jsonSuccess(await getOverview(user.id, new Date(), user.timezone), id);
   } catch (error) {
     return toErrorResponse(error, id);
   }

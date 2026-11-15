@@ -3822,6 +3822,118 @@
         ]
       }
     },
+    "/my/pulse": {
+      "get": {
+        "operationId": "getMyPulse",
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "变更探测：当前用户可见内容的变更标记",
+        "description": "一条查询得出全部可访问项目的变更标记，供客户端判断是否需要重新读取，取代逐页轮询。支持 If-None-Match：标记未变时返回 304 且无正文。详细规则见 docs/05。",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            "description": "上次响应的 ETag；可带 W/ 前缀，可为逗号分隔的列表"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "headers": {
+              "ETag": {
+                "description": "当前变更标记，加引号的 token",
+                "schema": {
+                  "type": "string",
+                  "minLength": 10,
+                  "maxLength": 66
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Pulse"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "变更标记与 If-None-Match 一致，无正文",
+            "headers": {
+              "ETag": {
+                "description": "当前变更标记，加引号的 token",
+                "schema": {
+                  "type": "string",
+                  "minLength": 10,
+                  "maxLength": 66
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "401": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "403": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "404": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "409": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "410": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "413": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "415": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "422": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "429": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "500": {
+            "$ref": "#/components/responses/BusinessError"
+          },
+          "503": {
+            "$ref": "#/components/responses/BusinessError"
+          }
+        }
+      }
+    },
     "/attachments/{attachmentId}/content": {
       "get": {
         "operationId": "getAttachmentContent",
@@ -5454,6 +5566,52 @@
           "upcoming",
           "inProgress",
           "totalOpen"
+        ]
+      },
+      "PulseProject": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "token": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "id",
+          "token"
+        ]
+      },
+      "Pulse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 64
+          },
+          "shell": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 64
+          },
+          "projects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PulseProject"
+            }
+          }
+        },
+        "required": [
+          "token",
+          "shell",
+          "projects"
         ]
       },
       "ActivityMetadata": {

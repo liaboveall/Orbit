@@ -14,7 +14,8 @@ import {
 import {
   projectArchivedError,
   projectNotFoundError,
-  requireProjectOwner,
+  accessForLockedProject,
+  projectForbiddenError,
   resolveProjectAccess,
 } from "@/server/modules/authorization/project-access";
 import { projectLimitExceededError } from "./create";
@@ -24,7 +25,7 @@ import { toProjectDTO } from "./mappers";
  * 更新/归档/恢复项目服务（M2 / ORB-007，docs/01 §4、docs/04 §4、docs/05 §4）。
  *
  * 事务原子序列（锁顺序 User → Project，docs/04 §4）：
- *   [restore 时先 lockUserRow] → lockProjectRow → requireProjectOwner → 归档态判定 →
+ *   [restore 时先 lockUserRow] → lockProjectRow → 持锁后授权（仅 owner）→ 归档态判定 →
  *   expectedVersion 比对 → 白名单字段变更 → version++ → 写活动。
  *   restore（archived=false）需在 owner 级串行化配额计数，故必须先取 User 锁；
  *   archive/update 不涉及跨 owner 配额，仅取 Project 锁。
@@ -79,7 +80,7 @@ export async function updateProject(
   if (!UuidSchema.safeParse(projectId).success) throw projectNotFoundError();
 
   // 锁前无锁成员预检（用应用单例 prisma，非 tx）：非成员/不存在快速拒绝，避免非成员对热门
-  // 项目行加排他锁造成 DoS 面；锁内仍以 requireProjectOwner 做权威复核（预检仅为提前拒绝）。
+  // 项目行加锁造成 DoS 面；锁内仍做权威复核（预检仅为提前拒绝）。
   await resolveProjectAccess(prisma, projectId, userId);
 
   return withTransaction(async (tx) => {
@@ -98,13 +99,15 @@ export async function updateProject(
     const locked = await lockProjectRow(tx, projectId);
     if (!locked) throw projectNotFoundError();
 
-    // 持锁后复查授权（防「检查之后成员被移除」竞争，docs/05 §4）。
-    const { project } = await requireProjectOwner(tx, projectId, userId);
+    // 持锁后复查授权（防「检查之后成员被移除」竞争，docs/05 §4）：项目行取自锁语句，
+    // 这里只判定成员关系；成员 → 403，非成员 → 404。
+    const { project, role } = await accessForLockedProject(tx, locked, userId);
+    if (role !== "OWNER") throw projectForbiddenError();
 
     const action = resolveAction(input);
     const decision = decideProjectWrite({ role: "OWNER", archivedAt: project.archivedAt, action });
     if (decision === "ARCHIVED") throw projectArchivedError();
-    // decision === "FORBIDDEN" 不会发生（requireProjectOwner 已保证 OWNER）。
+    // decision === "FORBIDDEN" 不会发生（上面已保证 OWNER）。
 
     if (project.version !== input.expectedVersion) {
       throw new DomainError("VERSION_CONFLICT", "项目已被更新，你的输入已保留，请刷新后重试。", undefined, {

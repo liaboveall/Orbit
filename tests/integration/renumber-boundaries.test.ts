@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/server/db/prisma";
-import { appendToColumnEnd } from "@/server/modules/task/position";
+import { appendToColumnEnd, renumberColumn } from "@/server/modules/task/position";
 import { withTransaction } from "@/server/db/tx";
 
 /**
@@ -16,8 +16,8 @@ import { withTransaction } from "@/server/db/tx";
  * 触达方式：直接以夹具写入构造边界 position（真实触发条件是数千次移动，
  * 不可接受为测试前置），被测函数本身是生产代码路径。
  *
- * F18：重编号为事务内逐行 UPDATE；本测试同时记录 1000 行重编号的实测耗时，
- * 作为「是否必须改为批量 UPDATE」的测量依据。
+ * F18：重编号是一条 UPDATE（按现有顺序用 row_number 重新编号）。本测试用 1000 行验证它
+ * 保持顺序、只改 position，并记录实测耗时；此前的逐行 UPDATE 是 1000 次往返。
  */
 
 const OWNER = randomUUID();
@@ -140,8 +140,8 @@ describe("列尾 bigint 边界 → renumberColumnAll（E2）", () => {
     expect(appended!).toBe(POSITION_GAP * 2n);
   });
 
-  it("F18 测量：1000 行全列重编号耗时（逐行 UPDATE 基线）", async () => {
-    // 仅 IN_PROGRESS 列保留 1 行；本用例在独立项目数据下测量后清理。
+  it("F18：1000 行全列重编号是一条语句，保持顺序且只改 position", async () => {
+    // 本用例的 TODO 列有 999 行，position 故意打乱间距（含相邻值），顺序由 (position, id) 决定。
     const data = Array.from({ length: 999 }, (_, i) => ({
       id: randomUUID(),
       projectId: PROJECT_ID,
@@ -149,26 +149,38 @@ describe("列尾 bigint 边界 → renumberColumnAll（E2）", () => {
       creatorId: OWNER,
       title: `测量 ${i}`,
       status: "TODO" as const,
-      position: BigInt(i + 1) * POSITION_GAP,
+      position: BigInt(i * 3 + (i % 2)),
     }));
     await prisma.task.createMany({ data });
+    const before = await prisma.task.findMany({
+      where: { projectId: PROJECT_ID, status: "TODO", deletedAt: null },
+      orderBy: [{ position: "asc" }, { id: "asc" }],
+      select: { id: true, version: true, updatedAt: true },
+    });
+    const skipped = before[10]!.id;
 
     const started = Date.now();
     await withTransaction(async (tx) => {
-      // 与 position.ts renumberColumnAll 相同形状的逐行 UPDATE（1000 行）。
-      const rows = await tx.$queryRaw<Array<{ id: string }>>`
-        SELECT id FROM "Task"
-        WHERE "projectId" = ${PROJECT_ID}::uuid AND "deletedAt" IS NULL AND status = 'TODO'::"TaskStatus"
-        ORDER BY position ASC, id ASC
-      `;
-      for (const [idx, row] of rows.entries()) {
-        const pos = BigInt(idx + 1) * POSITION_GAP;
-        await tx.$executeRaw`UPDATE "Task" SET position = ${pos} WHERE id = ${row.id}::uuid`;
-      }
+      // 生产路径：移动任务时排除被移动的那一张。
+      await renumberColumn(tx, PROJECT_ID, "TODO", skipped);
     });
     const elapsed = Date.now() - started;
-    // 事务预算目标：写事务秒级完成（docs/04 §4）。1000 行须显著低于 10s 语句超时。
-    expect(elapsed).toBeLessThan(10_000);
-    console.log(`[F18] 1000 行逐行重编号耗时：${elapsed}ms（本机测量，非生产基线）`);
+
+    const after = await prisma.task.findMany({
+      where: { projectId: PROJECT_ID, status: "TODO", deletedAt: null, id: { not: skipped } },
+      orderBy: [{ position: "asc" }, { id: "asc" }],
+      select: { id: true, position: true, version: true, updatedAt: true },
+    });
+    const expectedOrder = before.filter((row) => row.id !== skipped);
+    expect(after.map((row) => row.id)).toEqual(expectedOrder.map((row) => row.id));
+    expect(after.map((row) => row.position)).toEqual(after.map((_, index) => BigInt(index + 1) * POSITION_GAP));
+    // 其它任务的 version / updatedAt 不因重编号改变；被排除的任务原样保留。
+    expect(after.map((row) => [row.version, row.updatedAt.getTime()])).toEqual(
+      expectedOrder.map((row) => [row.version, row.updatedAt.getTime()]),
+    );
+    expect((await prisma.task.findUniqueOrThrow({ where: { id: skipped } })).position).toBe(BigInt(10 * 3));
+    // 事务预算目标：写事务秒级完成（docs/04 §4）。单条语句应远低于此。
+    expect(elapsed).toBeLessThan(2_000);
+    console.log(`[F18] 998 行单语句重编号耗时：${elapsed}ms（本机测量，非生产基线）`);
   });
 });

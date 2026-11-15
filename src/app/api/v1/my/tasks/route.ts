@@ -15,7 +15,7 @@ export async function GET(request: Request) {
       id,
     );
     if (!parsed.ok) return jsonEnvelope(parsed.response, 400, id);
-    const result = await listMyTasks(user.id, parsed.data);
+    const result = await listMyTasks(user.id, parsed.data, new Date(), user.timezone);
     return jsonList(
       result.tasks,
       { requestId: id, nextCursor: result.nextCursor, hasMore: result.hasMore },

@@ -26,7 +26,7 @@ import {
 import { nextTaskNumber, formatIdentifier } from "./identifier";
 import { appendToColumnEnd } from "./position";
 import { fromDueDateString } from "./date-only";
-import { toTaskDTO, fetchTaskResourceCounts } from "./mappers";
+import { loadTaskDTO } from "./mappers";
 import { readTaskReplay } from "./replay";
 
 /**
@@ -35,7 +35,7 @@ import { readTaskReplay } from "./replay";
  * 事务原子序列（锁顺序 Project 优先）：
  *   lockProjectRow → requireWritableTaskProject（成员 + 非归档）→ beginIdempotency →
  *   配额计数 → 取号 nextTaskNumber → 追加列尾 position → INSERT Task →
- *   boardVersion++ → 写活动 TASK_CREATED → commitIdempotency。
+ *   写活动 TASK_CREATED（同一条语句 boardVersion++）→ commitIdempotency。
  *
  * 不变量：
  *  - 每项目未删除任务数 < MAX_OPEN_TASKS(1000)，超限 → 422 LIMIT_EXCEEDED；
@@ -97,7 +97,7 @@ export async function createTask(
     if (!locked) throw projectNotFoundError();
 
     // 持锁后复核授权与归档态（成员可见 + 非归档；非成员/不存在 → 404，归档 → 409）。
-    const { project } = await requireWritableTaskProject(tx, projectId, userId);
+    const { project } = await requireWritableTaskProject(tx, locked, userId);
 
     const begin = await beginIdempotency(tx, {
       userId,
@@ -152,30 +152,21 @@ export async function createTask(
     };
     const created = await tx.task.create({ data });
 
-    // 看板顺序集合变化 → boardVersion++（不 bump Project.updatedAt，docs/04 §4）。
-    await tx.$executeRaw`
-      UPDATE "Project" SET "boardVersion" = "boardVersion" + 1 WHERE id = ${projectId}::uuid
-    `;
-
-    await appendActivity(tx, {
-      projectId,
-      actorId: userId,
-      entityType: "TASK",
-      entityId: created.id,
-      action: "TASK_CREATED",
-      metadata: { taskIdentifier: formatIdentifier(project.key, number) },
-    });
-
-    const row = await tx.task.findUniqueOrThrow({
-      where: { id: created.id },
-      include: {
-        assignee: { select: { id: true, name: true } },
-        creator: { select: { id: true, name: true } },
+    // 看板顺序集合变化 → boardVersion++，与活动同一条语句（不 bump Project.updatedAt，docs/04 §4）。
+    await appendActivity(
+      tx,
+      {
+        projectId,
+        actorId: userId,
+        entityType: "TASK",
+        entityId: created.id,
+        action: "TASK_CREATED",
+        metadata: { taskIdentifier: formatIdentifier(project.key, number) },
       },
-    });
-    // M5: 真实聚合计数
-    const counts = await fetchTaskResourceCounts(tx, created.id);
-    const task = await toTaskDTO(row, { projectKey: project.key }, counts);
+      { bumpBoardVersion: true },
+    );
+
+    const task = await loadTaskDTO(tx, created, { projectKey: project.key });
 
     await commitIdempotency(tx, {
       userId,

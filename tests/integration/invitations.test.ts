@@ -59,9 +59,8 @@ const TEST_SECRET = "orbit-integration-invitation-test-secret-0123456789";
 const barrierPool = new pg.Pool({ connectionString: env.TEST_DATABASE_URL, max: 5 });
 
 /**
- * `lockProjectRow`（src/server/db/tx.ts）实际发出的 SQL 是多列 SELECT + FOR UPDATE：
- * `SELECT id, version, "boardVersion", "nextTaskNumber", "archivedAt", "ownerId"
- *    FROM "Project" WHERE id = $1::uuid FOR UPDATE`。
+ * `lockProjectRow`（src/server/db/tx.ts）实际发出的 SQL 是整行 SELECT + FOR NO KEY UPDATE：
+ * `SELECT p.* FROM "Project" p WHERE p.id = $1::uuid FOR NO KEY UPDATE OF p`。
  * 屏障用 `FROM "Project"` 作为足够窄、又能稳定匹配该语句的片段。
  */
 const PROJECT_LOCK_QUERY_FRAGMENT = 'FROM "Project"';

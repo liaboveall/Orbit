@@ -24,6 +24,13 @@ FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends libpcre2-8-0 && rm -rf /var/lib/apt/lists/* /usr/local/lib/node_modules/npm && rm -f /usr/local/bin/npm /usr/local/bin/npx
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
+# KEEP_ALIVE_TIMEOUT (ms, read by the standalone server): idle connections from the reverse proxy stay
+# open longer than the proxy keeps them (60 s in infra/nginx-http.conf), so the proxy never reuses a
+# connection this side has already closed.
+# NODE_OPTIONS: an explicit old-generation ceiling for a 1 GB container. V8's own default is derived
+# from the memory limit and is far lower, which ends a busy process with an out-of-memory abort while
+# the container still has room. Override either value in the runtime environment file if limits differ.
+ENV KEEP_ALIVE_TIMEOUT=75000 NODE_OPTIONS=--max-old-space-size=640
 COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 COPY --from=build --chown=node:node /app/public ./public

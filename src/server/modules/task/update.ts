@@ -3,10 +3,8 @@ import type { ActivityMetadataField, TaskDTO, UpdateTaskDTO } from "@/contracts"
 import { UuidSchema } from "@/contracts";
 import type { Prisma } from "@/generated/prisma/client";
 import { DomainError } from "@/server/http/errors";
-import { prisma } from "@/server/db/prisma";
-import { lockProjectRow, withTransaction } from "@/server/db/tx";
+import { lockProjectOfTask, withTransaction } from "@/server/db/tx";
 import { appendActivity } from "@/server/modules/activity/writer";
-import { projectNotFoundError } from "@/server/modules/authorization/project-access";
 import {
   assertAssigneeAllowed,
   requireWritableTaskProject,
@@ -15,13 +13,13 @@ import {
 import { formatIdentifier } from "./identifier";
 import { appendToColumnEnd } from "./position";
 import { fromDueDateString, toDueDateString } from "./date-only";
-import { toTaskDTO, fetchTaskResourceCounts } from "./mappers";
+import { loadTaskDTO } from "./mappers";
 
 /**
  * 更新任务服务（M2 / ORB-008，docs/01 §6、docs/04 §3/§4/§5）。
  *
- * 事务原子序列：定位 task→projectId（锁前只读）→ lockProjectRow →
- *   requireWritableTaskProject（成员 + 非归档）→ 锁内复读 Task → expectedVersion 比对 →
+ * 事务原子序列：lockProjectOfTask（按任务定位并锁定项目）→
+ *   requireWritableTaskProject（成员 + 非归档）→ 锁内读 Task → expectedVersion 比对 →
  *   白名单字段变更（title/description/status/priority/assigneeId/dueDate）→
  *   必要时重排 position + boardVersion++ → version++（一次 PATCH 只 +1）→ 写活动 TASK_UPDATED。
  *
@@ -48,12 +46,6 @@ function versionConflictError(currentVersion: number): DomainError {
   );
 }
 
-/** 带 assignee/creator 关系的任务查询 include。 */
-const taskInclude = {
-  assignee: { select: { id: true, name: true } },
-  creator: { select: { id: true, name: true } },
-} as const;
-
 /**
  * 更新任务字段。
  *
@@ -67,21 +59,16 @@ export async function updateTask(
   input: UpdateTaskDTO,
 ): Promise<TaskDTO> {
   if (!UuidSchema.safeParse(taskId).success) throw taskNotFoundError();
-  // 锁前只读定位最小 projectId（docs/05 §4）；不存在 → 404。
-  const locator = await prisma.task.findUnique({
-    where: { id: taskId },
-    select: { projectId: true },
-  });
-  if (!locator) throw taskNotFoundError();
-  const projectId = locator.projectId;
 
   return withTransaction(async (tx) => {
-    const locked = await lockProjectRow(tx, projectId);
-    if (!locked) throw projectNotFoundError();
+    // 按任务定位并锁定所属项目（一条语句）；任务不存在 → 404。
+    const locked = await lockProjectOfTask(tx, taskId);
+    if (!locked) throw taskNotFoundError();
+    const projectId = locked.id;
 
-    const { project } = await requireWritableTaskProject(tx, projectId, userId);
+    const { project } = await requireWritableTaskProject(tx, locked, userId);
 
-    const task = await tx.task.findUnique({ where: { id: taskId }, include: taskInclude });
+    const task = await tx.task.findUnique({ where: { id: taskId } });
     if (!task || task.deletedAt !== null) throw taskNotFoundError();
 
     if (task.version !== input.expectedVersion) throw versionConflictError(task.version);
@@ -148,9 +135,7 @@ export async function updateTask(
 
     // 规范化后无语义变化：不 bump version、不写活动，返回当前数据。
     if (changedFields.length === 0) {
-    // M5: 真实聚合计数
-    const counts = await fetchTaskResourceCounts(tx, task.id);
-    return await toTaskDTO(task, { projectKey: project.key }, counts);
+      return loadTaskDTO(tx, task, { projectKey: project.key });
     }
 
     data.version = task.version + 1;
@@ -160,12 +145,6 @@ export async function updateTask(
 
     const updated = await tx.task.update({ where: { id: task.id }, data });
 
-    if (statusChanged) {
-      await tx.$executeRaw`
-        UPDATE "Project" SET "boardVersion" = "boardVersion" + 1 WHERE id = ${projectId}::uuid
-      `;
-    }
-
     const metadata: Record<string, unknown> = {
       fields: changedFields,
       taskIdentifier: formatIdentifier(project.key, task.number),
@@ -174,20 +153,20 @@ export async function updateTask(
       metadata.fromStatus = fromStatus;
       metadata.toStatus = toStatus;
     }
-    await appendActivity(tx, {
-      projectId,
-      actorId: userId,
-      entityType: "TASK",
-      entityId: task.id,
-      action: "TASK_UPDATED",
-      metadata,
-    });
+    // 改状态会改变看板顺序集合 → 同一条语句里 boardVersion++。
+    await appendActivity(
+      tx,
+      {
+        projectId,
+        actorId: userId,
+        entityType: "TASK",
+        entityId: task.id,
+        action: "TASK_UPDATED",
+        metadata,
+      },
+      { bumpBoardVersion: statusChanged },
+    );
 
-    const row = await tx.task.findUniqueOrThrow({
-      where: { id: updated.id },
-      include: taskInclude,
-    });
-    const counts = await fetchTaskResourceCounts(tx, updated.id);
-    return await toTaskDTO(row, { projectKey: project.key }, counts);
+    return loadTaskDTO(tx, updated, { projectKey: project.key });
   });
 }

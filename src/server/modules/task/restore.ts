@@ -3,8 +3,7 @@ import type { TaskDTO, VersionInputDTO } from "@/contracts";
 import { UuidSchema } from "@/contracts";
 import type { Prisma } from "@/generated/prisma/client";
 import { DomainError } from "@/server/http/errors";
-import { prisma } from "@/server/db/prisma";
-import { lockProjectRow, withTransaction } from "@/server/db/tx";
+import { lockProjectOfTask, withTransaction } from "@/server/db/tx";
 import { MAX_OPEN_TASKS } from "@/server/modules/limits";
 import { appendActivity } from "@/server/modules/activity/writer";
 import {
@@ -13,7 +12,6 @@ import {
   hashRequest,
   IdempotencyCommitConflictError,
 } from "@/server/modules/idempotency/service";
-import { projectNotFoundError } from "@/server/modules/authorization/project-access";
 import {
   canDeleteTask,
   countOpenTasks,
@@ -25,14 +23,14 @@ import {
 } from "./access";
 import { formatIdentifier } from "./identifier";
 import { appendToColumnEnd } from "./position";
-import { toTaskDTO, fetchTaskResourceCounts } from "./mappers";
+import { loadTaskDTO } from "./mappers";
 import { readTaskReplay } from "./replay";
 
 /**
  * 恢复（撤销软删除）任务服务（M2 / ORB-008，docs/01 §6、docs/04 §3/§4/§5）。
  *
- * 事务原子序列：定位 task→projectId（锁前只读）→ lockProjectRow →
- *   requireWritableTaskProject（成员 + 非归档）→ 锁内复读 Task→
+ * 事务原子序列：lockProjectOfTask（按任务定位并锁定项目）→
+ *   requireWritableTaskProject（成员 + 非归档）→ 锁内读 Task→
  *   权限（owner 或创建者）→ beginIdempotency（重放短路）→
  *   首次操作要求已删除 → expectedVersion 比对 → 配额计数 →
  *   清 deletedAt + version++ → 原负责人已退项目则置空 → 追加原列尾 position →
@@ -68,12 +66,6 @@ function versionConflictError(currentVersion: number): DomainError {
   );
 }
 
-/** 带 assignee/creator 关系的任务查询 include。 */
-const taskInclude = {
-  assignee: { select: { id: true, name: true } },
-  creator: { select: { id: true, name: true } },
-} as const;
-
 /**
  * 恢复软删除的任务。
  *
@@ -89,23 +81,18 @@ export async function restoreTask(
   idempotencyKey: string,
 ): Promise<RestoreTaskResult> {
   if (!UuidSchema.safeParse(taskId).success) throw taskNotFoundError();
-  // 锁前只读定位最小 projectId（docs/05 §4）；不存在 → 404。
-  const locator = await prisma.task.findUnique({
-    where: { id: taskId },
-    select: { projectId: true },
-  });
-  if (!locator) throw taskNotFoundError();
-  const projectId = locator.projectId;
 
   const requestHash = hashRequest(input);
   taskId = taskId.toLowerCase();
   const routeKey = restoreTaskRouteKey(taskId);
 
   const execute = () => withTransaction(async (tx) => {
-    const locked = await lockProjectRow(tx, projectId);
-    if (!locked) throw projectNotFoundError();
+    // 按任务定位并锁定所属项目（一条语句）；任务不存在 → 404。
+    const locked = await lockProjectOfTask(tx, taskId);
+    if (!locked) throw taskNotFoundError();
+    const projectId = locked.id;
 
-    const { project, role } = await requireWritableTaskProject(tx, projectId, userId);
+    const { project, role } = await requireWritableTaskProject(tx, locked, userId);
 
     // 当前成员与恢复权限先于重放；已恢复状态由幂等记录区分新请求与重试。
     const task = await tx.task.findUnique({ where: { id: taskId } });
@@ -149,29 +136,23 @@ export async function restoreTask(
       assigneeId,
       position,
     };
-    await tx.task.update({ where: { id: task.id }, data });
+    const row = await tx.task.update({ where: { id: task.id }, data });
 
-    // 看板顺序集合变化 → boardVersion++（不 bump Project.updatedAt，docs/04 §4）。
-    await tx.$executeRaw`
-      UPDATE "Project" SET "boardVersion" = "boardVersion" + 1 WHERE id = ${projectId}::uuid
-    `;
+    // 看板顺序集合变化 → boardVersion++，与活动同一条语句（不 bump Project.updatedAt，docs/04 §4）。
+    await appendActivity(
+      tx,
+      {
+        projectId,
+        actorId: userId,
+        entityType: "TASK",
+        entityId: task.id,
+        action: "TASK_RESTORED",
+        metadata: { taskIdentifier: formatIdentifier(project.key, task.number) },
+      },
+      { bumpBoardVersion: true },
+    );
 
-    await appendActivity(tx, {
-      projectId,
-      actorId: userId,
-      entityType: "TASK",
-      entityId: task.id,
-      action: "TASK_RESTORED",
-      metadata: { taskIdentifier: formatIdentifier(project.key, task.number) },
-    });
-
-    const row = await tx.task.findUniqueOrThrow({
-      where: { id: task.id },
-      include: taskInclude,
-    });
-    // M5: 真实聚合计数
-    const counts = await fetchTaskResourceCounts(tx, task.id);
-    const restored = await toTaskDTO(row, { projectKey: project.key }, counts);
+    const restored = await loadTaskDTO(tx, row, { projectKey: project.key });
 
     await commitIdempotency(tx, {
       userId,

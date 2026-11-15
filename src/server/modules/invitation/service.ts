@@ -6,7 +6,10 @@ import { computeFilterFingerprint, decodeCursor, encodeCursor, invalidCursorErro
 import { prisma } from "@/server/db/prisma";
 import { lockProjectRow, lockUserRow, withTransaction } from "@/server/db/tx";
 import { appendActivity } from "@/server/modules/activity/writer";
-import { resolveProjectAccess } from "@/server/modules/authorization/project-access";
+import {
+  accessForLockedProject,
+  resolveProjectAccess,
+} from "@/server/modules/authorization/project-access";
 import { DomainError } from "@/server/http/errors";
 import type { InvitationState } from "@/contracts/enums";
 import type {
@@ -149,7 +152,7 @@ export async function createInvitation(
     }
 
     // 持锁后复核授权与归档（防「预检之后成员被移除/项目被归档」竞争）。
-    const { project, role } = await resolveProjectAccess(tx, projectId, userId);
+    const { project, role } = await accessForLockedProject(tx, locked, userId);
     if (role !== "OWNER") {
       throw new DomainError("FORBIDDEN", "只有项目所有者可以创建邀请。");
     }
@@ -499,7 +502,7 @@ export async function revokeInvitation(
     }
 
     // 持锁后复核授权：确认当前用户是项目 owner。
-    const { role } = await resolveProjectAccess(tx, projectId, userId);
+    const { role } = await accessForLockedProject(tx, locked, userId);
     if (role !== "OWNER") {
       throw new DomainError("FORBIDDEN", "只有项目所有者可以撤销邀请。");
     }

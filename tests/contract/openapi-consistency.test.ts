@@ -26,6 +26,8 @@ import {
   MoveResultSchema,
   MoveTaskSchema,
   OverviewSchema,
+  PulseProjectSchema,
+  PulseSchema,
   PROJECT_COLOR,
   PROJECT_ROLE,
   PageMetaSchema,
@@ -131,6 +133,7 @@ const EXPECTED_OPERATIONS: Array<[operationId: string, method: string, path: str
   ["listActivity", "get", "/projects/{projectId}/activity"],
   ["getMyOverview", "get", "/my/overview"],
   ["listMyTasks", "get", "/my/tasks"],
+  ["getMyPulse", "get", "/my/pulse"],
   ["getAttachmentContent", "get", "/attachments/{attachmentId}/content"],
 ];
 
@@ -170,7 +173,7 @@ describe("openapi paths：operationId 的 method + path", () => {
 
   it("M0–M5 的契约操作均有实际 HTTP route 导出", () => {
     const implemented=operations;
-    expect(implemented).toHaveLength(37);
+    expect(implemented).toHaveLength(38);
     for (const op of implemented) {
       const route = op.path.replace(/\{([^}]+)\}/g, "[$1]");
       const source = readFileSync(new URL(`../../src/app/api/v1${route}/route.ts`, import.meta.url), "utf8");
@@ -204,7 +207,7 @@ describe("openapi paths：operationId 的 method + path", () => {
     const expectedIds = EXPECTED_OPERATIONS.map(([id]) => id).sort();
     const actualIds = operations.map((o) => o.operationId).sort();
     expect(actualIds).toEqual(expectedIds);
-    expect(actualIds).toHaveLength(37);
+    expect(actualIds).toHaveLength(38);
   });
 });
 
@@ -229,6 +232,8 @@ describe("components/schemas ↔ Zod shape：字段名一致", () => {
     ["Download", zodShapeKeys(DownloadSchema)],
     ["Activity", zodShapeKeys(ActivitySchema)],
     ["Overview", zodShapeKeys(OverviewSchema)],
+    ["Pulse", zodShapeKeys(PulseSchema)],
+    ["PulseProject", zodShapeKeys(PulseProjectSchema)],
   ];
 
   it.each(cases)("schema %s 的字段名集合与 openapi 一致", (name, zodKeys) => {
@@ -580,6 +585,8 @@ describe("openapi ↔ Zod 深度一致性（E3）", () => {
     ["Activity", ActivitySchema],
     ["ActivityMetadata", ActivityMetadataSchema],
     ["Overview", OverviewSchema],
+    ["Pulse", PulseSchema],
+    ["PulseProject", PulseProjectSchema],
   ] as const)("响应 %s：逐属性 type/required/nullable/enum/format/约束对齐", (name, zod) => {
     expectSchemaDeepAligned(zod, name);
   });

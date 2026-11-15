@@ -2,17 +2,17 @@ import "server-only";
 import type { Prisma, TaskStatus } from "@/generated/prisma/client";
 import type { MoveTaskDTO, MoveResultDTO } from "@/contracts";
 import { MoveResultSchema, UuidSchema } from "@/contracts";
-import { withTransaction, lockProjectRow } from "@/server/db/tx";
+import { withTransaction, lockProjectOfTask } from "@/server/db/tx";
 import { DomainError } from "@/server/http/errors";
 import { requireWritableTaskProject, taskNotFoundError } from "./access";
-import { toTaskDTO, fetchTaskResourceCounts } from "./mappers";
+import { buildTaskSummary, fetchTaskExtras } from "./mappers";
 import { appendToColumnEnd, renumberColumn, type RawColRow } from "./position";
 import { formatIdentifier } from "./identifier";
 import { appendActivity } from "@/server/modules/activity/writer";
 import { createMoveRecord } from "./move-record";
 import { POSITION_GAP } from "@/server/modules/limits";
 
-/** 构造 400 VALIDATION_ERROR（字段级提示）。 */
+/** 目标位置不可用 —— 422 INVALID_BOARD_TARGET（字段级提示）。 */
 function validationError(fieldErrors: Record<string, string[]>): DomainError {
   return new DomainError("INVALID_BOARD_TARGET", "目标位置不可用，请刷新看板后重试。", fieldErrors);
 }
@@ -31,14 +31,8 @@ function boardConflictError(currentBoardVersion: number): DomainError {
   });
 }
 
-
-/** Q10: 规范化 UUID 为小写以确保一致性 */
-function normalizeUuid(uuid: string): string {
-  return uuid.toLowerCase();
-}
-
-/** BigInt 安全边界：当 lastPosition > MAX_SAFE - POSITION_GAP*2 时触发重编号 */
-const BIGINT_MAX_SAFE = 9223372036854775800n; // PostgreSQL signed bigint bound with a small safety margin
+/** PostgreSQL signed bigint 上界，留出少量安全余量。 */
+const BIGINT_MAX_SAFE = 9223372036854775800n;
 
 /**
  * 计算 completedAt 变更策略。
@@ -60,13 +54,58 @@ function computeCompletedAt(
   return {};
 }
 
+/** 读取一列的未删除任务（position, id 升序）。须在持有 Project 行锁的事务内调用。 */
+async function readColumn(
+  tx: Prisma.TransactionClient,
+  projectId: string,
+  status: TaskStatus,
+): Promise<RawColRow[]> {
+  return tx.$queryRaw<RawColRow[]>`
+    SELECT id, position FROM "Task"
+    WHERE "projectId" = ${projectId}::uuid
+      AND "deletedAt" IS NULL
+      AND status = ${status}::"TaskStatus"
+    ORDER BY position ASC, id ASC
+  `;
+}
+
 /**
- * 计算移动后的 position。
- * - beforeTaskId === null → appendToColumnEnd(tx, projectId, toStatus)
- * - beforeTaskId !== null → 定位目标列任务列表，find beforeTaskId，取 predecessor & beforeTaskId 的中点；
- *   间隙耗尽则重编号整列再计算。
+ * 在目标列（已去掉被移动任务）里计算插到 beforeTaskId 之前的 position。
+ * 在前后邻居之间取整数中点；插首取首项的一半；无整数间隙或逼近 bigint 上界时，
+ * 先在同一事务内把目标列按 POSITION_GAP 重新编号（不含被移动任务），再取中点。
  */
-/** E2 验收导出：中点插入/重编号的生产入口（服务内部此前仅同文件使用）。 */
+async function positionBefore(
+  tx: Prisma.TransactionClient,
+  projectId: string,
+  toStatus: TaskStatus,
+  column: RawColRow[],
+  beforeTaskId: string,
+  movingTaskId: string,
+): Promise<bigint> {
+  const idx = column.findIndex((row) => row.id === beforeTaskId);
+  if (idx === -1) {
+    throw validationError({ beforeTaskId: ["目标任务不在指定列中或不存在"] });
+  }
+
+  const beforePos = BigInt(column[idx]!.position);
+  const prevPos = idx > 0 ? BigInt(column[idx - 1]!.position) : null;
+  const midPos = prevPos === null ? beforePos / 2n : (prevPos + beforePos) / 2n;
+
+  // 间隙耗尽：无法在 (prevPos, beforePos) 之间插入一个新整数位置。
+  const gapExhausted = prevPos === null ? beforePos < 2n : beforePos - prevPos < 2n;
+  if (gapExhausted || midPos > BIGINT_MAX_SAFE - POSITION_GAP * 2n) {
+    await renumberColumn(tx, projectId, toStatus, movingTaskId);
+    // 重编号后第 idx 项位于 (idx+1)*GAP，其前驱位于 idx*GAP（列首的前驱视为 0）。
+    return (BigInt(idx) * POSITION_GAP + BigInt(idx + 1) * POSITION_GAP) / 2n;
+  }
+  return midPos;
+}
+
+/**
+ * 计算移动后的 position（E2 验收导出：中点插入/重编号的生产入口）。
+ * - beforeTaskId === null → 追加目标列末尾；
+ * - 否则读取目标列，取前驱与 beforeTaskId 的中点，间隙耗尽则重编号整列再计算。
+ */
 export async function computeMovePosition(
   tx: Prisma.TransactionClient,
   projectId: string,
@@ -77,173 +116,133 @@ export async function computeMovePosition(
   if (beforeTaskId === null) {
     return appendToColumnEnd(tx, projectId, toStatus);
   }
-
-  // Q10: 规范化 beforeTaskId 和 movingTaskId 为小写以避免大小写不匹配
-  const normalizedBeforeTaskId = beforeTaskId ? normalizeUuid(beforeTaskId) : null;
-  const normalizedMovingTaskId = normalizeUuid(movingTaskId);
-
-  if (normalizedBeforeTaskId === normalizedMovingTaskId) {
+  const before = beforeTaskId.toLowerCase();
+  const moving = movingTaskId.toLowerCase();
+  if (before === moving) {
     throw validationError({ beforeTaskId: ["不能将任务移动到其自身之前"] });
   }
-
-  // 查询目标列任务（不含 movingTaskId），按 position ASC、id ASC
-  const rows = await tx.$queryRaw<RawColRow[]>`
-    SELECT id, position FROM "Task"
-    WHERE "projectId" = ${projectId}::uuid
-      AND "deletedAt" IS NULL
-      AND status = ${toStatus}::"TaskStatus"
-      AND id != ${normalizedMovingTaskId}::uuid
-    ORDER BY position ASC, id ASC
-  `;
-
-  const idx = rows.findIndex((r) => r.id === normalizedBeforeTaskId);
-  if (idx === -1) {
-    throw validationError({ beforeTaskId: ["目标任务不在指定列中或不存在"] });
-  }
-
-  const beforePos = BigInt(rows[idx]!.position);
-  const prevPos = idx > 0 ? BigInt(rows[idx - 1]!.position) : null;
-
-  // 间隙耗尽判定：无法在 (prevPos, beforePos) 之间插入一个新整数位置。
-  const gapExhausted = prevPos === null ? beforePos < 2n : beforePos - prevPos < 2n;
-  if (gapExhausted) {
-    await renumberColumn(tx, projectId, toStatus, normalizedMovingTaskId);
-    const newPrevPos = BigInt(idx) * POSITION_GAP;
-    const newBeforePos = BigInt(idx + 1) * POSITION_GAP;
-    return (newPrevPos + newBeforePos) / 2n;
-  }
-
-  // 正常中点插入
-  const midPos = prevPos === null ? beforePos / 2n : (prevPos + beforePos) / 2n;
-  
-  // 检查中点是否接近 MAX_SAFE（理论上不可能，但防御性编程）
-  if (midPos > BIGINT_MAX_SAFE - POSITION_GAP * 2n) {
-    await renumberColumn(tx, projectId, toStatus, normalizedMovingTaskId);
-    const newPrevPos = BigInt(idx) * POSITION_GAP;
-    const newBeforePos = BigInt(idx + 1) * POSITION_GAP;
-    return (newPrevPos + newBeforePos) / 2n;
-  }
-  
-  return midPos;
+  const column = (await readColumn(tx, projectId, toStatus)).filter((row) => row.id !== moving);
+  return positionBefore(tx, projectId, toStatus, column, before, moving);
 }
 
 /**
- * 移动任务（M3 Phase 3 / ORB-011）—— 重写以修复 R2-R5。
+ * 移动任务（M3 Phase 3 / ORB-011）。
  *
  * 实现要点：
  *  - 契约真源：MoveTaskDTO（expectedVersion + expectedBoardVersion + toStatus + beforeTaskId）
  *  - 响应形状：{task: TaskDTO, boardVersion}（绝不含 position）
- *  - 锁顺序：User→Project→Task（本函数只接触 Project+Task，User 由路由调用会话保证）
+ *  - 锁顺序：Project→Task；lockProjectOfTask 一条语句完成「按任务定位项目并加锁」
  *  - 乐观并发：检查任务 version（→ 409 VERSION_CONFLICT）、项目 boardVersion（→ 409 BOARD_CONFLICT）
  *  - 归档规避：requireWritableTaskProject 复核 archivedAt（→ 409 PROJECT_ARCHIVED）
- *  - ActivityLog：TASK_MOVED（withStatus/fromStatus/taskIdentifier）
- *  - 幂等保障：withTransaction + lockProjectRow（死锁/序列化重试兜底）
+ *  - ActivityLog：TASK_MOVED，同一条语句里 boardVersion++
+ *  - 目标列只读一次：既用于「位置没变」的判断，也用于中点计算
  *
- * 约束：position bigint 绝不入 DTO；响应经 MoveResultSchema.parse 复校；
+ * 约束：position bigint 绝不入 DTO；响应经 MoveResultSchema.parse 校验一次。
  */
 export async function moveTask(
   taskId: string,
   userId: string,
   input: MoveTaskDTO,
 ): Promise<MoveResultDTO> {
-  // Q10: 先规范化为大写校验，再转小写存储
   if (!UuidSchema.safeParse(taskId).success) throw taskNotFoundError();
-  const normalizedTaskId = normalizeUuid(taskId);
+  const movingId = taskId.toLowerCase();
+  const beforeId = input.beforeTaskId?.toLowerCase() ?? null;
 
   return withTransaction(async (tx) => {
-    // 1. 定位任务（锁前只读）获取最小 projectId（docs/05 §4）
-    const locator = await tx.task.findUnique({ where: { id: normalizedTaskId }, select: { projectId: true } });
-    if (!locator) throw taskNotFoundError();
-    const projectId = locator.projectId;
+    // 1. 按任务定位并锁定项目，拿到权威的 boardVersion / archivedAt / ownerId。
+    const locked = await lockProjectOfTask(tx, movingId);
+    if (!locked) throw taskNotFoundError();
+    const projectId = locked.id;
 
-    // 2. 锁 Project 行（锁顺序 Project→Task），拿到权威 boardVersion/archivedAt/ownerId
-    const locked = await lockProjectRow(tx, projectId);
-    if (!locked) throw new DomainError("NOT_FOUND", "项目不存在。");
+    // 2. 权限 + 归档检查（锁内权威复核）：非成员 → NOT_FOUND，归档 → PROJECT_ARCHIVED。
+    const { project } = await requireWritableTaskProject(tx, locked, userId);
 
-    // 3. 权限 + 归档检查（lock 内权威复核）
-    //    - non-member → NOT_FOUND（不区分是否项目存在）
-    //    - archived → PROJECT_ARCHIVED
-    const { project } = await requireWritableTaskProject(tx, projectId, userId);
+    // 3. 锁内读任务。
+    const task = await tx.task.findUnique({ where: { id: movingId } });
+    if (!task || task.deletedAt !== null) throw taskNotFoundError();
 
-    // 4. 重读任务（lock 内，fresh snapshot）
-    const freshTask = await tx.task.findUnique({
-      where: { id: normalizedTaskId },
-      include: { assignee: { select: { id: true, name: true } }, creator: { select: { id: true, name: true } } },
-    });
-    if (!freshTask || freshTask.deletedAt !== null) throw taskNotFoundError();
-
-    // 5. 任务版本检查（R3 核心）
-    if (freshTask.version !== input.expectedVersion) {
-      throw versionConflictError(freshTask.version);
-    }
-
-    // 6. 看板版本检查
+    // 4. 任务版本与看板版本。
+    if (task.version !== input.expectedVersion) throw versionConflictError(task.version);
     if (locked.boardVersion !== input.expectedBoardVersion) {
       throw boardConflictError(locked.boardVersion);
     }
 
-    // Compare the requested successor with the actual successor before assigning positions.
-    if (input.toStatus === freshTask.status) {
-      const column = await tx.task.findMany({
-        where: { projectId, status: freshTask.status, deletedAt: null },
-        orderBy: [{ position: "asc" }, { id: "asc" }], select: { id: true },
+    const respond = async (row: typeof task, boardVersion: number): Promise<MoveResultDTO> => {
+      const extras = await fetchTaskExtras(tx, [row]);
+      return MoveResultSchema.parse({
+        task: { ...buildTaskSummary(row, { projectKey: project.key }, extras), description: row.description },
+        boardVersion,
       });
-      const index = column.findIndex(row => row.id === freshTask.id);
-      const successor = column[index + 1]?.id ?? null;
-      if ((input.beforeTaskId?.toLowerCase() ?? null) === successor) {
-              const counts = await fetchTaskResourceCounts(tx, freshTask.id);
-              return MoveResultSchema.parse({ task: await toTaskDTO(freshTask, { projectKey: project.key }, counts), boardVersion: locked.boardVersion });
-      }
-    }
-    const newPosition = await computeMovePosition(tx, projectId, input.toStatus, input.beforeTaskId?.toLowerCase() ?? null, normalizedTaskId);
+    };
 
-    // 8. 更新任务：status + position + version++ + completedAt 规则
-    const completedAtDelta = computeCompletedAt(freshTask.status, input.toStatus, freshTask.completedAt);
+    // 5. 目标位置。列内移动或指定了 beforeTaskId 时读一次目标列；跨列追加只读列尾。
+    let newPosition: bigint;
+    if (input.toStatus === task.status || beforeId !== null) {
+      const column = await readColumn(tx, projectId, input.toStatus);
+      if (input.toStatus === task.status) {
+        // 请求的后继就是当前后继：没有语义变化，不写活动、不加版本。
+        const index = column.findIndex((row) => row.id === task.id);
+        const successor = column[index + 1]?.id ?? null;
+        if (beforeId === successor) return respond(task, locked.boardVersion);
+      }
+      if (beforeId === movingId) {
+        throw validationError({ beforeTaskId: ["不能将任务移动到其自身之前"] });
+      }
+      const others = column.filter((row) => row.id !== movingId);
+      if (beforeId === null) {
+        // 列内移到末尾：其余任务的末项之后（溢出时由 appendToColumnEnd 负责重编号）。
+        const last = others.at(-1);
+        newPosition =
+          last && BigInt(last.position) + POSITION_GAP <= BIGINT_MAX_SAFE
+            ? BigInt(last.position) + POSITION_GAP
+            : await appendToColumnEnd(tx, projectId, input.toStatus);
+      } else {
+        newPosition = await positionBefore(tx, projectId, input.toStatus, others, beforeId, movingId);
+      }
+    } else {
+      newPosition = await appendToColumnEnd(tx, projectId, input.toStatus);
+    }
+
+    // 6. 更新任务：status + position + version++ + completedAt 规则。
     const updated = await tx.task.update({
-      where: { id: normalizedTaskId },
+      where: { id: movingId },
       data: {
         status: input.toStatus,
         position: newPosition,
         version: { increment: 1 },
-        ...completedAtDelta,
+        ...computeCompletedAt(task.status, input.toStatus, task.completedAt),
       },
-      include: { assignee: { select: { id: true, name: true } }, creator: { select: { id: true, name: true } } },
     });
-
-    // 9. 递增 boardVersion（raw SQL，avoid Project.updatedAt）
-    await tx.$executeRaw`UPDATE "Project" SET "boardVersion" = "boardVersion" + 1 WHERE id = ${projectId}::uuid`;
     const newBoardVersion = locked.boardVersion + 1;
 
-    // 10. 写统一 ActivityLog（TASK_MOVED）
-    await appendActivity(tx, {
-      projectId,
-      actorId: userId,
-      entityType: "TASK",
-      entityId: normalizedTaskId,
-      action: "TASK_MOVED",
-      metadata: {
-        fromStatus: freshTask.status,
-        toStatus: input.toStatus,
-        taskIdentifier: formatIdentifier(project.key, freshTask.number),
+    // 7. 活动 TASK_MOVED；同一条语句里 boardVersion++（不 bump Project.updatedAt）。
+    await appendActivity(
+      tx,
+      {
+        projectId,
+        actorId: userId,
+        entityType: "TASK",
+        entityId: movingId,
+        action: "TASK_MOVED",
+        metadata: {
+          fromStatus: task.status,
+          toStatus: input.toStatus,
+          taskIdentifier: formatIdentifier(project.key, task.number),
+        },
       },
-    });
+      { bumpBoardVersion: true },
+    );
 
-    // 11. 写入 MoveRecord（审计历史，事务内同原子性）
+    // 8. 移动记录（审计历史，事务内同原子性）。
     await createMoveRecord(tx, {
-      taskId: normalizedTaskId,
-      fromStatus: freshTask.status,
+      taskId: movingId,
+      fromStatus: task.status,
       toStatus: input.toStatus,
-      fromPosition: freshTask.position,
+      fromPosition: task.position,
       toPosition: newPosition,
       boardVersion: newBoardVersion,
     });
 
-    // 12. M5: 真实聚合计数（绝不含 position）
-    const counts = await fetchTaskResourceCounts(tx, updated.id);
-    const result: MoveResultDTO = {
-      task: await toTaskDTO(updated, { projectKey: project.key }, counts),
-      boardVersion: newBoardVersion,
-    };
-    return MoveResultSchema.parse(result);
+    return respond(updated, newBoardVersion);
   });
 }

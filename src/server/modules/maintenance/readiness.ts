@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/server/db/prisma";
 import expected from "@/generated/readiness.json";
+import { createReadinessProbe } from "./readiness-probe";
 
 /** Database readiness only; optional mail/storage outages must not take the whole app offline. */
 export async function checkReadiness(db: Pick<typeof prisma, "$queryRaw"> = prisma): Promise<boolean> {
@@ -22,3 +23,12 @@ export async function checkReadiness(db: Pick<typeof prisma, "$queryRaw"> = pris
     return false;
   }
 }
+
+/**
+ * The probe behind GET /health/ready: full schema verification at start, after a failure and
+ * every few minutes; a single `SELECT 1` otherwise (see readiness-probe.ts).
+ */
+export const probeReadiness = createReadinessProbe(
+  () => checkReadiness(),
+  () => prisma.$queryRaw`SELECT 1`,
+);

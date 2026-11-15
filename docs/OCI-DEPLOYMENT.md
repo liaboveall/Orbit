@@ -30,7 +30,15 @@ sudo docker compose -f /opt/orbit/compose.yml up -d --wait web
 curl --fail https://smartorbit.tech/health/ready
 ~~~
 
-就绪检查核对迁移与必需列。上线后核对登录、任务和附件流程。迁移失败时排查状态与数据，已应用的迁移文件不可改写。应用回滚使用与当前 schema 兼容的旧镜像。
+就绪检查核对迁移与必需列（完整核对每 5 分钟一次，其间只探测数据库连通性）。上线后核对登录、任务和附件流程。迁移失败时排查状态与数据，已应用的迁移文件不可改写。应用回滚使用与当前 schema 兼容的旧镜像。
+
+### 代理、镜像与数据库参数的配套关系
+
+- Nginx 复用到应用的连接（nginx-http.conf 的 upstream orbit_app，空闲 60 秒）。应用必须把空闲连接保留得更久，否则 Nginx 可能复用一条应用刚关掉的连接，写请求得到 502。Web 镜像为此设置 KEEP_ALIVE_TIMEOUT=75000。顺序：**先**切换到带该设置的镜像，**再**安装新的 nginx-http.conf 与 nginx.conf，nginx -t 后重载。回退时反过来，先换回旧的 Nginx 配置。
+- Nginx 压缩应用未压缩的 JSON 与 RSC 数据（text/x-component）；认证端点与附件下载不压缩。这些指令都在 Orbit 自己的 server 片段里，upstream、限流区和日志格式一律以 orbit_ 命名，不影响同机的其它站点。
+- Web 镜像设置 NODE_OPTIONS=--max-old-space-size=640，对应 1 GB 的容器上限。内存上限不同时在 app.env 里覆盖这两个变量。
+- 单机编排为 PostgreSQL 设置 shared_buffers=256MB、effective_cache_size=640MB、work_mem=4MB、max_connections=40、jit=off，并预加载 pg_stat_statements。参数在容器重建后生效（`docker compose up -d postgres` 会重启数据库，先停 web 并完成备份）。需要查看语句统计时，在 postgres 维护库执行一次 `CREATE EXTENSION pg_stat_statements`；不创建扩展时预加载不产生可见对象。
+- 本次有两个迁移（Project.revision、限流表改为 UNLOGGED），都兼容旧镜像，按上面的步骤在 web 停止期间执行 migrate deploy。限流计数在数据库非正常关闭后会清零，这是预期行为。
 
 ## 定时维护
 

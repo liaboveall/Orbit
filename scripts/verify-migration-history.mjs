@@ -34,6 +34,10 @@ for (const [key, database] of [["DATABASE_URL", "orbit_dev"], ["TEST_DATABASE_UR
         WHERE schemaname='public' AND tablename <> '_prisma_migrations'
       UNION ALL SELECT 'enum', t.typname || '.' || e.enumsortorder, e.enumlabel FROM pg_enum e
         JOIN pg_type t ON t.oid=e.enumtypid JOIN pg_namespace n ON n.oid=t.typnamespace WHERE n.nspname='public'
+      -- Persistence (logged/unlogged) and storage parameters are set by migrations too.
+      UNION ALL SELECT 'table', c.relname, json_build_array(c.relpersistence::text, c.reloptions)::text
+        FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname='public' AND c.relkind='r' AND c.relname <> '_prisma_migrations'
     ) definitions ORDER BY kind, identity`);
     const schemaDigest = sha(JSON.stringify(schema.rows)); schemas.push(schemaDigest);
     results.push({ database, applied: history.rows.length, expected: migrations.size, unknown, missing, mismatches, schemaDigest });

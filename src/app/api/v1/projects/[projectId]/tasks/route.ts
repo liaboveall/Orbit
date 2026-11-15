@@ -52,7 +52,7 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
     const parsed = parseQueryParams(TaskListQuerySchema, params, requestId);
     if (!parsed.ok) return jsonEnvelope(parsed.response, 400, requestId);
 
-    const result = await listProjectTasks(projectId, sessionUser.id, parsed.data);
+    const result = await listProjectTasks(projectId, sessionUser.id, parsed.data, sessionUser.timezone);
     return jsonList(
       result.tasks,
       { requestId, nextCursor: result.nextCursor, hasMore: result.hasMore },

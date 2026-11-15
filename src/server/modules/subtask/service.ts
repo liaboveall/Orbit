@@ -9,9 +9,8 @@ import { SubtaskSchema, UuidSchema } from "@/contracts";
 import type { Prisma } from "@/generated/prisma/client";
 import { DomainError } from "@/server/http/errors";
 import { prisma } from "@/server/db/prisma";
-import { lockProjectRow, withTransaction } from "@/server/db/tx";
+import { lockProjectOfTaskChild, withTransaction } from "@/server/db/tx";
 import { appendActivity } from "@/server/modules/activity/writer";
-import { projectNotFoundError } from "@/server/modules/authorization/project-access";
 import {
   beginIdempotency,
   commitIdempotency,
@@ -21,10 +20,9 @@ import {
 import { MAX_SUBTASKS_PER_TASK } from "@/server/modules/limits";
 import { formatIdentifier } from "@/server/modules/task/identifier";
 import {
-  locateTaskProject,
+  lockTaskProject,
   requireWritableTaskSubresource,
   resolveReadableTaskSubresource,
-  touchTaskUpdatedAt,
 } from "@/server/modules/task/subresource";
 import {
   countActiveSubtasks,
@@ -49,8 +47,8 @@ import { toSubtaskDTO } from "./mappers";
  *  - 软删除：置 deletedAt 并 version++，列表与后续读写一律视为 404。
  *
  * 事务原子序列（锁顺序 Project → Task → 子资源）：
- *   locateTaskProject（锁外只读定位）→ lockProjectRow → requireWritableTaskSubresource
- *   → [幂等 begin] → 配额 → 写子任务 → touchTaskUpdatedAt → 写活动 → [幂等 commit]。
+ *   lockTaskProject（按任务定位并锁定项目）→ requireWritableTaskSubresource
+ *   → [幂等 begin] → 配额 → 写子任务 → 写活动（同一条语句刷新父任务 updatedAt）→ [幂等 commit]。
  */
 
 /** 构造 400 VALIDATION_ERROR（字段级提示）。 */
@@ -79,19 +77,14 @@ function normalizeTitle(raw: string): string {
 }
 
 /**
- * 锁外定位子任务所属 (taskId, projectId)，用于 PATCH/DELETE 满足 Project 先锁的顺序。
- * 非法 UUID / 子任务不存在 → 404。**不做授权**，授权在锁内重做。
+ * 写路径第一步：按子任务锁定所属项目并带回父任务 id。非法 UUID / 不存在 → 404。
+ * 不做授权判断，授权由 requireWritableTaskSubresource 在持锁后完成。
  */
-async function locateSubtaskProject(
-  subtaskId: string,
-): Promise<{ taskId: string; projectId: string }> {
+async function lockSubtaskProject(tx: Prisma.TransactionClient, subtaskId: string) {
   if (!UuidSchema.safeParse(subtaskId).success) throw subtaskNotFoundError();
-  const row = await prisma.subtask.findUnique({
-    where: { id: subtaskId },
-    select: { taskId: true, task: { select: { projectId: true } } },
-  });
-  if (!row) throw subtaskNotFoundError();
-  return { taskId: row.taskId, projectId: row.task.projectId };
+  const located = await lockProjectOfTaskChild(tx, "subtask", subtaskId);
+  if (!located) throw subtaskNotFoundError();
+  return located;
 }
 
 /**
@@ -125,7 +118,6 @@ export async function createSubtask(
   input: CreateSubtaskDTO,
   idempotencyKey: string,
 ): Promise<CreateSubtaskResult> {
-  const projectId = await locateTaskProject(taskId);
   taskId = taskId.toLowerCase();
   const requestHash = hashRequest(input);
   const routeKey = createSubtaskRouteKey(taskId);
@@ -138,10 +130,10 @@ export async function createSubtask(
   } as const;
 
   const execute = () => withTransaction(async (tx) => {
-    const locked = await lockProjectRow(tx, projectId);
-    if (!locked) throw projectNotFoundError();
+    const locked = await lockTaskProject(tx, taskId);
+    const projectId = locked.id;
 
-    const { task, access } = await requireWritableTaskSubresource(tx, projectId, taskId, userId);
+    const { task, access } = await requireWritableTaskSubresource(tx, locked, taskId, userId);
 
     const begin = await beginIdempotency(tx, idempotencyOpts);
     if (begin.kind === "replay") {
@@ -165,17 +157,19 @@ export async function createSubtask(
       } satisfies Prisma.SubtaskUncheckedCreateInput,
     });
 
-    // 父任务 updatedAt 同步，但不动 task.version（docs/04 §4）。
-    await touchTaskUpdatedAt(tx, taskId);
-
-    await appendActivity(tx, {
-      projectId,
-      actorId: userId,
-      entityType: "SUBTASK",
-      entityId: created.id,
-      action: "SUBTASK_CREATED",
-      metadata: { taskIdentifier: formatIdentifier(access.project.key, task.number) },
-    });
+    // 同一条语句同步父任务 updatedAt，但不动 task.version（docs/04 §4）。
+    await appendActivity(
+      tx,
+      {
+        projectId,
+        actorId: userId,
+        entityType: "SUBTASK",
+        entityId: created.id,
+        action: "SUBTASK_CREATED",
+        metadata: { taskIdentifier: formatIdentifier(access.project.key, task.number) },
+      },
+      { touchTaskId: taskId },
+    );
 
     const subtask = toSubtaskDTO(created);
 
@@ -226,13 +220,11 @@ export async function updateSubtask(
   userId: string,
   input: UpdateSubtaskDTO,
 ): Promise<SubtaskDTO> {
-  const { taskId, projectId } = await locateSubtaskProject(subtaskId);
-
   return withTransaction(async (tx) => {
-    const locked = await lockProjectRow(tx, projectId);
-    if (!locked) throw projectNotFoundError();
+    const { project: locked, taskId } = await lockSubtaskProject(tx, subtaskId);
+    const projectId = locked.id;
 
-    const { task, access } = await requireWritableTaskSubresource(tx, projectId, taskId, userId);
+    const { task, access } = await requireWritableTaskSubresource(tx, locked, taskId, userId);
 
     const subtask = await tx.subtask.findUnique({ where: { id: subtaskId } });
     if (!subtask || subtask.taskId !== taskId || subtask.deletedAt !== null) {
@@ -266,19 +258,21 @@ export async function updateSubtask(
     data.version = subtask.version + 1;
     const updated = await tx.subtask.update({ where: { id: subtask.id }, data });
 
-    await touchTaskUpdatedAt(tx, taskId);
-
-    await appendActivity(tx, {
-      projectId,
-      actorId: userId,
-      entityType: "SUBTASK",
-      entityId: subtask.id,
-      action: "SUBTASK_UPDATED",
-      metadata: {
-        fields: changedFields,
-        taskIdentifier: formatIdentifier(access.project.key, task.number),
+    await appendActivity(
+      tx,
+      {
+        projectId,
+        actorId: userId,
+        entityType: "SUBTASK",
+        entityId: subtask.id,
+        action: "SUBTASK_UPDATED",
+        metadata: {
+          fields: changedFields,
+          taskIdentifier: formatIdentifier(access.project.key, task.number),
+        },
       },
-    });
+      { touchTaskId: taskId },
+    );
 
     return toSubtaskDTO(updated);
   });
@@ -296,13 +290,11 @@ export async function deleteSubtask(
   userId: string,
   expectedVersion: number,
 ): Promise<void> {
-  const { taskId, projectId } = await locateSubtaskProject(subtaskId);
-
   await withTransaction(async (tx) => {
-    const locked = await lockProjectRow(tx, projectId);
-    if (!locked) throw projectNotFoundError();
+    const { project: locked, taskId } = await lockSubtaskProject(tx, subtaskId);
+    const projectId = locked.id;
 
-    const { task, access } = await requireWritableTaskSubresource(tx, projectId, taskId, userId);
+    const { task, access } = await requireWritableTaskSubresource(tx, locked, taskId, userId);
 
     const subtask = await tx.subtask.findUnique({ where: { id: subtaskId } });
     if (!subtask || subtask.taskId !== taskId || subtask.deletedAt !== null) {
@@ -318,15 +310,17 @@ export async function deleteSubtask(
       data: { deletedAt: new Date(), version: subtask.version + 1 },
     });
 
-    await touchTaskUpdatedAt(tx, taskId);
-
-    await appendActivity(tx, {
-      projectId,
-      actorId: userId,
-      entityType: "SUBTASK",
-      entityId: subtask.id,
-      action: "SUBTASK_DELETED",
-      metadata: { taskIdentifier: formatIdentifier(access.project.key, task.number) },
-    });
+    await appendActivity(
+      tx,
+      {
+        projectId,
+        actorId: userId,
+        entityType: "SUBTASK",
+        entityId: subtask.id,
+        action: "SUBTASK_DELETED",
+        metadata: { taskIdentifier: formatIdentifier(access.project.key, task.number) },
+      },
+      { touchTaskId: taskId },
+    );
   });
 }

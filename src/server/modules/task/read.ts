@@ -21,7 +21,7 @@ import {
 } from "@/server/modules/pagination/cursor";
 import { requireProjectMember } from "@/server/modules/authorization/project-access";
 import { fromDueDateString, isValidDueDate } from "./date-only";
-import { TASK_SUMMARY_SELECT, toTaskDTO, toTaskSummaryDTO, fetchTaskResourceCounts, fetchTaskResourceCountsBatch } from "./mappers";
+import { TASK_SUMMARY_SELECT, fetchTaskExtras, toTaskDTO, toTaskSummaryDTO } from "./mappers";
 import { taskNotFoundError } from "./access";
 
 /**
@@ -150,6 +150,7 @@ export async function listProjectTasks(
   projectId: string,
   userId: string,
   query: TaskListQueryDTO,
+  viewerTimezone?: string,
 ): Promise<TaskListResult> {
   const { project } = await requireProjectMember(prisma, projectId, userId);
 
@@ -162,8 +163,12 @@ export async function listProjectTasks(
   const deleted = query.deleted ?? "exclude";
   const limit = Math.min(query.limit ?? DEFAULT_LIMIT, MAX_LIMIT);
 
-  const user = query.overdue ? await prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } }) : null;
-  const today = query.overdue ? dateInTimezone(registrationTimezone(user?.timezone)) : null;
+  // 逾期按用户时区的「今天」判定；调用方已有会话用户时传入其时区，省一次只为取时区的查询。
+  const timezone = !query.overdue
+    ? null
+    : (viewerTimezone ??
+      (await prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } }))?.timezone);
+  const today = query.overdue ? dateInTimezone(registrationTimezone(timezone)) : null;
   const fingerprint = computeFilterFingerprint({
     today,
     projectId: project.id,
@@ -215,16 +220,10 @@ export async function listProjectTasks(
 
   const hasMore = rows.length > limit;
   const page = hasMore ? rows.slice(0, limit) : rows;
-  
-  // M5: 并发聚合真实计数
-  const batchCounts=await fetchTaskResourceCountsBatch(prisma,page.map(row=>row.id));
-  const tasksWithCounts = await Promise.all(
-    page.map(async (row) => {
-      const counts = batchCounts.get(row.id)!;
-      return await toTaskSummaryDTO(row, { projectKey: project.key }, counts);
-    })
-  );
-  const tasks = tasksWithCounts;
+
+  // 姓名与子任务/评论/附件计数：整页一条语句。
+  const extras = await fetchTaskExtras(prisma, page);
+  const tasks = page.map((row) => toTaskSummaryDTO(row, { projectKey: project.key }, extras));
 
   let nextCursor: string | null = null;
   if (hasMore) {
@@ -261,21 +260,12 @@ export async function findProjectTask(
 export async function getTask(taskId: string, userId: string): Promise<TaskDTO> {
   if (!UuidSchema.safeParse(taskId).success) throw taskNotFoundError();
 
-  const task = await prisma.task.findUnique({
-    where: { id: taskId },
-    include: {
-      project: { select: { key: true } },
-      assignee: { select: { id: true, name: true } },
-      creator: { select: { id: true, name: true } },
-    },
-  });
+  const task = await prisma.task.findUnique({ where: { id: taskId } });
   if (!task) throw taskNotFoundError();
 
   // 先定位最小 projectId，再验成员关系（非成员 → 404），最后判软删除（docs/05 §4）。
-  await requireProjectMember(prisma, task.projectId, userId);
+  const { project } = await requireProjectMember(prisma, task.projectId, userId);
   if (task.deletedAt !== null) throw taskNotFoundError();
 
-  // M5: 真实聚合计数
-  const counts = await fetchTaskResourceCounts(prisma, task.id);
-  return await toTaskDTO(task, { projectKey: task.project.key }, counts);
+  return toTaskDTO(task, { projectKey: project.key }, await fetchTaskExtras(prisma, [task]));
 }

@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Readable } from "node:stream";
 import { prisma } from "@/server/db/prisma";
-import { lockProjectRow, withTransaction } from "@/server/db/tx";
+import { lockProjectOfTaskChild, lockProjectRow, withTransaction } from "@/server/db/tx";
 import { DomainError } from "@/server/http/errors";
 import {
   UploadAttachmentMetaSchema,
@@ -17,10 +17,9 @@ import {
   type UploadAttachmentMetaDTO,
 } from "@/contracts";
 import {
-  locateTaskProject,
+  lockTaskProject,
   requireWritableTaskSubresource,
   resolveReadableTaskSubresource,
-  touchTaskUpdatedAt,
 } from "@/server/modules/task/subresource";
 import { appendActivity } from "@/server/modules/activity/writer";
 import { formatIdentifier } from "@/server/modules/task/identifier";
@@ -81,15 +80,10 @@ export async function uploadAttachment(
   const meta = parsed.data;
   validateFileNameType(file.fileName, file.mimeType);
   taskId = taskId.toLowerCase();
-  const projectId = await locateTaskProject(taskId);
   const reservation = await withTransaction(async (tx) => {
-    await lockProjectRow(tx, projectId);
-    const { access } = await requireWritableTaskSubresource(
-      tx,
-      projectId,
-      taskId,
-      userId,
-    );
+    const locked = await lockTaskProject(tx, taskId);
+    const projectId = locked.id;
+    const { access } = await requireWritableTaskSubresource(tx, locked, taskId, userId);
     const existing = await tx.attachment.findUnique({
       where: {
         taskId_uploaderId_clientUploadId: {
@@ -163,6 +157,7 @@ export async function uploadAttachment(
     });
     return { row, replayed: false };
   });
+  const projectId = reservation.row.projectId;
   let directory: string | undefined;
   try {
     directory = await mkdtemp(join(tmpdir(), "orbit-upload-"));
@@ -185,13 +180,8 @@ export async function uploadAttachment(
         options.signal,
       );
     return await withTransaction(async (tx) => {
-      await lockProjectRow(tx, projectId);
-      const { task, access } = await requireWritableTaskSubresource(
-        tx,
-        projectId,
-        taskId,
-        userId,
-      );
+      const locked = await lockTaskProject(tx, taskId);
+      const { task, access } = await requireWritableTaskSubresource(tx, locked, taskId, userId);
       const current = await tx.attachment.findUnique({
         where: { id: reservation.row.id },
         include: uploaderInclude,
@@ -220,17 +210,21 @@ export async function uploadAttachment(
           usedBytes: { increment: current.declaredSizeBytes },
         },
       });
-      await touchTaskUpdatedAt(tx, taskId);
-      await appendActivity(tx, {
-        projectId,
-        actorId: userId,
-        entityType: "ATTACHMENT",
-        entityId: current.id,
-        action: "FILE_UPLOADED",
-        metadata: {
-          taskIdentifier: formatIdentifier(access.project.key, task.number),
+      // 同一条语句同步父任务 updatedAt（不动 task.version）。
+      await appendActivity(
+        tx,
+        {
+          projectId,
+          actorId: userId,
+          entityType: "ATTACHMENT",
+          entityId: current.id,
+          action: "FILE_UPLOADED",
+          metadata: {
+            taskIdentifier: formatIdentifier(access.project.key, task.number),
+          },
         },
-      });
+        { touchTaskId: taskId },
+      );
       return { attachment: toAttachmentDTO(ready), replayed: false };
     });
   } catch (error) {
@@ -284,13 +278,15 @@ export async function deleteAttachment(
   id: string,
   userId: string,
 ): Promise<void> {
-  const locator = await locateAttachment(id);
+  if (!UuidSchema.safeParse(id).success) throw attachmentNotFoundError();
   await withTransaction(async (tx) => {
-    await lockProjectRow(tx, locator.projectId);
+    // 按附件定位并锁定所属项目（一条语句），同时带回父任务 id；附件不存在 → 404。
+    const located = await lockProjectOfTaskChild(tx, "attachment", id);
+    if (!located) throw attachmentNotFoundError();
     const { task, access } = await requireWritableTaskSubresource(
       tx,
-      locator.projectId,
-      locator.taskId,
+      located.project,
+      located.taskId,
       userId,
     );
     const row = await tx.attachment.findUnique({ where: { id } });
@@ -317,17 +313,20 @@ export async function deleteAttachment(
         errorCode: null,
       },
     });
-    await touchTaskUpdatedAt(tx, row.taskId);
-    await appendActivity(tx, {
-      projectId: row.projectId,
-      actorId: userId,
-      entityType: "ATTACHMENT",
-      entityId: id,
-      action: "FILE_DELETED",
-      metadata: {
-        taskIdentifier: formatIdentifier(access.project.key, task.number),
+    await appendActivity(
+      tx,
+      {
+        projectId: row.projectId,
+        actorId: userId,
+        entityType: "ATTACHMENT",
+        entityId: id,
+        action: "FILE_DELETED",
+        metadata: {
+          taskIdentifier: formatIdentifier(access.project.key, task.number),
+        },
       },
-    });
+      { touchTaskId: row.taskId },
+    );
   });
 }
 async function readableAttachment(id: string, userId: string) {

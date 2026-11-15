@@ -14,13 +14,18 @@ import {
   encodeCursor,
   invalidCursorError,
 } from "@/server/modules/pagination/cursor";
-import { resolveProjectAccess } from "@/server/modules/authorization/project-access";
+import { toProjectRow, type RawProjectRow } from "@/server/db/project-row";
+import {
+  projectMemberSql,
+  projectNotFoundError,
+  projectVisibleSql,
+} from "@/server/modules/authorization/project-access";
 import { toProjectDTO } from "./mappers";
 
 /**
  * 项目读取服务（M2 / ORB-007，docs/05 §4/§6）。
  *
- * 只读路径用应用 Prisma 单例（不开事务）；授权统一走 project-access（非成员/不存在 → 404）。
+ * 只读路径用应用 Prisma 单例（不开事务）；非成员/不存在统一 404，授权与数据同一条语句读取。
  * 列表用 keyset 游标分页：默认 updatedAt DESC, id DESC，游标绑定 (scope, archived) 过滤指纹。
  */
 
@@ -134,14 +139,32 @@ export async function listProjects(
   return { projects, nextCursor, hasMore };
 }
 
-/** 读取单个项目（成员可见）；非成员/不存在 → 404 NOT_FOUND。 */
+type ProjectWithCounts = RawProjectRow & {
+  isMember: boolean;
+  memberRows: number;
+  openTaskCount: number;
+};
+
+/**
+ * 读取单个项目（成员可见）；非成员/不存在 → 404 NOT_FOUND。
+ * 项目行、成员关系、成员数与未完成任务数来自同一条语句（每个项目页的布局都会调用）。
+ * openTaskCount = 未删除且未完成（status ≠ DONE）的任务（docs/04 §3）。
+ */
 export async function getProject(projectId: string, userId: string): Promise<ProjectDTO> {
-  const { project } = await resolveProjectAccess(prisma, projectId, userId);
-  const memberRows = await prisma.projectMember.count({ where: { projectId: project.id } });
-  // openTaskCount = 未删除且未完成（status ≠ DONE）的任务（docs/04 §3）。
-  const openTaskCount = await prisma.task.count({
-    where: { projectId: project.id, deletedAt: null, status: { not: "DONE" } },
-  });
+  if (!UuidSchema.safeParse(projectId).success) throw projectNotFoundError();
+  const rows = await prisma.$queryRaw<ProjectWithCounts[]>`
+    SELECT p.*,
+      ${projectMemberSql(userId)} AS "isMember",
+      (SELECT count(*) FROM "ProjectMember" m WHERE m."projectId" = p.id)::int AS "memberRows",
+      (SELECT count(*) FROM "Task" t
+         WHERE t."projectId" = p.id AND t."deletedAt" IS NULL AND t.status <> 'DONE')::int AS "openTaskCount"
+    FROM "Project" p
+    WHERE p.id = ${projectId}::uuid
+  `;
+  const row = rows[0];
+  if (!row) throw projectNotFoundError();
+  const { isMember, memberRows, openTaskCount, ...project } = toProjectRow(row);
+  if (project.ownerId !== userId && !isMember) throw projectNotFoundError();
   return toProjectDTO(project, {
     viewerId: userId,
     memberCount: 1 + memberRows,
@@ -152,40 +175,38 @@ export async function getProject(projectId: string, userId: string): Promise<Pro
 /**
  * 列出项目成员（含 owner，docs/05 §4：不向队友披露 email）。
  * 授权：成员/owner 可见，非成员 → 404。owner 排首位，其后按 joinedAt 升序。
+ * 授权与名单是同一条语句：查看者不可见该项目时结果为空（owner 行总是存在）。
  */
 export async function listMembers(projectId: string, userId: string): Promise<MemberDTO[]> {
-  const { project } = await resolveProjectAccess(prisma, projectId, userId);
-
-  const owner = await prisma.user.findUnique({
-    where: { id: project.ownerId },
-    select: { id: true, name: true },
-  });
-  const memberRows = await prisma.projectMember.findMany({
-    where: { projectId: project.id },
-    orderBy: [{ joinedAt: "asc" }, { id: "asc" }],
-    include: { user: { select: { id: true, name: true } } },
-  });
-
-  const members: MemberDTO[] = [];
-  if (owner) {
-    members.push(
-      MemberSchema.parse({
-        userId: owner.id,
-        name: displayName(owner.name),
-        role: "OWNER",
-        joinedAt: project.createdAt.toISOString(),
-      }),
-    );
-  }
-  for (const row of memberRows) {
-    members.push(
-      MemberSchema.parse({
-        userId: row.user.id,
-        name: displayName(row.user.name),
-        role: "MEMBER",
-        joinedAt: row.joinedAt.toISOString(),
-      }),
-    );
-  }
-  return members;
+  if (!UuidSchema.safeParse(projectId).success) throw projectNotFoundError();
+  const rows = await prisma.$queryRaw<
+    Array<{ userId: string; name: string; role: "OWNER" | "MEMBER"; joinedAt: Date }>
+  >`
+    WITH project AS (
+      SELECT p.id, p."ownerId", p."createdAt"
+      FROM "Project" p
+      WHERE p.id = ${projectId}::uuid AND ${projectVisibleSql(userId)}
+    )
+    SELECT listed."userId", listed.name, listed.role, listed."joinedAt"
+    FROM (
+      SELECT u.id AS "userId", u.name, 'OWNER' AS role, project."createdAt" AS "joinedAt",
+        0 AS rank, NULL::uuid AS "memberId"
+      FROM project JOIN "User" u ON u.id = project."ownerId"
+      UNION ALL
+      SELECT u.id, u.name, 'MEMBER', m."joinedAt", 1, m.id
+      FROM project
+      JOIN "ProjectMember" m ON m."projectId" = project.id
+      JOIN "User" u ON u.id = m."userId"
+    ) listed
+    ORDER BY listed.rank, listed."joinedAt" ASC, listed."memberId" ASC
+  `;
+  if (rows.length === 0) throw projectNotFoundError();
+  return rows.map((row) =>
+    MemberSchema.parse({
+      userId: row.userId,
+      name: displayName(row.name),
+      role: row.role,
+      joinedAt: row.joinedAt.toISOString(),
+    }),
+  );
 }

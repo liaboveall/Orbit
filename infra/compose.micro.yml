@@ -12,6 +12,30 @@ services:
     image: postgres:17
     restart: unless-stopped
     mem_limit: ${ORBIT_POSTGRES_MEM_LIMIT:-0}
+    # Sized for a 1 GB container next to other sites: a quarter of it as shared buffers, a
+    # connection ceiling well above the app pool (5) plus maintenance, backup and monitoring,
+    # and small per-operation memory so a burst of sorts cannot reach the limit.
+    # jit=off: every query here is short; JIT compilation only adds latency.
+    # pg_stat_statements is preloaded for diagnosis; it stays inert until an operator runs
+    # CREATE EXTENSION pg_stat_statements in the postgres maintenance database.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=640MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - max_connections=40
+      - -c
+      - jit=off
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+    # Room for parallel-query shared memory; Docker's default /dev/shm is 64 MB.
+    shm_size: 128mb
     env_file: [/opt/orbit/db.env]
     volumes:
       - pgdata:/var/lib/postgresql/data

@@ -468,6 +468,31 @@ export const OverviewSchema = z.strictObject({
 });
 export type OverviewDTO = z.infer<typeof OverviewSchema>;
 
+/* ── 变更探测 ─────────────────────────────────────────────────────────── */
+
+/** 不透明的变更标记：只用于比较是否相等，不承载可解析的含义。 */
+export const PulseTokenSchema = z.string().min(8).max(64);
+
+/** PulseProject：一个可访问项目的变更标记；成员可见的任何内容变化都会让 token 改变。 */
+export const PulseProjectSchema = z.strictObject({
+  id: UuidSchema,
+  token: PulseTokenSchema,
+});
+export type PulseProjectDTO = z.infer<typeof PulseProjectSchema>;
+
+/**
+ * Pulse：GET /my/pulse 的响应。客户端用它判断「有没有变化」再决定是否重新读取：
+ *  - token：覆盖全部内容（同时是响应的 ETag）；
+ *  - shell：侧栏最近项目可能变化时改变（可访问项目集合及其名称、颜色、归档、更新时间）；
+ *  - projects：当前用户拥有或参与的全部项目（含已归档），各带自己的 token。
+ */
+export const PulseSchema = z.strictObject({
+  token: PulseTokenSchema,
+  shell: PulseTokenSchema,
+  projects: z.array(PulseProjectSchema),
+});
+export type PulseDTO = z.infer<typeof PulseSchema>;
+
 /* ── 查询参数 schemas（对齐 paths 内联 parameters）────────────────────── */
 
 /**

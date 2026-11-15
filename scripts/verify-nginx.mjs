@@ -8,7 +8,19 @@ const directory = resolve("artifacts/release/nginx");
 await mkdir(directory, { recursive: true });
 const http = await readFile("infra/nginx-http.conf", "utf8");
 const server = await readFile("infra/nginx.conf", "utf8");
-const config = `events {}\nhttp {\n${http}\nserver { listen 8080; ${server} }\nserver { listen 3000; access_log off; error_log /dev/null; location = /__review_failure { return 503; } location / { return 204; } }\n}`;
+// Shared hosts: Orbit's files must not claim the default server or use capturing regex maps.
+assert(!/default_server/.test(http + server), "Orbit must not declare default_server");
+assert(!/~\S*\((?!\?:)/.test(http), "map regexes must use non-capturing groups");
+assert.equal((server.match(/^\s*proxy_set_header\s/gm) ?? []).length, 5, "proxy headers are declared once, at the shared level");
+const json = JSON.stringify({ padding: "a".repeat(2000) });
+// The stand-in application reports how many requests arrived on the current upstream connection.
+const application = `server { listen 3000; access_log off; error_log /dev/null; default_type application/json;
+  location = /__review_failure { return 503; }
+  location = /__review_connection { return 200 '{"requests":$connection_requests}'; }
+  location = /__review_json { return 200 '${json}'; }
+  location = /api/auth/__review_json { return 200 '${json}'; }
+  location / { return 204; } }`;
+const config = `events {}\nhttp {\n${http}\nserver { listen 8080; ${server} }\n${application}\n}`;
 const path = resolve(directory, "nginx.conf");
 await writeFile(path, config);
 const name = "orbit-nginx-review-" + randomUUID();
@@ -33,6 +45,17 @@ try {
       await new Promise(resolve => setTimeout(resolve, 200));
     }
   }
+  // Upstream keepalive: consecutive requests reuse one connection to the application.
+  const reused = [];
+  for (let i = 0; i < 3; i += 1) reused.push((await (await fetch(`${base}/__review_connection`)).json()).requests);
+  assert(reused.at(-1) >= 2, `upstream connections are not reused: ${reused}`);
+  // JSON from the application is compressed by the proxy; authentication responses are not.
+  const compressed = await fetch(`${base}/__review_json`, { headers: { "accept-encoding": "gzip" } });
+  assert.equal(compressed.headers.get("content-encoding"), "gzip");
+  assert.equal((await compressed.json()).padding.length, 2000);
+  const plain = await fetch(`${base}/api/auth/__review_json`, { headers: { "accept-encoding": "gzip" } });
+  assert.equal(plain.status, 200);
+  assert.equal(plain.headers.get("content-encoding"), null);
   const secret = "synthetic-private-" + randomUUID();
   const headers = { referer: `https://example.invalid/${secret}`, cookie: `session=${secret}` };
   const responses = await Promise.all(Array.from({ length: 60 }, () => fetch(`${base}/api/auth/${secret}?token=${secret}`, { headers })));
@@ -53,7 +76,8 @@ try {
   assert(rows.some(row => row.status === 503 && row.upstreamStatus === "503"));
   const imageId = docker(["image", "inspect", image, "--format", "{{.Id}}"]);
   const summary = { imageId, requests: responses.length, accepted: responses.filter(r => r.status === 204).length,
-    rejected: rejected.length, secretAbsent: true, upstreamFailureVisible: true, upstreamTimingPresent: rows.some(row => row.upstreamResponseSeconds !== "-") };
+    rejected: rejected.length, secretAbsent: true, upstreamFailureVisible: true, upstreamTimingPresent: rows.some(row => row.upstreamResponseSeconds !== "-"),
+    upstreamConnectionReused: true, jsonCompressed: true, authUncompressed: true };
   await writeFile(resolve(directory, "summary.json"), JSON.stringify(summary, null, 2));
   await writeFile(resolve(directory, "access.jsonl"), log);
   console.log(JSON.stringify(summary));

@@ -30,9 +30,11 @@ Better Auth 的 User、Session、Account、Verification 使用锁定版本的官
 
 ### Project
 
-id UUID PK；ownerId User FK RESTRICT；name varchar(80)；key varchar(8) UNIQUE；description text 默认空；color 枚举 BLUE/PURPLE/TEAL/GREEN/ORANGE/GRAY；archivedAt nullable；version int 默认1；boardVersion int 默认1；nextTaskNumber int 默认1；reservedBytes bigint 默认0；usedBytes bigint 默认0；createdAt、updatedAt。
+id UUID PK；ownerId User FK RESTRICT；name varchar(80)；key varchar(8) UNIQUE；description text 默认空；color 枚举 BLUE/PURPLE/TEAL/GREEN/ORANGE/GRAY；archivedAt nullable；version int 默认1；boardVersion int 默认1；revision int 默认0；nextTaskNumber int 默认1；reservedBytes bigint 默认0；usedBytes bigint 默认0；createdAt、updatedAt。
 
-CHECK key 满足大写格式，version/boardVersion/nextTaskNumber > 0，bytes >= 0。ownerId 是唯一 owner 权限来源。key 永不复用，项目归档不释放 key。索引 ownerId,archivedAt,updatedAt,id。
+CHECK key 满足大写格式，version/boardVersion/nextTaskNumber > 0，revision >= 0，bytes >= 0。ownerId 是唯一 owner 权限来源。key 永不复用，项目归档不释放 key。索引 ownerId,archivedAt,updatedAt,id。
+
+revision 是项目内的变更计数，只服务于变更探测（GET /my/pulse，见 05 §6），不进入任何 DTO。每条活动日志在同一条语句里把它加一，该语句在项目锁内执行，所以它按提交顺序严格递增。活动的时间戳做不到：排队等锁的事务可能后提交、时间却更早。它不改变 updatedAt。
 
 ### ProjectMember
 
@@ -86,13 +88,15 @@ id UUID PK；userId；method；routeKey（含真实资源ID的规范化路径）
 
 keyHash PK（不存原始邮箱/IP）；windowStart；count；expiresAt。实际表与 Better Auth 数据库存储方式可分开，不能破坏库 schema。计数原子递增，维护命令清理过期桶。不以 count 的 read-then-write 实现共享限流。
 
+该表是 UNLOGGED（fillfactor 50）：每个已登录请求都会写一次计数，普通表意味着每次读取都要等一次 WAL 刷盘。计数器丢了只是当前窗口重新开始，所以不写 WAL；PostgreSQL 在非正常关闭后会清空它，pg_dump 仍会导出。UploadLease 保持普通表：每次上传只写一次，并且约束并发传输数。
+
 ### UploadLease（M6）
 
 id UUID PK；keyHash char(64)；startedAt timestamptz；expiresAt timestamptz；active boolean。索引 (keyHash,startedAt) 和 expiresAt。同用户准入通过事务级 advisory lock 串行化，频率统计 startedAt 的滑动一分钟、并发统计未过期 active。释放只改 active，不删除频率证据；超过 180 秒允许崩溃恢复，维护限批删除过期行。
 
 ## 4. 写入事务与锁
 
-所有同项目写入先锁 Project（SELECT FOR UPDATE 或语义等价实现），再检查权限和归档状态，之后按 Task → 子资源顺序锁定。涉及owner活动项目数量的创建/归档/恢复，须先取得User锁再取得Project锁；恢复时检查10项目配额。统一顺序 User（需要时）→ Project → Task → 子资源。必须使用参数化 SQL。网络 I/O 不能位于事务内。
+所有同项目写入先锁 Project（SELECT … FOR NO KEY UPDATE），再检查权限和归档状态，之后按 Task → 子资源顺序锁定。FOR NO KEY UPDATE 与自身互斥，同项目写入照样串行；它不与外键检查取得的 FOR KEY SHARE 冲突，写入活动日志、设置负责人这类引用 User 或 Project 的操作不会排在别的事务持有的用户锁或项目锁之后。以任务或子资源为入口的写操作用一条语句完成「定位所属项目并加锁」。锁语句返回持锁后的项目行，不再重读；成员关系在拿到锁之后用单独的语句判定——写在加锁语句里的子查询沿用等锁之前的快照，会看不到等锁期间提交的成员移除。涉及owner活动项目数量的创建/归档/恢复，须先取得User锁再取得Project锁；恢复时检查10项目配额。统一顺序 User（需要时）→ Project → Task → 子资源。必须使用参数化 SQL。网络 I/O 不能位于事务内。
 
 事务最长目标 < 1 秒，SQL 超时初始 5 秒；死锁/序列化冲突仅做有限技术重试，业务版本冲突返回409，不能自动覆盖。项目级串行写是此版本明确取舍，配并发测试后再优化。
 
@@ -114,11 +118,11 @@ id UUID PK；keyHash char(64)；startedAt timestamptz；expiresAt timestamptz；
 
 每列按 (position,id) 排序，position 初始间隔1024。创建任务追加列尾；空列 position=1024。move 请求给出目标状态和 beforeTaskId；null 表示列尾。服务端从完整列读取邻居，不信任客户端 position。beforeTaskId 不能是自身、不能跨项目、必须属于目标列且未删除。
 
-在前后邻居之间取整数中点；插首时取首项-1024（允许负数）；插尾取末项+1024。如无整数间隙或会超出 bigint 范围，在同一项目锁事务内对目标列按1024重新编号，再计算插入值。内部重编号不改变展示顺序，其他任务 version 不因此增加；本次移动任务 version 增加，boardVersion 增加。
+在前后邻居之间取整数中点；插首时取首项-1024（允许负数）；插尾取末项+1024。如无整数间隙或会超出 bigint 范围，在同一项目锁事务内用一条 UPDATE 对目标列按1024重新编号，再计算插入值。内部重编号不改变展示顺序，其他任务 version 不因此增加；本次移动任务 version 增加，boardVersion 增加。
 
 move 带 expectedVersion 与 expectedBoardVersion。任一不匹配返回409，附 currentVersion/currentBoardVersion。无语义变化的 move 直接返回当前任务，不额外写活动和增加版本。PATCH 修改 status 统一复用移动服务，追加目标列末尾；PATCH 本身不接受 position。
 
-创建、跨/同列移动、删除、恢复都会改变 boardVersion。看板读取使用一致快照（REPEATABLE READ 短只读事务）获取列数据、总数与 boardVersion；不能三次独立读取拼接不同时刻的数据。
+创建、跨/同列移动、删除、恢复都会改变 boardVersion。看板读取使用一致快照获取列数据、总数与 boardVersion：三者连同成员关系复核、任务的姓名与计数来自同一条语句，一条语句即一个快照；不能多次独立读取拼接不同时刻的数据。
 
 看板分页游标绑定过滤指纹、boardVersion，以及本列已返回前缀（按 position,id）的数量与 SHA-256 摘要（BOARD-FILTER-CURSOR，2026-09-24）。优先级、标题、负责人、截止日变化与成员退出清空负责人不递增 boardVersion，却可能让任务进入或离开当前筛选集合；续页时在同一快照内重算前缀，数量或摘要不一致即返回 409 BOARD_CONFLICT，客户端整体重新读取。游标之后的集合变化由下一页查询自然反映，不视为冲突；描述等非筛选字段变化不影响续页。
 
@@ -177,3 +181,9 @@ fixture 的 now 是可注入基准时间，日期相对基准生成，以便覆�
 ### 综合审查补充（2026-09-13）
 
 Invitation.acceptedBy 使用 RESTRICT，与 acceptedAt/acceptedById 成对 CHECK 一致；V1 不提供删用户功能，未来匿名化需保持审计身份。新增迁移移除 Project 冗余组合非负 CHECK，两个独立非负约束仍保留。维护对账用单一 SQL 快照比较所有 READY/UPLOADING 附件（含软删除任务）与项目 usedBytes/reservedBytes，仅报告偏差，不自动修正。
+
+### 迁移 17、18（2026-11-15）
+
+- 20261115090000_project_revision：Project 增加 revision 列（NOT NULL DEFAULT 0）与非负 CHECK。常量默认值不重写已有行；旧镜像不读写该列，回滚到旧镜像与新 schema 兼容。
+- 20261115091000_rate_limit_unlogged：RateLimitBucket 改为 UNLOGGED 并设置 fillfactor 50。改变持久性会重写该表并短暂持有排他锁，表里只有限流计数；读写语句不变，旧镜像同样兼容。
+- 迁移历史核对脚本的结构摘要现在包含表的持久性与存储参数，开发库与测试库在这两项上的漂移会被发现。

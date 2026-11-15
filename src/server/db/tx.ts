@@ -1,17 +1,23 @@
 import "server-only";
-import type { Prisma } from "@/generated/prisma/client";
+import { Prisma, type Project } from "@/generated/prisma/client";
 import { DomainError } from "@/server/http/errors";
 import { prisma } from "./prisma";
+import { toProjectRow, type RawProjectRow } from "./project-row";
 
 /**
  * 事务与行锁基础设施（docs/04 §4）。
  *
  * 锁顺序约定（避免死锁）：**User → Project → Task → 子资源**。
- * 所有需要跨表持锁的写事务，必须按此顺序获取 FOR UPDATE 行锁；
+ * 所有需要跨表持锁的写事务，必须按此顺序获取行锁；
  * 顺序一致可让并发事务形成全序，配合本文件的死锁/序列化重试兜底。
  *
- * 隔离级别统一 ReadCommitted（docs/04 §4）：写事务在锁保护下读己所写；
- * 看板一致快照等只读场景另行使用 REPEATABLE READ（不在本文件范围）。
+ * 行锁用 FOR NO KEY UPDATE：它与自身互斥，写事务仍按项目（或用户）串行；但不与外键检查
+ * 取得的 FOR KEY SHARE 冲突。ActivityLog.actorId、Task.assigneeId 等外键写入会对被引用的
+ * User / Project 行取 KEY SHARE，若串行锁用 FOR UPDATE，这些写入会排在归档/恢复持有的用户锁
+ * 之后，并可能与之形成「用户锁等项目锁、项目锁等用户行」的死锁。
+ *
+ * 隔离级别用 PostgreSQL 默认的 READ COMMITTED，不再显式发送 SET TRANSACTION（每个写事务省
+ * 一次往返）：写事务在锁保护下读己所写，持锁后的每条语句都取新快照。
  *
  * 超时：与连接池的 statement_timeout=10000/lock_timeout=5000（prisma.ts）呼应，
  * 事务默认 timeout=10000ms、maxWait=2000ms，超时即失败而非无限持锁。
@@ -34,16 +40,6 @@ const RETRYABLE_PG_CODES = new Set(["40P01", "40001", "55P03"]);
 
 /** 有限技术重试的退避序列（ms）：最多 3 次重试。 */
 const RETRY_BACKOFF_MS = [50, 150, 450] as const;
-
-/** lockProjectRow 返回的项目锁快照（仅并发控制所需字段）。 */
-export interface LockedProjectRow {
-  id: string;
-  version: number;
-  boardVersion: number;
-  nextTaskNumber: number;
-  archivedAt: Date | null;
-  ownerId: string;
-}
 
 /** PostgreSQL SQLSTATE 形状：5 位大写字母或数字（用于滤除 Prisma 自身的 P2010 之类代码）。 */
 const SQLSTATE_RE = /^[0-9A-Z]{5}$/;
@@ -111,7 +107,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * 在 ReadCommitted 事务中执行 fn，并对死锁/序列化失败做**有限技术重试**
+ * 在 READ COMMITTED（库默认）事务中执行 fn，并对死锁/序列化失败做**有限技术重试**
  * （最多 3 次，指数退避 50/150/450ms）。
  * 
  * Q06 修复：
@@ -131,11 +127,7 @@ export async function withTransaction<T>(
 
   for (let attempt = 0; ; attempt += 1) {
     try {
-      return await prisma.$transaction(fn, {
-        timeout,
-        maxWait,
-        isolationLevel: "ReadCommitted",
-      });
+      return await prisma.$transaction(fn, { timeout, maxWait });
     } catch (error) {
       // Q06：业务版本冲突永不误试（semantic: VERSION_CONFLICT → 409）
       if (isBusinessVersionConflict(error)) {
@@ -159,26 +151,80 @@ export async function withTransaction<T>(
 }
 
 /**
- * 对项目行加 FOR UPDATE 排他锁，返回并发控制所需字段快照。
+ * 对项目行加 FOR NO KEY UPDATE 行锁，返回**持锁后的完整项目行**。
  * 项目不存在时返回 null（由调用方决定抛 NOT_FOUND，本函数不做业务判断）。
+ *
+ * 等锁期间别的事务提交了对该行的修改时，PostgreSQL 会按最新行版本重新取值，所以返回值
+ * 就是权威状态，调用方不需要再读一次 Project。成员关系存在别的表里，必须在拿到锁之后用
+ * **单独一条语句**判定（见 authorization/project-access.ts 的 accessForLockedProject）：
+ * 同一条语句里的子查询沿用等锁之前的快照，会看不到刚提交的成员移除。
  *
  * 必须在 withTransaction 的 tx 内调用；锁在事务提交/回滚时释放。
  */
 export async function lockProjectRow(
   tx: Prisma.TransactionClient,
   projectId: string,
-): Promise<LockedProjectRow | null> {
-  const rows = await tx.$queryRaw<LockedProjectRow[]>`
-    SELECT id, version, "boardVersion", "nextTaskNumber", "archivedAt", "ownerId"
-    FROM "Project"
-    WHERE id = ${projectId}::uuid
-    FOR UPDATE
+): Promise<Project | null> {
+  const rows = await tx.$queryRaw<RawProjectRow[]>`
+    SELECT p.* FROM "Project" p
+    WHERE p.id = ${projectId}::uuid
+    FOR NO KEY UPDATE OF p
   `;
-  return rows[0] ?? null;
+  const row = rows[0];
+  return row ? toProjectRow(row) : null;
 }
 
 /**
- * 对用户行加 FOR UPDATE 排他锁（锁顺序最前：User → Project → …）。
+ * 按任务定位并锁定其所属项目（一条语句，取代「先读 Task.projectId 再锁 Project」两次往返）。
+ * 任务不存在时返回 null。任务不会跨项目移动，所以子查询读到的 projectId 不会过期；
+ * 任务本身的状态（软删除、版本）仍须在持锁后重新读取。
+ */
+export async function lockProjectOfTask(
+  tx: Prisma.TransactionClient,
+  taskId: string,
+): Promise<Project | null> {
+  const rows = await tx.$queryRaw<RawProjectRow[]>`
+    SELECT p.* FROM "Project" p
+    WHERE p.id = (SELECT t."projectId" FROM "Task" t WHERE t.id = ${taskId}::uuid)
+    FOR NO KEY UPDATE OF p
+  `;
+  const row = rows[0];
+  return row ? toProjectRow(row) : null;
+}
+
+/** 可以反查所属项目的任务子资源表（固定白名单，不接受外部输入）。 */
+const TASK_CHILD_TABLE = {
+  subtask: Prisma.raw('"Subtask"'),
+  comment: Prisma.raw('"Comment"'),
+  attachment: Prisma.raw('"Attachment"'),
+} as const;
+
+/**
+ * 按子任务 / 评论 / 附件定位并锁定其所属项目，同时带回父任务 id（一条语句）。
+ * 子资源不存在时返回 null。子资源不会换父任务、任务不会换项目，所以连接读到的归属
+ * 不会过期；子资源自身的状态（软删除、版本）仍须在持锁后重新读取。
+ */
+export async function lockProjectOfTaskChild(
+  tx: Prisma.TransactionClient,
+  child: keyof typeof TASK_CHILD_TABLE,
+  childId: string,
+): Promise<{ project: Project; taskId: string } | null> {
+  const rows = await tx.$queryRaw<Array<RawProjectRow & { childTaskId: string }>>`
+    SELECT p.*, c."taskId" AS "childTaskId"
+    FROM "Project" p
+    JOIN "Task" t ON t."projectId" = p.id
+    JOIN ${TASK_CHILD_TABLE[child]} c ON c."taskId" = t.id
+    WHERE c.id = ${childId}::uuid
+    FOR NO KEY UPDATE OF p
+  `;
+  const row = rows[0];
+  if (!row) return null;
+  const { childTaskId, ...project } = toProjectRow(row);
+  return { project, taskId: childTaskId };
+}
+
+/**
+ * 对用户行加 FOR NO KEY UPDATE 行锁（锁顺序最前：User → Project → …）。
  * 用于「创建项目」等无 Project 锁、需在用户级串行化配额与幂等记录的场景（docs/05 §5）。
  * 用户不存在时返回 null（由调用方决定后续处理）。
  */
@@ -187,7 +233,7 @@ export async function lockUserRow(
   userId: string,
 ): Promise<{ id: string } | null> {
   const rows = await tx.$queryRaw<{ id: string }[]>`
-    SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE
+    SELECT id FROM "User" WHERE id = ${userId} FOR NO KEY UPDATE
   `;
   return rows[0] ?? null;
 }

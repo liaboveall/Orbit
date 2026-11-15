@@ -21,7 +21,7 @@ export async function GET(
     );
     if (!parsed.ok) return jsonEnvelope(parsed.response, 400, requestId);
     return jsonSuccess(
-      await getBoard((await context.params).projectId, user.id, parsed.data),
+      await getBoard((await context.params).projectId, user.id, parsed.data, user.timezone),
       requestId,
     );
   } catch (error) {

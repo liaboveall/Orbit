@@ -3,8 +3,8 @@ import type { Prisma, Project } from "@/generated/prisma/client";
 import { DomainError } from "@/server/http/errors";
 import { MAX_OPEN_TASKS } from "@/server/modules/limits";
 import {
+  accessForLockedProject,
   projectArchivedError,
-  requireProjectMember,
   type ProjectAccess,
 } from "@/server/modules/authorization/project-access";
 
@@ -46,15 +46,18 @@ export function taskDeleteForbiddenError(): DomainError {
 }
 
 /**
- * 要求项目对任务写操作可用：先确认当前用户为成员（owner 亦视为成员，非成员/不存在 → 404），
- * 再拒绝归档项目的一切业务写（→ 409 PROJECT_ARCHIVED）。须在持有 Project 行锁的事务内调用。
+ * 要求项目对任务写操作可用：当前用户为成员（owner 亦视为成员，非成员 → 404），
+ * 且项目未归档（→ 409 PROJECT_ARCHIVED）。
+ *
+ * `project` 必须是本事务里 lockProjectRow / lockProjectOfTask 刚返回的行：它已是持锁后的
+ * 权威状态，这里不再读 Project，只在需要时查一次成员关系。
  */
 export async function requireWritableTaskProject(
   tx: Prisma.TransactionClient,
-  projectId: string,
+  project: Project,
   userId: string,
 ): Promise<ProjectAccess> {
-  const access = await requireProjectMember(tx, projectId, userId);
+  const access = await accessForLockedProject(tx, project, userId);
   if (access.project.archivedAt !== null) throw projectArchivedError();
   return access;
 }

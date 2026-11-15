@@ -11,8 +11,8 @@ import { registrationTimezone } from "@/server/auth/user-fields";
 import { fromDueDateString } from "@/server/modules/task/date-only";
 import {
   TASK_SUMMARY_SELECT,
+  fetchTaskExtras,
   toTaskSummaryDTO,
-  fetchTaskResourceCountsBatch,
 } from "@/server/modules/task/mappers";
 import {
   keysetCondition,
@@ -26,13 +26,17 @@ import {
   encodeCursor,
 } from "@/server/modules/pagination/cursor";
 import { DomainError } from "@/server/http/errors";
+import { projectVisibleSql } from "@/server/modules/authorization/project-access";
 
-async function calendar(userId: string, now: Date) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { timezone: true },
-  });
-  const timezone = registrationTimezone(user?.timezone),
+/**
+ * 用户时区下的「今天」与未来 7 天边界。调用方已有会话用户时传入其 timezone
+ * （会话查询每次都读 User 行，不是缓存），省掉一次只为取时区的查询。
+ */
+async function calendar(userId: string, now: Date, knownTimezone?: string) {
+  const stored =
+    knownTimezone ??
+    (await prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } }))?.timezone;
+  const timezone = registrationTimezone(stored),
     today = dateInTimezone(timezone, now);
   const date = fromDueDateString(today),
     end = new Date(date);
@@ -43,8 +47,8 @@ const membership = (userId: string): Prisma.ProjectWhereInput => ({
   archivedAt: null,
   OR: [{ ownerId: userId }, { members: { some: { userId } } }],
 });
-export async function getOverview(userId: string, now = new Date()) {
-  const { timezone, today, date, end } = await calendar(userId, now);
+export async function getOverview(userId: string, now = new Date(), knownTimezone?: string) {
+  const { timezone, today, date, end } = await calendar(userId, now, knownTimezone);
   const rows = await prisma.$queryRaw<
     Array<{
       overdue: bigint;
@@ -60,8 +64,7 @@ export async function getOverview(userId: string, now = new Date()) {
       COUNT(*) FILTER (WHERE t.status = 'IN_PROGRESS') AS "inProgress",COUNT(*) AS "totalOpen"
     FROM "Task" t JOIN "Project" p ON p.id=t."projectId"
     WHERE t."assigneeId"=${userId} AND t."deletedAt" IS NULL AND t.status <> 'DONE'
-      AND p."archivedAt" IS NULL AND (p."ownerId"=${userId} OR EXISTS(
-        SELECT 1 FROM "ProjectMember" m WHERE m."projectId"=p.id AND m."userId"=${userId}))
+      AND p."archivedAt" IS NULL AND ${projectVisibleSql(userId)}
   `;
   const c = rows[0]!;
   return OverviewSchema.parse({
@@ -78,12 +81,13 @@ export async function listMyTasks(
   userId: string,
   input: MyTasksQueryDTO = {},
   now = new Date(),
+  knownTimezone?: string,
 ): Promise<TaskListResult> {
   const parsed = MyTasksQuerySchema.safeParse(input);
   if (!parsed.success)
     throw new DomainError("VALIDATION_ERROR", "任务筛选参数不合法。");
   const query = parsed.data,
-    { today, date, end } = await calendar(userId, now);
+    { today, date, end } = await calendar(userId, now, knownTimezone);
   const bucket = query.bucket ?? "all_open",
     sort = query.sort ?? "updated_desc",
     limit = query.limit ?? 30;
@@ -121,22 +125,18 @@ export async function listMyTasks(
     filters.push(
       keysetCondition(sort, decodeCursor(query.cursor, fingerprint)),
     );
-  // F14：工作台摘要使用显式投影（含 project.key），不拉取 description。
+  // F14：工作台摘要使用显式投影，不拉取 description。
   const rows = await prisma.task.findMany({
     where: { AND: filters },
     orderBy: orderByFor(sort),
     take: limit + 1,
-    select: { ...TASK_SUMMARY_SELECT, project: { select: { key: true } } },
+    select: TASK_SUMMARY_SELECT,
   });
+  // 姓名、计数与各任务所属项目的 key：整页一条语句。
   const page = rows.slice(0, limit),
-    counts = await fetchTaskResourceCountsBatch(
-      prisma,
-      page.map((t) => t.id),
-    );
-  const tasks = await Promise.all(
-    page.map((t) =>
-      toTaskSummaryDTO(t, { projectKey: t.project.key }, counts.get(t.id)!),
-    ),
+    extras = await fetchTaskExtras(prisma, page, { withProjectKeys: true });
+  const tasks = page.map((t) =>
+    toTaskSummaryDTO(t, { projectKey: extras.projectKeys.get(t.projectId) ?? "" }, extras),
   );
   const last = tasks.at(-1),
     hasMore = rows.length > limit;

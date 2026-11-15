@@ -9,6 +9,7 @@ import {
   MoveTaskSchema,
   OverviewSchema,
   ProjectSchema,
+  PulseSchema,
   TaskSchema,
   TaskSummarySchema,
   UpdateMeSchema,
@@ -367,6 +368,22 @@ describe("子资源 DTO：Comment / Attachment / Activity / Board / Overview", (
     expect(OverviewSchema.safeParse(base).success).toBe(true);
     expect(OverviewSchema.safeParse({ ...base, today: DT }).success).toBe(false);
     expect(OverviewSchema.safeParse({ ...base, overdue: -1 }).success).toBe(false);
+  });
+
+  it("Pulse：不透明标记与项目列表；拒绝过短标记、非法项目 id 与未知字段", () => {
+    const base = {
+      token: "0123456789abcdef",
+      shell: "fedcba9876543210",
+      projects: [{ id: UUID, token: "00112233aabbccdd" }],
+    };
+    expect(PulseSchema.safeParse(base).success).toBe(true);
+    expect(PulseSchema.safeParse({ ...base, projects: [] }).success).toBe(true);
+    expect(PulseSchema.safeParse({ ...base, token: "short" }).success).toBe(false);
+    expect(PulseSchema.safeParse({ ...base, shell: "a".repeat(65) }).success).toBe(false);
+    expect(PulseSchema.safeParse({ ...base, projects: [{ id: "not-a-uuid", token: "00112233aabbccdd" }] }).success).toBe(false);
+    // 标记不携带计数、时间或项目名：响应里没有它们的位置。
+    expect(PulseSchema.safeParse({ ...base, projects: [{ id: UUID, token: "00112233aabbccdd", name: "项目" }] }).success).toBe(false);
+    expect(PulseSchema.safeParse({ ...base, revision: 3 }).success).toBe(false);
   });
 });
 

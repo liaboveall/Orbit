@@ -23,12 +23,16 @@ function createPrismaClient(): PrismaClient {
   //   options: 会话级 PostgreSQL 运行时参数——
   //     statement_timeout=10000: 单条语句最长 10s，兜底防止慢查询长期占用连接。
   //     lock_timeout=5000: 等锁最长 5s，超时即失败（配合 tx.ts 的死锁/序列化重试）。
+  //     idle_in_transaction_session_timeout=15000: 事务打开却 15s 没有任何语句时由数据库
+  //       终止会话并释放它持有的行锁。应用的事务上限是 10s、事务内不做网络 I/O，正常路径
+  //       不会触及；它兜的是进程卡死或事件循环长时间阻塞时遗留的持锁事务。
   const adapter = new PrismaPg({
     connectionString: DATABASE_URL,
     max: DATABASE_POOL_MAX,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
-    options: "-c statement_timeout=10000 -c lock_timeout=5000 -c timezone=UTC",
+    options:
+      "-c statement_timeout=10000 -c lock_timeout=5000 -c idle_in_transaction_session_timeout=15000 -c timezone=UTC",
   });
   return new PrismaClient({ adapter });
 }

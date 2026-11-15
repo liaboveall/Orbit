@@ -63,10 +63,12 @@ async function ensureSafePosition(
 }
 
 /**
- * 对指定列所有未删除任务进行全列重编号（用于 BigInt overflow 情况）。
- * 
- * 跳过 movingTaskId 参数：全列重编号不涉及移动任务，所以为 null。
- * 保持其他任务的 version/timestamps 不变（使用 raw UPDATE）。
+ * 把指定列的未删除任务按现有顺序（position, id）重新编号为 GAP、2·GAP、3·GAP……
+ * 用于中点间隙耗尽和列尾逼近 bigint 上界两种情况。
+ *
+ * 一条 UPDATE 完成：列再长也只有一次往返，持有项目锁的时间不随任务数增长
+ * （逐行更新时 1000 张卡片就是 1000 次往返）。excludeTaskId 是正在被移动的任务，
+ * 不参与编号。裸 UPDATE 只改 position，其它任务的 version / updatedAt 不变。
  */
 export async function renumberColumn(
   tx: Prisma.TransactionClient,
@@ -74,22 +76,18 @@ export async function renumberColumn(
   status: TaskStatus,
   excludeTaskId: string | null = null,
 ): Promise<void> {
-  const rows = await tx.$queryRaw<RawColRow[]>`
-    SELECT id, position FROM "Task"
-    WHERE "projectId" = ${projectId}::uuid
-      AND "deletedAt" IS NULL
-      AND status = ${status}::"TaskStatus"
-      AND (${excludeTaskId}::uuid IS NULL OR id <> ${excludeTaskId}::uuid)
-    ORDER BY position ASC, id ASC
+  await tx.$executeRaw`
+    UPDATE "Task" AS t SET position = ordered.next_position
+    FROM (
+      SELECT id, row_number() OVER (ORDER BY position ASC, id ASC) * ${POSITION_GAP}::bigint AS next_position
+      FROM "Task"
+      WHERE "projectId" = ${projectId}::uuid
+        AND "deletedAt" IS NULL
+        AND status = ${status}::"TaskStatus"
+        AND (${excludeTaskId}::uuid IS NULL OR id <> ${excludeTaskId}::uuid)
+    ) AS ordered
+    WHERE t.id = ordered.id
   `;
-
-  // 批量重编号从 GAP 开始
-  for (const [idx, row] of rows.entries()) {
-    const pos = BigInt(idx + 1) * POSITION_GAP;
-    await tx.$executeRaw`
-      UPDATE "Task" SET position = ${pos} WHERE id = ${row.id}::uuid
-    `;
-  }
 }
 
 // Raw database result shared by append and move paths.
